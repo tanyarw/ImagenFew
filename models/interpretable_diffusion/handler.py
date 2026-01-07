@@ -21,9 +21,9 @@ class Handler(generativeHandler):
         )
         self.ema = LitEma(self.model, decay=0.9999, use_num_upates=True, warmup=args.ema_warmup)
 
+        self.config['solver']['scheduler']['params']['optimizer'] = self.optimizer
         self.scheduler = instantiate_from_config({
-            **self.config['solver']['scheduler'],
-            'params': {'optimizer': self.optimizer}
+            **self.config['solver']['scheduler']
         })
 
         self.step = 0
@@ -31,26 +31,21 @@ class Handler(generativeHandler):
     def build_model(self):
         return instantiate_from_config(self.config['model'])
 
-    def train_iter(self, train_dataloader,logger):
+    def train_iter(self, train_dataloader, logger):
         for _, data in enumerate(train_dataloader, 1):
             x = data[0].to(self.device).float()
 
-            self.optimizer.zero_grad()
             loss = self.model(x, target=x)
-
-            if isinstance(loss, tuple):
-                loss, to_log = loss
-                for key, value in to_log.items():
-                    logger.log(f'train/{key}', value, self.step)
-            else:
-                logger.log(f'train/loss', loss.item(), self.step)
-
             loss.backward()
-            clip_grad_norm_(self.model.parameters(), 1.0)
+
+            logger.log(f'train/loss', loss.item(), self.step)
+
+            clip_grad_norm_(self._model.parameters(), 1.0)
             self.optimizer.step()
             self.scheduler.step(loss.item())
-            self.ema(self.model)
+            self.optimizer.zero_grad()
             self.step += 1
+            self.ema(self.model)
 
     def sample(self, n_samples, class_label=None, class_metadata=None):
         with torch.no_grad():
@@ -73,4 +68,4 @@ class Handler(generativeHandler):
         return EMAScope(self.model, self.ema)
 
     def save_model(self, ckpt_dir):
-        torch.save(self._model.state_dict(), os.path.join(ckpt_dir, 'diffusionTS_model.pt'))
+        torch.save(self._model.state_dict(), ckpt_dir)

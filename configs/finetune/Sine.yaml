@@ -19,6 +19,7 @@ ema_warmup: 100
 # logging:
 logging_iter: 100
 tags: []
+run_dir: ImagenFew/Sine/
 # Data
 datasets_dir: ./data/
 seq_len: 24

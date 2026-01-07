@@ -71,7 +71,6 @@ class Handler(generativeHandler):
 
     def _load_model(self, ckpt_dir, device):
         if not os.path.exists(ckpt_dir):
-            os.makedirs(os.path.dirname(ckpt_dir), exist_ok=True)
             logging.warning(f"No checkpoint found at {ckpt_dir}. "
                             f"Returned the same state as input")
         else:
