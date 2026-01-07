@@ -23,7 +23,7 @@ def main(args):
     args.train_on_datasets = [dataset for dataset in dataset_list if dataset in args.train_on_datasets]
     
     # Model name and directory
-    name = create_model_name_and_dir(args, "finetune" if args.finetune else "")
+    name = create_model_name_and_dir(args)
 
     # set-up neptune logger. switch to your desired logger
     with CompositeLogger([NeptuneLogger(), PrintLogger()]) if args.neptune and is_main_process() \

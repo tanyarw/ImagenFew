@@ -88,19 +88,15 @@ def log_config_and_tags(args, logger, name, multidata_dataset=False):
     else:
         logger.add_tags([args.train_on_datasets[0]])
 
-
-def get_model_name_diffusion():
-    return f'diffusionTS'
-def create_model_name_and_dir(args, extra_name=""):
+def create_model_name_and_dir(args):
     name = get_model_name(args)
     args.ts2vec_dir = os.path.join(args.log_dir ,"TS2VEC")
     os.makedirs(args.ts2vec_dir , exist_ok=True)
-    args.log_dir = os.path.join(args.log_dir, extra_name, os.path.splitext(os.path.basename(args.config))[0], args.run_id, name)
+    args.log_dir = os.path.join(args.log_dir, args.run_dir, args.run_id, name)
     os.makedirs(os.path.dirname(args.log_dir), exist_ok=True)
-    return name
 
 def get_model_name(args):
-    name = f'{args.handler}'
+    name = f'{args.handler.split(".")[1]}'
     return name
 
 def print_model_params(logger, model):

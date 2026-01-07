@@ -19,6 +19,8 @@ ema_warmup: 100
 # logging:
 logging_iter: 100
 tags: []
+run_dir: ImagenFew/AirQuality/
+
 # Data
 datasets_dir: ./data/
 seq_len: 24

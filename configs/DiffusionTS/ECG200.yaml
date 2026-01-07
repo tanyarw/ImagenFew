@@ -25,7 +25,7 @@ solver:
     decay: 0.995
     update_interval: 10
   scheduler:
-    target: engine.lr_sch.ReduceLROnPlateauWithWarmup
+    target: models.interpretable_diffusion.engine.lr_sch.ReduceLROnPlateauWithWarmup
     params:
       factor: 0.5
       patience: 5000
@@ -43,6 +43,7 @@ datasets_dir: ./data/
 epochs: 1000
 seq_len: 24
 logging_iter: 100
+run_dir: DiffusionTS/ECG200/
 
 datasets:
   - name: stock

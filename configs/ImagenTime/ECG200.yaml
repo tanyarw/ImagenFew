@@ -8,7 +8,7 @@ use_stft: false
 delay: 8
 embedding: 8
 # model:
-handler: models.ImagenFew.handler
+handler: models.ImagenTime.handler
 img_resolution: 8
 unet_channels: 32
 ch_mult: [1,2,2,4]
@@ -19,7 +19,7 @@ ema_warmup: 100
 # logging:
 logging_iter: 100
 tags: []
-run_dir: ImagenFew/SelfRegulationSCP1/
+run_dir: ImagenTime/ECG200/
 # Data
 datasets_dir: ./data/
 seq_len: 24
@@ -88,8 +88,8 @@ datasets:
   - name: SharePriceIncrease
     data: UEA
     rel_path: UEA/SharePriceIncrease
-  - name: SelfRegulationSCP1
+  - name: ECG200
     data: UEA
-    rel_path: UEA/SelfRegulationSCP1
+    rel_path: UEA/ECG200
 train_on_datasets:
-  - SelfRegulationSCP1
+  - ECG200
