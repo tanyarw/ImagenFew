@@ -11,9 +11,9 @@ def Custom(**config):
         flag=config['flag'],
         size=[config['seq_len'], config['label_len'], config['pred_len']],
         features=config['features'],
-        target='OT',
+        target=config.get('target', 'OT'),
         timeenc= 0 if config['embed'] != 'timeF' else 1,
-        freq='h'
+        freq=config.get('freq', 'h')
     )
 
 
