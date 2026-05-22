@@ -38,7 +38,7 @@ dataset_list = [
             "SelfRegulationSCP1",
             "StarLightCurves",
             "AirQuality",
-            "Electricity",
+            # "Electricity",
             "Rainfall",
         ]
 
