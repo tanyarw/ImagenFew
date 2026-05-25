@@ -18,12 +18,12 @@ def main(args):
     # Set up basic attributes
     args.finetune = not args.pretrain
     args.trained_on_datasets = [dataset for dataset in dataset_list if dataset in map(lambda s: s['name'], args.datasets)]
-    
+
     # Model name and directory
-    name = create_model_name_and_dir(args, "finetune" if args.finetune else "")
+    name = create_model_name_and_dir(args)
     with CompositeLogger([NeptuneLogger(), PrintLogger()]) if args.neptune \
             else CompositeLogger([PrintLogger()]) as logger:
-        
+
         args.tags.append('visualization')
         # log config and tags
         log_config_and_tags(args, logger, name, len(args.train_on_datasets) > 1)
@@ -31,7 +31,7 @@ def main(args):
         # Setup Data
         dataset_loader, samplers, trainsets, metadatas = data_provider(args)
         args.n_classes = dataset_loader.num_datasets
-        
+
         # Setup model
         assert not(args.model_ckpt == None), "Must set Model checkpoint"
         args.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -73,7 +73,7 @@ def main(args):
                     fig = plt.figure()
                     plt.plot(channel)
                     logger.log(f"gen_channel_{dataset}_{n}", fig)
-            
+
             for i, ts in islice(enumerate(np.transpose(generated_set, axes=(0,2,1))), 4):
                 for n, channel in enumerate(ts):
                     fig = plt.figure()
