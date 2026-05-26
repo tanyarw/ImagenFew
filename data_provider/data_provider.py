@@ -27,7 +27,7 @@ data_dict = {
 
 def random_permute(trainset, testset):
     perm_train = torch.randperm(len(trainset), generator=torch.Generator().manual_seed(0)).numpy()
-    perm_test = torch.randperm(len(testset), generator=torch.Generator().manual_seed(0)).numpy()
+    perm_test = torch.randperm(len(testset), generator=torch.Generator().manual_seed(1)).numpy()
 
     return Subset(trainset, perm_train), Subset(testset, perm_test)
 
@@ -55,14 +55,14 @@ def data_provider(args):
         metadata = {}
         config['seq_len'] = args.seq_len
         config['datasets_dir'] = args.datasets_dir
-        trainset, testset = get_train(config), get_train(config)
+        trainset, testset = get_train(config), get_test(config)
         subset_p = getattr(args,'subset_p', None)
         subset_n = getattr(args,'subset_n', None)
 
         # Randomly permute train/testsets
         trainset, testset = random_permute(trainset, testset)
         if (subset_n is not None or subset_p is not None) and (not 'subset_n' in config.keys()):
-            trainset, testset = random_subset(trainset, subset_p, subset_n), trainset
+            trainset = random_subset(trainset, subset_p, subset_n)
         trainset, testset = dataset_to_tensor(trainset, args), dataset_to_tensor(testset, args)
         if args.finetune:
             assert trainset.size(1) == args.seq_len, f"{config['name']} Does not output proper sequence length"
