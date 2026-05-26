@@ -16,6 +16,7 @@ def main(args):
 
     # Load Data
     dataset_loader, samplers, trainsets, metadatas = data_provider(args)
+    args.n_classes = dataset_loader.num_datasets
     
     # Setup model handler
     handler = import_module(args.handler).Handler(args=args, rank=args.device)
