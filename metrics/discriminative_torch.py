@@ -85,13 +85,14 @@ def discriminative_score_metrics(ori_data, generated_data, device):
         y_pred_real_curr = y_pred_real_curr.detach().cpu().numpy()
         y_pred_fake_curr = y_pred_fake_curr.detach().cpu().numpy()
 
-        y_pred_final = np.squeeze(np.concatenate((y_pred_real_curr, y_pred_fake_curr), axis=0))
+        # Concatenate on the sample axis (axis 1 in [1, N, 1])
+        y_pred_final = np.concatenate((y_pred_real_curr, y_pred_fake_curr), axis=1).flatten()
         y_label_final = np.concatenate(
-            (np.ones([y_pred_real_curr.shape[1], ]), np.zeros([y_pred_fake_curr.shape[1], ])),
+            (np.ones(y_pred_real_curr.shape[1]), np.zeros(y_pred_fake_curr.shape[1])),
             axis=0)
 
         # Compute the accuracy
-        acc = accuracy_score(y_label_final, (y_pred_final > 0.5).reshape(-1))
+        acc = accuracy_score(y_label_final, (y_pred_final > 0.5))
         discriminative_score = np.abs(0.5 - acc)
 
     return discriminative_score
