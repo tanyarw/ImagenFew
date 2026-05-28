@@ -29,7 +29,7 @@ def prepare_data(ori_sig, gen_sig):
     return prep_ori, prep_gen, sample_num
 
 
-def PCA_plot(prep_ori, prep_gen, anal_sample_no, logger, args):
+def PCA_plot(prep_ori, prep_gen, anal_sample_no, logger, args, pdf=None):
     # Visualization parameter
     colors = ["red" for i in range(anal_sample_no)] + ["blue" for i in range(anal_sample_no)]
 
@@ -48,15 +48,18 @@ def PCA_plot(prep_ori, prep_gen, anal_sample_no, logger, args):
                 c=colors[anal_sample_no:], alpha=0.2, label="Synthetic")
 
     ax.legend()
-    plt.title('PCA plot')
+    plt.title(f'{args.dataset} PCA plot')
     plt.xlabel('x-pca')
     plt.ylabel('y_pca')
-    plt.show()
+    if pdf:
+        pdf.savefig(f)
+    else:
+        plt.show()
     logger.log_fig(f'{args.dataset}_PCA', f)
     plt.close()
 
 
-def TSNE_plot(prep_ori, prep_gen, anal_sample_no, logger, args):
+def TSNE_plot(prep_ori, prep_gen, anal_sample_no, logger, args, pdf=None):
     colors = ["red" for i in range(anal_sample_no)] + ["blue" for i in range(anal_sample_no)]
     prep_data_final = np.concatenate((prep_ori, prep_gen), axis=0)
 
@@ -74,16 +77,19 @@ def TSNE_plot(prep_ori, prep_gen, anal_sample_no, logger, args):
 
     ax.legend()
 
-    plt.title('t-SNE plot')
+    plt.title(f'{args.dataset} t-SNE plot')
     plt.xlabel('x-tsne')
     plt.ylabel('y_tsne')
-    plt.show()
+    if pdf:
+        pdf.savefig(f)
+    else:
+        plt.show()
     logger.log_fig(f'{args.dataset}_TSNE', f)
 
     plt.close()
 
 
-def density_plot(prep_ori, prep_gen, logger, args):
+def density_plot(prep_ori, prep_gen, logger, args, pdf=None):
     f, ax = plt.subplots(1)
 
     sns.distplot(prep_ori, hist=False, kde=True, label='Original')
@@ -93,8 +99,11 @@ def density_plot(prep_ori, prep_gen, logger, args):
     plt.xlabel('Data Value')
     plt.ylabel('Data Density Estimate')
     plt.rcParams['pdf.fonttype'] = 42
-    plt.title(args.dataset)
-    plt.show()
+    plt.title(f'{args.dataset} Density Plot')
+    if pdf:
+        pdf.savefig(f)
+    else:
+        plt.show()
     logger.log_fig(f'{args.dataset}_density', f)
     plt.close()
 

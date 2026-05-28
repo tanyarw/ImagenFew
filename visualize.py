@@ -10,6 +10,8 @@ from utils.utils_vis import prepare_data, PCA_plot, TSNE_plot, density_plot, jen
 from data_provider.combined_datasets import dataset_list
 from itertools import islice
 from importlib import import_module
+import os
+from matplotlib.backends.backend_pdf import PdfPages
 
 import matplotlib.pyplot as plt
 
@@ -20,7 +22,14 @@ def main(args):
     args.trained_on_datasets = [dataset for dataset in dataset_list if dataset in map(lambda s: s['name'], args.datasets)]
 
     # Model name and directory
-    name = create_model_name_and_dir(args)
+    create_model_name_and_dir(args)
+    name = args.run_id
+    
+    # Create results/plots directory if it doesn't exist
+    plots_dir = os.path.join('results', 'plots')
+    os.makedirs(plots_dir, exist_ok=True)
+    pdf_path = os.path.join(plots_dir, f'visualization_{name}.pdf')
+    
     with CompositeLogger([NeptuneLogger(), PrintLogger()]) if args.neptune \
             else CompositeLogger([PrintLogger()]) as logger:
 
@@ -39,51 +48,61 @@ def main(args):
 
         scores_mean = {'disc_mean': [], 'disc_std': [], 'pred_mean': [], 'pred_std': [], 'context_fid': []}
 
-        # Evaluate + visualize
-        for dataset in args.train_on_datasets:
-            args.dataset = dataset
-            testset, class_label = dataset_loader.gen_dataloader(dataset)
-            handler.model.eval()
-            with torch.no_grad():
-                generated_set = handler.sample(len(testset), class_label, metadatas[dataset])
-            generated_set = generated_set.cpu().detach().numpy()
-            real_set = testset.cpu().detach().numpy()
-            scores = evaluate_model_uncond(real_set, generated_set, dataset, args.device, args.eval_metrics, base_path=args.ts2vec_dir)
-            scores_mean['disc_mean'].append(scores[f'disc_mean'])
-            scores_mean['disc_std'].append(scores[f'disc_std'])
-            scores_mean['pred_mean'].append(scores[f'pred_mean'])
-            scores_mean['pred_std'].append(scores[f'pred_std'])
-            scores_mean['context_fid'].append(scores[f'context_fid'])
-            for key, value in scores.items():
-                logger.log(f'test/{dataset}_{key}', value)
-            logging.info("Data generation is complete")
-            prep_ori, prep_gen, sample_num = prepare_data(real_set, generated_set)
+        with PdfPages(pdf_path) as pdf:
+            logging.info(f"Saving plots to {pdf_path}")
+            # Evaluate + visualize
+            for dataset in args.train_on_datasets:
+                args.dataset = dataset
+                testset, class_label = dataset_loader.gen_dataloader(dataset)
+                handler.model.eval()
+                with torch.no_grad():
+                    generated_set = handler.sample(len(testset), class_label, metadatas[dataset])
+                generated_set = generated_set.cpu().detach().numpy()
+                real_set = testset.cpu().detach().numpy()
+                scores = evaluate_model_uncond(real_set, generated_set, dataset, args.device, args.eval_metrics, base_path=args.ts2vec_dir)
+                scores_mean['disc_mean'].append(scores[f'disc_mean'])
+                scores_mean['disc_std'].append(scores[f'disc_std'])
+                scores_mean['pred_mean'].append(scores[f'pred_mean'])
+                scores_mean['pred_std'].append(scores[f'pred_std'])
+                scores_mean['context_fid'].append(scores[f'context_fid'])
+                for key, value in scores.items():
+                    logger.log(f'test/{dataset}_{key}', value)
+                logging.info(f"Data generation for {dataset} is complete")
+                prep_ori, prep_gen, sample_num = prepare_data(real_set, generated_set)
 
-            # PCA Analysis
-            PCA_plot(prep_ori, prep_gen, sample_num, logger, args)
-            # Do t-SNE Analysis together
-            TSNE_plot(prep_ori, prep_gen, sample_num, logger, args)
-            # Density plot
-            density_plot(prep_ori, prep_gen, logger, args)
-            # jensen shannon divergence
-            jensen_shannon_divergence(prep_ori, prep_gen, logger)
-            # Plot some sampled data
-            for i, ts in islice(enumerate(np.transpose(generated_set, axes=(0,2,1))), 4):
-                for n, channel in enumerate(ts):
-                    fig = plt.figure()
-                    plt.plot(channel)
-                    logger.log(f"gen_channel_{dataset}_{n}", fig)
+                # PCA Analysis
+                PCA_plot(prep_ori, prep_gen, sample_num, logger, args, pdf=pdf)
+                # Do t-SNE Analysis together
+                TSNE_plot(prep_ori, prep_gen, sample_num, logger, args, pdf=pdf)
+                # Density plot
+                density_plot(prep_ori, prep_gen, logger, args, pdf=pdf)
+                # jensen shannon divergence
+                jensen_shannon_divergence(prep_ori, prep_gen, logger)
+                
+                # Plot some sampled data
+                logging.info(f"Plotting sample channels for {dataset}...")
+                for i, ts in islice(enumerate(np.transpose(generated_set, axes=(0,2,1))), 4):
+                    for n, channel in enumerate(ts):
+                        fig = plt.figure(figsize=(10, 4))
+                        plt.plot(channel)
+                        plt.title(f"Generated Sample {i} - Channel {n} ({dataset})")
+                        pdf.savefig(fig)
+                        logger.log(f"gen_channel_{dataset}_{n}", fig)
+                        plt.close(fig)
 
-            for i, ts in islice(enumerate(np.transpose(generated_set, axes=(0,2,1))), 4):
-                for n, channel in enumerate(ts):
-                    fig = plt.figure()
-                    plt.plot(channel)
-                    logger.log(f"channel_{dataset}_{n}", fig)
         logger.log(f'test/disc_mean', np.mean(scores_mean['disc_mean']))
         logger.log(f'test/disc_std', np.mean(scores_mean['disc_std']))
         logger.log(f'test/pred_mean', np.mean(scores_mean['pred_mean']))
         logger.log(f'test/pred_std', np.mean(scores_mean['pred_std']))
         logger.log(f'test/context_fid', np.mean(scores_mean['context_fid']))
+        logging.info(f"Visualization complete. Booklet saved at {pdf_path}")
+
+if __name__ == '__main__':
+    args = parse_args_uncond()  # load unconditional generation specific args
+    torch.random.manual_seed(args.seed)
+    np.random.default_rng(args.seed)
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    main(args)
 
 if __name__ == '__main__':
     args = parse_args_uncond()  # load unconditional generation specific args
