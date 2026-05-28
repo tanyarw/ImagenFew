@@ -21,14 +21,24 @@ def main(args):
     args.finetune = not args.pretrain
     args.trained_on_datasets = [dataset for dataset in dataset_list if dataset in map(lambda s: s['name'], args.datasets)]
 
+    # Extract run_id from model_ckpt path if provided
+    if args.model_ckpt:
+        # Example: logs/ImagenFew/Rainfall/8986bc74-c417-447c-b690-9f16e87f14fb/ImagenFew
+        # run_id would be 8986bc74-c417-447c-b690-9f16e87f14fb
+        ckpt_path = os.path.normpath(args.model_ckpt)
+        path_parts = ckpt_path.split(os.sep)
+        if len(path_parts) >= 2:
+            args.run_id = path_parts[-2]
+            logging.info(f"Extracted run_id from checkpoint path: {args.run_id}")
+
     # Model name and directory
     create_model_name_and_dir(args)
     name = args.run_id
     
-    # Create results/plots directory if it doesn't exist
-    plots_dir = os.path.join('results', 'plots')
+    # Create results/plots/<run_id> directory
+    plots_dir = os.path.join('results', 'plots', name)
     os.makedirs(plots_dir, exist_ok=True)
-    pdf_path = os.path.join(plots_dir, f'visualization_{name}.pdf')
+    pdf_path = os.path.join(plots_dir, f'visualization.pdf')
     
     with CompositeLogger([NeptuneLogger(), PrintLogger()]) if args.neptune \
             else CompositeLogger([PrintLogger()]) as logger:
