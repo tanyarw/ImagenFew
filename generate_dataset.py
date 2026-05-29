@@ -13,24 +13,27 @@ def main():
     # Setup logging
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     
+    # Extract years first to avoid argparse error in parse_args_uncond
+    years = 10
+    if '--years' in sys.argv:
+        idx = sys.argv.index('--years')
+        try:
+            years = float(sys.argv[idx + 1])
+            # Remove it so parse_args_uncond doesn't complain
+            sys.argv.pop(idx)
+            sys.argv.pop(idx)
+        except (IndexError, ValueError):
+            logging.error("Invalid value for --years. Using default (10).")
+
     # Load args
     args = parse_args_uncond()
     args.device = "cuda" if torch.cuda.is_available() else "cpu"
-    args.finetune = True # Assume we are using a finetuned model
+    args.finetune = True 
     
-    # User can pass --years as an extra argument or we can just hardcode/calculate
-    # Since parse_args_uncond uses argparse, we might need to handle extra args manually 
-    # or just use a default. Let's look for a '--years' flag.
-    years = 10
-    for i, arg in enumerate(sys.argv):
-        if arg == '--years':
-            years = float(sys.argv[i+1])
-            break
-            
     # Model name and directory
     create_model_name_and_dir(args)
     
-    # Setup Data to get the scaler
+    # Setup Data
     dataset_loader, samplers, trainsets, metadatas = data_provider(args)
     args.n_classes = dataset_loader.num_datasets
     
@@ -38,12 +41,19 @@ def main():
     handler = import_module(args.handler).Handler(args=args, rank=args.device)
     handler.model.eval()
     
-    # Calculate samples needed
-    # Use pandas to handle any frequency string (e.g., '5min', '10min', '1h')
-    freq = metadata.get('freq', '10min')
+    # Identify dataset
+    # parse_args_uncond might leave train_on_datasets as a list of strings
+    dataset_name = args.train_on_datasets[0]
+    if isinstance(dataset_name, dict):
+        dataset_name = dataset_name['name']
+        
+    metadata = metadatas[dataset_name]
+    
+    # Calculate steps needed
+    freq = metadata.get('freq', '5min')
     logging.info(f"Detected frequency: {freq}")
     
-    # Calculate steps in one non-leap year
+    # Calculate steps in one non-leap year using pandas
     dr_year = pd.date_range(start='2026-01-01', end='2027-01-01', freq=freq, inclusive='left')
     steps_per_year = len(dr_year)
         
@@ -56,7 +66,7 @@ def main():
     
     all_generated = []
     
-    # Generate in chunks to avoid OOM or huge lists
+    # Generate in chunks
     chunk_size = 1000 
     for i in range(0, num_samples, chunk_size):
         current_n = min(chunk_size, num_samples - i)
@@ -65,17 +75,11 @@ def main():
             samples = handler.sample(current_n, class_label, metadata)
             all_generated.append(samples.cpu().numpy())
             
-    # Concatenate all
-    generated_data = np.concatenate(all_generated, axis=0) # [num_samples, seq_len, channels]
-    
-    # Flatten to a continuous series
+    # Concatenate and flatten
+    generated_data = np.concatenate(all_generated, axis=0)
     continuous_series = generated_data.reshape(-1, metadata['channels'])[:total_steps_needed]
     
-    # Unscale the data
-    # Get the dataset object to use its scaler
-    # Note: dataset_loader.gen_dataloader returns (test_data, class_label)
-    # We need the actual dataset object for inverse_transform.
-    # In data_provider, the trainsets dict contains the dataset objects.
+    # Unscale
     dataset_obj = trainsets[dataset_name]
     unscaled_data = dataset_obj.scaler.inverse_transform(continuous_series)
     
@@ -83,14 +87,11 @@ def main():
     output_dir = os.path.join('results', 'generated_data')
     os.makedirs(output_dir, exist_ok=True)
     
-    # Use run_id in filename if possible
     run_id = getattr(args, 'run_id', 'unknown_run')
     output_path = os.path.join(output_dir, f'rainfall_synthetic_{years}y_{run_id}.csv')
     
-    df = pd.DataFrame(unscaled_data, columns=[metadata.get('target', 'rainfall')])
-    # Add a date column starting from a dummy date
-    start_date = "2026-01-01"
-    df.insert(0, 'date', pd.date_range(start=start_date, periods=len(df), freq=metadata.get('freq', '10min')))
+    df = pd.DataFrame(unscaled_data, columns=[metadata.get('target', 'avg_rainfall')])
+    df.insert(0, 'date', pd.date_range(start="2026-01-01", periods=len(df), freq=freq))
     
     df.to_csv(output_path, index=False)
     logging.info(f"Successfully saved synthetic dataset to {output_path}")
