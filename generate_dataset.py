@@ -80,8 +80,13 @@ def main():
     continuous_series = generated_data.reshape(-1, metadata['channels'])[:total_steps_needed]
     
     # Unscale
-    dataset_obj = trainsets[dataset_name]
-    unscaled_data = dataset_obj.scaler.inverse_transform(continuous_series)
+    from data_provider.data_provider import data_dict
+    dataset_config = next(d for d in args.datasets if d['name'] == dataset_name)
+    dataset_config['seq_len'] = args.seq_len
+    dataset_config['datasets_dir'] = args.datasets_dir
+    dataset_config['flag'] = 'train'
+    actual_dataset_obj = data_dict[dataset_config['data']](**dataset_config)
+    unscaled_data = actual_dataset_obj.scaler.inverse_transform(continuous_series)
     
     # Save to CSV
     output_dir = os.path.join('results', 'generated_data')
