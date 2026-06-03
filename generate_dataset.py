@@ -42,15 +42,15 @@ def main():
     handler.model.eval()
     
     # Identify dataset
-    # parse_args_uncond might leave train_on_datasets as a list of strings
     dataset_name = args.train_on_datasets[0]
     if isinstance(dataset_name, dict):
         dataset_name = dataset_name['name']
         
     metadata = metadatas[dataset_name]
     
-    # Calculate steps needed
-    freq = metadata.get('freq', '5min')
+    # Get frequency from config if available, else metadata, else default
+    dataset_config = next(d for d in args.datasets if d['name'] == dataset_name)
+    freq = dataset_config.get('freq', metadata.get('freq', '10min'))
     logging.info(f"Detected frequency: {freq}")
     
     # Calculate steps in one non-leap year using pandas
