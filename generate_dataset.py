@@ -88,8 +88,8 @@ def main():
     actual_dataset_obj = data_dict[dataset_config['data']](**dataset_config)
     unscaled_data = actual_dataset_obj.scaler.inverse_transform(continuous_series)
     
-    # Clip negative values to 0 (Rainfall floor)
-    unscaled_data = np.maximum(unscaled_data, 0)
+    # Clip values below 0.005 mm to 0 (Rainfall floor and sparsity threshold)
+    unscaled_data[unscaled_data < 0.005] = 0.0
     
     # Save to CSV
     output_dir = os.path.join('results', 'generated_data')
