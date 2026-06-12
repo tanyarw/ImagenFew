@@ -1,0 +1,50 @@
+# ==============================================================================
+# GMM Regime-Conditional Training Config
+# ==============================================================================
+# Based on configs/finetune/Rainfall.yaml with regime-specific overrides.
+# All architecture parameters must match the base checkpoint exactly.
+
+# --- Training ---
+epochs: 1001
+batch_size: 2048
+learning_rate: 0.0001    # 1e-4
+weight_decay: 0.00001    # 1e-5
+
+# --- Data ---
+train_csv: data/rainfall/train/rainfall_10min.csv
+test_csv: data/rainfall/train/rainfall_10min.csv
+seq_len: 24
+n_classes: 4   # 4 GMM regimes (overrides default 43 dataset-level classes)
+
+# --- Transform (Delay Embedding) ---
+use_stft: false
+delay: 8
+embedding: 8
+
+# --- Model Architecture (must match base checkpoint) ---
+handler: models.ImagenFew.handler
+img_resolution: 8
+input_channels: 1
+unet_channels: 32
+ch_mult: [1, 2, 2, 4]
+attn_resolution: [8, 4, 2]
+diffusion_steps: 36
+dynamic_size: [128, 128]
+
+# --- Diffusion Sampler ---
+beta1: 0.00001      # 1e-5
+betaT: 0.01         # 1e-2
+deterministic: false
+
+# --- Fine-tuning ---
+finetune: true
+pretrain: false
+ema: true
+ema_warmup: 100
+ft_method: all       # fine-tune all parameters
+lora_dim: 4          # ignored when ft_method != 'lora'
+dropout: 0.0
+
+# --- Logging ---
+logging_iter: 100
+run_dir: ImagenFew/Rainfall_Regime/
