@@ -40,13 +40,6 @@ class RegimeDataset(Dataset):
 
         df = pd.read_csv(csv_path)
 
-        # Downsample from 5-min to 10-min: keep every 2nd row per block
-        df = (
-            df.groupby("block_id", group_keys=False)
-            .apply(lambda g: g.iloc[::2])
-            .reset_index(drop=True)
-        )
-
         # Collect per-block arrays and regime labels
         blocks = []
         for _, group in df.groupby("block_id", sort=True):
