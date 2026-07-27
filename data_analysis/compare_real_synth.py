@@ -15,13 +15,21 @@ from scipy.spatial.distance import jensenshannon
 import warnings
 warnings.filterwarnings('ignore')
 import os
+import argparse
 
 # --- Config ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(SCRIPT_DIR)  # project root
-REAL_PATH = os.path.join(BASE_DIR, 'data/rainfall/real_rainfall_data.csv')
-SYNTH_PATH = os.path.join(BASE_DIR, 'results/generated_data/rainfall_synthetic_10.0y_077efccb-d83d-4259-b120-6c04544f8fe0.csv')
-OUT_DIR = os.path.join(BASE_DIR, 'results/comparison_report')
+
+parser = argparse.ArgumentParser(description="Compare Real vs Synthetic Rainfall Data")
+parser.add_argument("--real_path", type=str, default=os.path.join(BASE_DIR, 'data/rainfall/real_rainfall_data.csv'))
+parser.add_argument("--synth_path", type=str, default=os.path.join(BASE_DIR, 'results/generated_data/rainfall_synthetic_10y_v3.csv'))
+parser.add_argument("--out_dir", type=str, default=os.path.join(BASE_DIR, 'results/comparison_report'))
+args = parser.parse_args()
+
+REAL_PATH = args.real_path
+SYNTH_PATH = args.synth_path
+OUT_DIR = args.out_dir
 os.makedirs(OUT_DIR, exist_ok=True)
 
 # --- Load ---

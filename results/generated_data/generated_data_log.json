@@ -1,0 +1,6 @@
+{
+    "v4": "Finetuned all the parameters and generated with 4 (seasons) classes conditionally `results/generated_data/rainfall_synthetic_10y_v4.csv`",
+    "v3": "Unconditional inference with 10-min resolution to match training data resolution: `results/generated_data/rainfall_synthetic_10y_v3.csv`",
+    "v2": "5-min resolution and remove negative gaussian noise: `results/generated_data/rainfall_synthetic_10y_v2.csv`",
+    "v1": "First try with 5-min resolution: `results/generated_data/rainfall_synthetic_10y_v1.csv`"
+}
