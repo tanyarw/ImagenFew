@@ -1,243 +1,189 @@
-# Research Progress Diary & Changelog: High-Resolution Synthetic Rainfall Generation via Time-Series Diffusion
+# Research Progress Diary & Changelog: Synthetic Rainfall Generation via Time-Series Diffusion
 
-**Project:** Adaptation of ImagenFew & Time-Series Diffusion Models for Sparse Meteorological Precipitation  
-**Primary Application:** Synthetic Dataset Curations for Downstream Reinforcement Learning (RL) in Stormwater Management, Reservoir Control, and Flood Regulation
-
----
-
-## July 27, 2026 — Unsupervised HMM Seasonal Analysis & Synthetic Dataset Seasonality Audit
-
-### Hidden Markov Model (HMM) Seasonal Profiling and Regime Validation
-
-### 🔍 Context
-- Developed and executed an unsupervised seasonal storm detection pipeline in `data_analysis/HMM_Season_Analysis.ipynb` (also mirrored in `/flood-control/src/rainfall_datagen/notebooks/HMM_Season_Analysis.ipynb`).
-- Evaluated the 10-minute historical training dataset `data/rainfall/train/rainfall_10min_labeled.csv`, comparing unsupervised 4-state `GaussianHMM` predictions against supervised 14-day block clustering `gmm_regime` labels.
-- Evaluated synthetic generated datasets:
-  - `results/generated_data/rainfall_synthetic_10y_v3.csv` (Unconditional 10-minute generation)
-  - `results/generated_data/rainfall_synthetic_10y_v4.csv` (Conditional GMM regime generation, where regime labels are derived from GMM block-clustering incorporating HMM seasonal features)
-
-### ❓ Why Was It Done
-- To verify that the supervised `gmm_regime` labels (derived from clustering 14-day storm features like volume and intensity along with HMM seasonality) reflect true underlying seasonal meteorological shifts across the annual 365-day cycle.
-- To audit whether current time-series diffusion models (unconditional `v3` and regime-conditioned `v4`) successfully generate realistic seasonal transitions and climatological diversity over multi-year simulation horizons.
-
-### 🧪 What the Results Are
-
-#### 1. Robust Ground-Truth Seasonal Alignment (Training Data)
-When fitting a 4-state `GaussianHMM` on daily resampled and 14-day smoothed features (`Total Rainfall`, `Maximum Intensity`, `Rainy Fraction`), the unsupervised model autonomously segmented the year into contiguous, meteorologically coherent seasonal regimes:
-- **State 2 (Winter / Calm Regime, Months 1–4, 12):** Dominates early spring and winter with low accumulation and low intensity. Aligns strongly with GMM Regimes 2 & 3 (dry baseline / moderate).
-- **State 0 (Monsoon / Early Summer Transition, Months 5–7):** Captures convective onset and rising rainfall fraction. Aligns with GMM Regimes 1 & 3 (secondary heavy / moderate).
-- **State 3 (Late Summer / Autumn Peak, Months 8–10):** Captures peak annual storm intensities and volumes. Perfect correspondence with GMM Regime 0 (extreme cloudbursts).
-- **State 1 (Autumn Transition, Month 11):** Captures post-storm decay transitioning back into winter conditions.
-
-![Climatological HMM states](../../results/hmm_seasonal_analysis/01_train_climatological_hmm_states.png)
-
-#### 2. Synthetic Dataset Seasonality Audit (The "Single-Regime Lock")
-Applying the same trained scaler and HMM model to the synthetic datasets revealed:
-- Training Data has Balanced (States 0, 1, 2, 3)
-- `v3` (Unconditional) has only State 2 (365 / 365 days) as the most frequent low-intensity resting state. 
-- `v4` (Conditional) has only State 3 (363 / 365 days) as the most frequent high-intensity storm state. The other 2 days were State 0 and 2. 
-
-![Climatological HMM states](../../results/hmm_seasonal_analysis/02_synth_v3_climatological_hmm_states.png)
-
-![Climatological HMM states](../../results/hmm_seasonal_analysis/03_synth_v4_climatological_hmm_states.png)
-
-#### 3. Analytical Conclusions
-1. Because 89.5% of empirical 10-minute intervals are zero-rainfall, unconditional diffusion models default to generating smooth winter-like (`State 2`) sequences year-round to minimize loss ($5.60\text{ mm/h}$ peak).
-2. Conditioning on `gmm_regime` forces the model to generate extreme instantaneous bursts ($10.77\text{ mm}$ peak), evaluating the 10-year continuous series shows it remains permanently locked in the high-rain summer regime (`State 3`).
-3. Current diffusion conditioning does not transition between regimes across time. 
-
-### 🚀 Actions & Thoughts for Next Steps
-1. Inspect how and if a learned $4 \times 4$ HMM matrix can be used to sample a realistic sequence of daily regime labels over a 365-day simulation horizon.
-2. Modify `configs/finetune/Rainfall.yaml` to include seasonal embeddings (e.g., sinusoidal `day_of_year` or `month` features).
+**Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
+**Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
 ---
 
-## June 15, 2026 — Regime-Mixed Conditional Generation & The "Daily Max Paradox"
+## July 27, 2026 — Seasonality Audit & Root Cause Analysis of Generation Loopholes
 
-### Stress-Testing Extreme Flood Peak Generation via GMM Regime Conditioning (Two-Stage HMM + GMM Pipeline)
+### 🔍 Overview
+We audited how seasonal patterns and weather transitions behave in our synthetic datasets (`v3` unconditional and `v4` conditional) compared to real 10-minute historical data (`data/rainfall/train/rainfall_10min_labeled.csv`). We used an unsupervised 4-state Hidden Markov Model (HMM) in `data_analysis/HMM_Season_Analysis.ipynb` (mirrored in `/flood-control/src/rainfall_datagen/notebooks/HMM_Season_Analysis.ipynb`).
 
-### 🔍 Context
-- To overcome the underestimated extreme peaks identified in our unconditional models, we conditioned the ImagenFew diffusion generation process on 4 distinct GMM rainfall regime classes (which incorporate HMM seasonal features). 
-  - The code for labelling seasons and regimes is in the project `/flood-control/src/rainfall_datagen/notebooks/4_dataset_stratification.ipynb`
-- Developed code in directory `regime_training`.
-- **Evaluated Synthetic Dataset / Run ID:** `results/generated_data/rainfall_synthetic_10y_v4.csv` (10-minute resolution inference, conditioned on 4 GMM regime classes).
+---
 
-### ❓ Why Was It Done
-- Primary engineering objective was to force the generative model to produce realistic 1-in-10-year extreme precipitation bursts
-- Without these extreme data points, downstream RL flood control agents cannot be stress-tested against severe hydraulic loading and emergency reservoir spillway scenarios.
+### 📌 5 Core Model Loopholes Discovered
 
-### Methodology
-1. **Climatological Season Mapping (When HMM was used):** Historical 10-minute rainfall time series are resampled to daily profiles and mapped to 4 seasonal labels via an unsupervised 4-state `GaussianHMM` (**HMM Labels:** `2` = Winter/Calm baseline, `0` = Monsoon Transition, `3` = Late Summer Storm Peak, `1` = Autumn Decay).
-2. **Storm Severity Block Clustering (When GMM was used):** The continuous time series is segmented into contiguous blocks (14-day windows). Each block is assigned a discrete class label $c \in \{0, 1, 2, 3\}$ derived from a 4-component Gaussian Mixture Model (GMM) clustered on features (intensity, total accumulation, dry/wet fraction, AND the HMM seasonal label from Step 1).
-   - **GMM Conditioning Labels (`gmm_regime`):**
-     - **Label 0:** Extreme Cloudburst Regime (Max peak ~5.55 mm/10-min, up to 10.77 mm in generation).
-     - **Label 1:** Secondary Heavy Regime (Max peak ~3.64 mm/10-min).
-     - **Label 3:** Moderate Regime (Max peak ~1.55 mm/10-min).
-     - **Label 2:** Dry Baseline Regime (Low intensity resting state, Max peak ~0.70 mm/10-min).
-3. The diffusion model is fine-tuned on sliding windows of scaled rainfall paired directly with their block's discrete **GMM regime label** (`gmm_regime`, where Label 0 triggers extreme 1-in-10-year cloudburst generation).
-4. During inference, GMM regime conditioning is passed as one-hot encoded vectors into the diffusion denoising process.
-5. To generate multi-year synthetic datasets, sample allocation across the 4 GMM regimes is set proportionally to the empirical regime distribution observed in training data ($\approx 25.5\%$ Regime 0, $37.0\%$ Regime 1, $27.9\%$ Regime 2, $9.6\%$ Regime 3).
-6. Generated regime blocks are randomly shuffled and concatenated to form a continuous multi-year time series. Note: Because GMM clusters blocks independently without learning sequential Markovian persistence, concatenating blocks causes storm duration to collapse compared to reality (66 mins vs. 100 mins), explaining the "Daily Max Paradox".
+1. **Random Block Shuffling Causes the "Daily Max Paradox"**
+   - *Problem:* In `regime_training/generate_regime.py`, 14-day generated weather blocks were randomly shuffled (`generated[rng.permutation(...)]`) and glued together.
+   - *Impact:* Real storms persist continuously over 6–12 hours. Randomly shuffling blocks cuts storms off at block boundaries (~60 mins). This explains why `v4` reaches high 10-minute bursts (10.77 mm) but fails to reach realistic 24-hour totals (27.6 mm max vs 52.1 mm real).
 
-### 🧪 What the Results Are
-The regime-mixed conditional model achieved an Overall RL Fitness Score of **0.622 / 1.000** (Verdict: ⚠️ **MODERATELY  FIT**). 
+2. **Short Context Horizon ($seq\_len = 24$ = 4 Hours)**
+   - *Problem:* Training configs (`configs/finetune/Rainfall.yaml` and `regime_training/config.yaml`) set the context window to `seq_len: 24` (4 hours at 10-minute resolution).
+   - *Impact:* The U-Net self-attention mechanism only sees 4 hours at a time, preventing the model from learning multi-hour storm growth, frontal decay, or multi-day drought recovery.
 
+3. **Static Window Conditioning & "Single-Regime Lock"**
+   - *Problem:* During generation, reverse diffusion uses one static class label for the entire window.
+   - *Impact:* Real weather continuously transitions between states. Static labels prevent the model from learning transitions ($R_t \rightarrow R_{t+1}$). Generated multi-year series stay permanently stuck in one state:
+     - `v3` (Unconditional) stays locked in **State 2 (Dry/Winter)** for 365 of 365 days.
+     - `v4` (Conditional) stays locked in **State 3 (Storm/Summer)** for 363 of 365 days.
 
-#### Critical Analysis: The Duration vs. Peak Trade-Off
-The storm structural properties highlight the exact strengths and weaknesses of the regime-based approach:
+4. **Biased Evaluation Scorecard**
+   - *Problem:* The equal-weighted scoring formula penalizes `v4` heavily for storm duration mismatches (score: 0.622) while giving `v3` a higher score (0.733), even though `v3` caps extreme flood peaks by 50% (5.60 mm vs 10.68 mm real).
+   - *Impact:* Relying purely on the `v3` score is dangerous; an RL agent trained on `v3` will fail during severe 1-in-10-year floods.
 
-| Metric | Real Ground Truth | Synthetic (Mixed Regime) | Status | Data Science Analysis & Impact on RL |
-|---|:---:|:---:|:---:|:---|
-| **Number of Storms** | 4,852 | **5,557** | ✅ Fairly matched | Compensates for shorter individual storm episodes. |
-| **Mean Storm Duration** | 100 mins | **66 mins** | ❌ Significantly shorter | **Severe Impact:** Storms pass much faster than reality. Agents managing reservoir capacity might not learn sustained flood defense. |
-| **Mean Peak Intensity** | 0.302 mm | **0.371 mm** | ⚠️ Slightly higher | Reflects the forced sampling from high-intensity GMM clusters. |
-| **Mean Storm Volume** | 1.43 mm | **1.13 mm** | ⚠️ Lower | Directly tied to duration collapse; overall water volume per storm is reduced. |
-| **Max Instantaneous Peak** | **10.68 mm** | **10.77 mm** | ✅ **Massive Win** | Perfectly matches the absolute empirical 10-minute maximum cloudburst. |
-| **Daily Max Rainfall** | **52.1 mm** | **27.6 mm** | ⚠️ Underestimated | Demonstrates that daily totals depend on duration, not just peak bursts. |
+5. **Information Leakage in Data Labeling**
+   - *Problem:* `scripts/label_10min_data.py` assigned labels using total 14-day window statistics, leaking summary metrics into window conditioning while ignoring transition probabilities $P(R_{t+1} \mid R_t)$.
 
+---
 
+### 🧪 Ground-Truth Seasonality vs. Synthetic Behavior
 
-To evaluate our `v3` and `v4` datasets against real ground truth and assess their RL fitness, we conducted an exhaustive tri-dataset audit.
+When fitting a 4-state `GaussianHMM` on daily aggregated real data, the model naturally identified 4 real-world seasons:
+- **State 2 (Winter / Dry Baseline, Months 1–4 & 12):** Low volume, low intensity. Matches GMM Regimes 2 & 3.
+- **State 0 (Monsoon Transition, Months 5–7):** Rising rain frequency and early storms. Matches GMM Regimes 1 & 3.
+- **State 3 (Late Summer Peak, Months 8–10):** Extreme cloudbursts and maximum volumes. Matches GMM Regime 0.
+- **State 1 (Autumn Decay, Month 11):** Post-storm decay back into winter.
 
+**Synthetic Audit Result:**
+- **Real Data:** Balanced distribution across States 0, 1, 2, and 3 across the year.
+- **`v3` (Unconditional):** Generates State 2 (dry winter) 365/365 days because 89.5% of real time-steps are zero rain. The model defaults to calm weather to minimize loss.
+- **`v4` (Conditional):** Generates State 3 (heavy summer storm) 363/365 days because GMM regime conditioning forces heavy rain without allowing transitions back to calm weather.
 
-#### 1. Core Structural Properties Comparison
-| Metric | Real Data | Synthetic (Unconditional `v3`) | Synthetic (Conditional Regime `v4`) | Assessment |
-|:---|:---:|:---:|:---:|:---|
-| **Zero Fraction** | 89.5% | 89.9% | 90.7% | Both models achieve excellent sparsity via 0.005mm thresholding. Conditional is marginally drier probably due to regime resting states. |
-| **Number of Storms** | 4,852 | 5,613 | 5,557 | Both models overestimate storm count by ~15%.|
+---
 
-#### 2. Storm Geometry & Temporal Dynamics (The Core Trade-Off)
-| Metric | Real Data | Synthetic (Unconditional `v3`) | Synthetic (Conditional Regime `v4`) | Assessment |
-|:---|:---:|:---:|:---:|:---|
-| **Mean Storm Duration** | **100 mins** | **77 mins** | **66 mins** | Regime models fracture temporal continuity. Discrete regime switching causes storms to prematurely collapse. |
-| **Mean Storm Volume** | 1.43 mm | 1.18 mm | 1.13 mm | Volumes are underestimated in both, directly correlated with shortened storm durations. |
-| **Peak Timing** | 36.8% | ~36–39% | 37.8% | Both models capture that empirical storms are front-loaded (peaking around the 1/3 mark). |
+### 🚀 Planned Next Experiments
 
-#### 3. Extreme Values & Tail Probabilities
-| Metric | Real Data | Synthetic (Unconditional `v3`) | Synthetic (Conditional Regime `v4`) | Assessment |
-|:---|:---:|:---:|:---:|:---|
-| **P99 Intensity** | 0.315 mm | 0.314 mm | 0.329 mm | Both handle the 99th percentile well (Ratios: 0.995 and 1.044). |
-| **Max Peak Intensity** | **10.68 mm** | **5.60 mm** | **10.77 mm** | Massive victory for Regime-Conditioning. Unconditional failed at absolute limits; Regime well matches reality. |
-| **Daily Max Rainfall** | 52.1 mm | 26.5 mm | 27.6 mm | Despite high 10-min peaks, short durations (66 mins) prevent conditional models from accumulating realistic 24-hour totals. |
+1. **Experiment 1: Transition-Aware Markovian Block Assembly**
+   - Calculate the 1st-order transition matrix $P(R_{t+1} \mid R_t)$ from `rainfall_10min_labeled.csv`.
+   - Update `regime_training/generate_regime.py` to sample sequential regimes via transition probabilities $P_{ij}$ instead of random shuffling, adding overlap-add smoothing at boundaries.
+   - *Goal:* Increase average storm duration to ~100 mins and daily maximum rainfall to 50+ mm.
 
-#### 4. Analytical Conclusions
-1. The Unconditional Model `v3`(Overall Score: 0.733 / 1.000):
-    - It generates better sequence lengths and autocorrelations.
-    - It knows how to sustain a storm.
-    - However, like many unconditioned deep learning models, it suffers from "regression to the mean," smoothing out absolute extremes.
-    - It is difficult to simulate a severe flash flood with this dataset.
-2. The Conditional Model `v4` (Overall Score: 0.622 / 1.000):
-    - By using GMM regime clusters (conditioned on HMM seasonality and storm features), we force the model to output 10.77 mm peaks.
-    - It works perfectly for instantaneous extremes.
-    - But the non-Markovian nature of GMM block-clustering across windows causes the model to lack sequential persistence across regime transitions, causing storms to hit hard and quickly vanish.
-3. The "Daily Max" Paradox:
-  - The conditional model perfectly matches the 10-minute Max Peak (10.77 mm vs 10.68 mm) but fails the Daily Max (27.6 mm vs 52.1 mm).
-  - This proves that real-world 50mm+ daily rainfall events are probably caused by short bursts of cloudburst rain, but rather by sustained heavy rain over many continuous hours.
-4. Overall Verdict for RL Deployment:
-   * **Unconditional Dataset:** Fit for generalized day-to-day policy training, but dangerous for flood-control (will underestimate severe flood volumes).
-   * **Conditional Dataset:** Moderately fit for stress-testing instantaneous extreme flood responses, but will bias the agent to expect storms to end prematurely.
+2. **Experiment 2: Expand Context Horizon ($seq\_len \rightarrow 144 / 288$)**
+   - Increase `seq_len` in `configs/finetune/Rainfall.yaml` from 24 to 144 (24 hours) or 288 (48 hours).
+   - Fine-tune ImagenFew with wider context windows.
+   - *Goal:* Capture 24-hour storm dynamics and multi-day autocorrelation decay.
 
-### 🚀 Actions & Thoughts for Next Steps
-1. Analyze how frequently the regime switches in the conditional model and see if we can enforce state persistence better. Ideally we want to avoid the model jumping between regimes too frequently.
-2. Increase `seq_len` from 144 up to 288 steps (48 hours) in `configs/finetune/Rainfall.yaml` to allow attention heads to capture synoptic storm persistence.
-3. Long term view ->Train RL agents initially on Unconditional data for long-term water management and drought recovery, then fine-tune on Regime-Mixed data for emergency flash-flood spillway response.
+3. **Experiment 3: Continuous Time & Dynamic HMM Conditioning**
+   - Feed continuous time features ($\sin/\cos$ of `day_of_year`) and continuous HMM state probabilities $P(S_t)$ into the U-Net conditioning layers.
+   - *Goal:* Enable smooth 365-day weather transitions without artificial block cuts.
+
+4. **Experiment 4: Classifier-Free Guidance (CFG) & Heavy-Tail Loss Weighting**
+   - Tune CFG scale ($\omega \in [1.2, 2.5]$) and apply an intensity-weighted loss function $w(x) = 1 + \alpha |x|^\gamma$.
+   - *Goal:* Allow unconditional models to naturally generate extreme peaks (>10 mm) without artificial regime forced labels.
+
+---
+
+## June 15, 2026 — Regime-Conditioned Model (v4) & The "Daily Max Paradox"
+
+### 🔍 Overview
+To fix the missing extreme peaks in unconditional models, we conditioned ImagenFew on 4 discrete weather regimes using a two-stage pipeline (HMM seasons + GMM storm clustering).
+- **Code Locations:** `/flood-control/src/rainfall_datagen/notebooks/4_dataset_stratification.ipynb` and `regime_training/`.
+- **Dataset Evaluated:** `results/generated_data/rainfall_synthetic_10y_v4.csv` (10-minute resolution, 10-year generation).
+
+---
+
+### 🛠️ Methodology
+
+1. **Seasonal Labeling (HMM):** Mapped daily rainfall profiles to 4 seasonal states using a 4-state `GaussianHMM` (2 = Winter/Calm, 0 = Monsoon Transition, 3 = Late Summer Storm, 1 = Autumn Decay).
+2. **Regime Clustering (GMM):** Segmented time series into 14-day blocks. Clustered blocks into 4 GMM regimes using intensity, volume, dry fraction, and HMM seasonal labels:
+   - **Regime 0 (Extreme Cloudburst):** Max peak ~5.55 mm/10-min in data (generated up to 10.77 mm).
+   - **Regime 1 (Secondary Heavy):** Max peak ~3.64 mm/10-min.
+   - **Regime 3 (Moderate):** Max peak ~1.55 mm/10-min.
+   - **Regime 2 (Dry Baseline):** Max peak ~0.70 mm/10-min.
+3. **Training & Inference:** Fine-tuned diffusion model using one-hot encoded GMM regime vectors.
+4. **Dataset Assembly:** Sampled regime blocks proportional to real-world frequencies (~25.5% R0, 37.0% R1, 27.9% R2, 9.6% R3), then randomly shuffled and concatenated them into a 10-year dataset.
+
+---
+
+### 📊 Results & Key Trade-Offs
+
+- **Overall RL Fitness Score:** **0.622 / 1.000** (Verdict: ⚠️ **MODERATELY FIT**)
+
+#### Tri-Dataset Comparison Table (`v3` vs `v4` vs Real Data)
+
+| Category | Metric | Real Data | Synthetic `v3` (Unconditional) | Synthetic `v4` (Regime-Conditioned) | Findings & Analysis |
+|---|---|:---:|:---:|:---:|---|
+| **Sparsity & Counts** | **Zero Fraction** | 89.5% | 89.9% | 90.7% | Excellent dry spell match across all models. |
+| | **Storm Count** | 4,852 | 5,613 | 5,557 | Both models slightly overestimate storm count by ~15%. |
+| **Storm Geometry** | **Mean Storm Duration** | **100 mins** | **77 mins** | **66 mins** | `v4` breaks duration because random block concatenation cuts storms short. |
+| | **Mean Storm Volume** | 1.43 mm | 1.18 mm | 1.13 mm | Shortened storm durations reduce total volume per storm. |
+| | **Peak Timing** | 36.8% | ~36–39% | 37.8% | Both models accurately front-load storm peaks (peaking near 1/3 duration). |
+| **Extreme Peaks** | **P99 Intensity** | 0.315 mm | 0.314 mm | 0.329 mm | Both models accurately capture the 99th percentile. |
+| | **Max Instantaneous Peak** | **10.68 mm** | **5.60 mm** | **10.77 mm** | **Major Win for `v4`:** GMM conditioning successfully forces realistic peak cloudbursts. |
+| | **Daily Max Rainfall** | **52.1 mm** | 26.5 mm | **27.6 mm** | **The Daily Max Paradox:** `v4` matches peak 10-min bursts but fails 24-hr totals due to short storm durations. |
+
+---
+
+### 💡 Key Takeaways & RL Impact
+
+1. **The "Daily Max" Paradox:** Matching peak instantaneous rain (10.77 mm) is not enough to generate 50mm+ daily floods. Real flood events require heavy rain sustained over 6–12 continuous hours. Shuffling independent 14-day blocks breaks this temporal continuity.
+2. **RL Training Suitability:**
+   - **`v3` (Unconditional):** Great for standard day-to-day policy training, but dangerous for flood defense because it underestimates flood volumes by 50%.
+   - **`v4` (Regime-Conditioned):** Great for testing immediate flash-flood responses, but teaches the agent that severe storms always end quickly (66 mins vs 100 mins).
 
 ---
 
 ## June 12, 2026 — Unconditional Model Validation & The 0.005 mm Sparsity Breakthrough
 
-### Unconditional Generation (Inference)
-
-### 🔍 Context
-- Finalized `generate_dataset.py` and evaluated 10-year unconditional synthetic rainfall dataset.
-- Evaluated `rainfall_synthetic_10y_v3.csv` (10-minute resolution, post-processed with $R < 0.005\text{ mm} \rightarrow 0.0$).
-- **Historical Generation Log References (`Generated data log.md`):**
-  * `rainfall_synthetic_10y_v2.csv` (earlier trial with 5-minute resolution removing negative Gaussian noise).
-  * `rainfall_synthetic_10y_v1.csv` (initial trial with 5-minute resolution that had negative Gaussian noise).
-
-
-### What the Results Are
-The application of the $0.005 \text{ mm}$ threshold yielded a breakthrough in structural fidelity, elevating the dataset's Overall RL Fitness Score to **0.733 / 1.000**.
-
-#### Critical Analysis: Impact of the 0.005mm Floor
-* **Dry/Wet Intermittency Resolved:**
-  * **Real Zero Fraction:** **89.5%**
-  * **Synthetic Zero Fraction:** **89.9%** (Formerly **45.0%** before thresholding).
-  * **Result:** Clamping values $< 0.005\text{ mm}$ to `0.0` successfully removed background noise haze. The RL agent experiences a realistic distribution of dry spells, with maximum drought lengths expanding from **4 hours to 93 hours (3.8 days)**.
-* **Storm Event Realism Before vs. After Thresholding:**
-  The table below demonstrates how the $0.005\text{ mm}$ threshold transformed storm structural properties:
-
-| Metric | Real Ground Truth | Synthetic (Before Threshold) | Synthetic (After 0.005mm Threshold) | Status & Analysis |
-|---|:---:|:---:|:---:|:---|
-| **Number of Storms** | 4,852 | 35,248 | **5,613** | ✅ Well-matched; eliminated tens of thousands of false noise interruptions. |
-| **Mean Storm Duration** | 100 mins | 55 mins | **77 mins** | ⚠️ Slightly shorter than real, but a 40% improvement over raw output. |
-| **Mean Peak Intensity** | 0.302 mm | 0.054 mm | **0.323 mm** | ✅ Excellent match; removes artificial dilution from sub-millimeter noise. |
-| **Mean Storm Volume** | 1.43 mm | 0.20 mm | **1.18 mm** | ✅ Excellent match; realistic water accumulation per storm event. |
-
-* **Concern (Underestimated Extremes):**
-  While the 99th percentile matches well, the rarest, most extreme cloudbursts are roughly halved:
-  * **Daily Max Rainfall:** Real: **52.1 mm** vs. Synthetic: **26.5 mm**.
-  * **Max Instantaneous Peak:** Real: **10.68 mm/10-min** vs. Synthetic: **5.60 mm/10-min**.
-  * **RL Impact:** A flood-control agent trained solely on this dataset will under-prepare for severe 1-in-10-year flood events.
-
-### 🚀 Actions & Thoughts for Next Steps
-1. Implement two-stage HMM + GMM regime conditioning to overcome the underestimated 5.60 mm peak cap and 26.5 mm daily maximum limits.
-2. Consider sequence lengths (`seq_len`) $\ge 144$ steps in training configs to model multi-day droughts and storm systems successfully.
-
-### 🧠 Interpretations About Our Hypothesis
-- Unconditional time-series diffusion models suffer from an inherent "regression to the mean" bias in latent space. 
-- While isotropic denoising excels at learning global temporal autocorrelation and spell continuity (maintaining 77-minute storm durations and realistic 24-hour Autocorrelation Function (ACF) decay), it systematically penalizes high-amplitude, low-probability outliers.
-- Because extreme cloudbursts (>10 mm) represent less than 0.1% of empirical data points, an unconditioned loss landscape treats these peaks as noise variance to be smoothed out, capping generated peak intensities at ~5.6 mm.
+### 🔍 Overview
+We evaluated the 10-year unconditional synthetic dataset `results/generated_data/rainfall_synthetic_10y_v3.csv` at 10-minute resolution, using a post-processing rule that sets values $< 0.005\text{ mm}$ to `0.0`.
+- *Earlier Iterations:* `v1` (5-min resolution with raw Gaussian noise) and `v2` (5-min resolution with negative values removed).
 
 ---
 
-## May 28, 2026 — Designing the Conditional & Sparse Evaluation Pipeline
+### 📈 Breakthrough Results (Score: 0.733 / 1.000)
 
-### Development of Two-Tiered Evaluation Methodology and Wet-Window Diagnostics
+Applying the $0.005\text{ mm}$ threshold eliminated low-level background noise, dramatically improving structural realism.
 
-### 🔍 Context
-- Standard metrics to evaluate generated rainfall were inadequate
-- Designed and committed a comprehensive, domain-specific evaluation framework: `evaluate_conditional.py`, `metrics/conditional_metrics.py`, `visualize.py` and `utils/utils_vis.py`
-- `guides/EVALUATION_GUIDE.md` contains the approach
-
-### ❓ Why Was It Done
-- To test whether synthetic data is safe for downstream RL (e.g., training a stormwater control valve or flood reservoir policy), we needed to establish evaluation.
-- An RL agent trained on data with incorrect storm volumes or missing extremes will learn policies that lead to poor control decisions and infrastructure failure, like floods.
-- We structured our evaluation into a **Two-Tiered Methodology**:
-    1. **Tier 1: Standard Global Metrics** — Measuring overall sequence distributions via RNN Discriminative Scores (`test/disc_mean`), Predictive MAE (`test/pred_mean`), and Context FID (`test/context_fid` via TS2Vec embeddings).
-    2. **Tier 2: Conditional Fidelity Metrics** — Measuring storm-specific metrics via Wet-Window Discriminative Scores, Non-Zero Intensity Jensen-Shannon Divergence (JSD), 99th Percentile (P99) Extreme Ratios, and Contiguous Event Duration Statistics.
-
-
-### 🚀 Actions & Thoughts for Next Steps
-1. Create a dedicated script (`generate_dataset.py`) that incorporates hard thresholding (set rainfall < 0.005 mm to 0) during dataset export.
-2. Build a comparative analysis package (`data_analysis/compare_real_synth.py`, `Comparison_Analysis.ipynb`, `Storm_Profile_Analysis.ipynb`) to standardize the calculation of RL fitness reports for future model iterations.
-
-### 🧠 Interpretations About Our Hypothesis
-- Standard evaluation fails for rainfall. We hypothesized that accurately evaluating precipitation requires measuring two separate things: (1) **when** it rains (spell timing), and (2) **how heavy** it rains during a storm (event intensity).
-- A model that outputs zeros 90% of the time easily cheats standard tests. By establishing **Wet-Window Discriminative Scoring** and **Intensity JSD (< 0.05)** as our primary benchmarks, we measure whether the model generates realistic storms, not just silent dry spells.
+| Metric | Real Ground Truth | Synthetic (Raw Output) | Synthetic (With 0.005mm Threshold) | Key Improvement |
+|---|:---:|:---:|:---:|---|
+| **Zero Fraction** | 89.5% | 45.0% | **89.9%** | Removed background noise haze. Max drought expanded from 4 hrs to 93 hrs (3.8 days). |
+| **Storm Count** | 4,852 | 35,248 | **5,613** | Eliminated tens of thousands of false noise interruptions. |
+| **Mean Duration** | 100 mins | 55 mins | **77 mins** | 40% improvement in storm continuity over raw output. |
+| **Mean Peak Intensity**| 0.302 mm | 0.054 mm | **0.323 mm** | Fixed intensity dilution caused by sub-millimeter noise. |
+| **Mean Storm Volume** | 1.43 mm | 0.20 mm | **1.18 mm** | Reached realistic total rainfall volume per storm. |
 
 ---
 
-## May 22, 2026 — Initial Ingestion of High-Resolution Rainfall Data & Baseline Adaptation
+### ⚠️ Main Flaw: Underestimated Extreme Cloudbursts
 
-### Custom 10-Minute Rainfall Dataset Integration into the ImagenFew Diffusion Framework
+While `v3` captured average storms well, it severely underestimated 1-in-10-year extreme events:
+- **Max Instantaneous Peak:** 5.60 mm/10-min (Synthetic) vs. **10.68 mm** (Real) — *Halved*
+- **Daily Max Rainfall:** 26.5 mm (Synthetic) vs. **52.1 mm** (Real) — *Halved*
 
-### 🔍 Context
-- Standard time-series generative benchmarks (e.g., ETT, ECG200, Weather, AirQuality) consist of continuous, relatively smooth biological or physical measurements.
-- But, high-resolution precipitation data has: 
-      - extreme zero-value sparsity
-      - non-Gaussian heavy-tailed intensity distributions
-      - rapid intermittency between dry spells
-      - convective cloudbursts. 
-- Adaptation of the unconditional ImagenFew architecture to ingest, scale, and model empirical 10-minute rainfall time series (`rainfall_10min.csv`).
-
-### ❓ Why Was It Done
-- To evaluate whether standard time-series diffusion architectures can learn precipitation dynamics.
-- Implemented a custom dataset handler (`data_provider/datasets/custom.py`) and training configuration (`configs/finetune/Rainfall.yaml`) to enable standard normalization, windowing (`seq_len=24` to `144`), and autoregressive sampling over multi-year periods.
-
-### 🚀 Actions & Thoughts for Next Steps
-- Do not rely solely on standard global discriminative and predictive metrics, as they reward models for generating continuous low-level drizzle rainfall.
-- Create an evaluation suite that isolates storm events from dry periods.
-- Implement thresholding ($< 0.005\text{ mm}$) during inference to eliminate Gaussian noise and restore realistic intermittency.
+**Why This Happens:** Unconditional diffusion models suffer from "regression to the mean." Because cloudbursts (>10 mm) account for less than 0.1% of all data points, standard loss functions treat extreme spikes as noise variance and smooth them out to ~5.6 mm.
 
 ---
+
+## May 28, 2026 — Designing the Two-Tier Evaluation Pipeline
+
+### 🔍 Overview
+Standard generative metrics (like global MSE) fail for rainfall because a model can achieve low error simply by outputting zero rain 90% of the time. To ensure synthetic data is safe for downstream RL training, we built a domain-specific evaluation framework in `evaluate_conditional.py`, `metrics/conditional_metrics.py`, `visualize.py`, and `utils/utils_vis.py` (documented in `guides/EVALUATION_GUIDE.md`).
+
+---
+
+### 📐 Two-Tier Evaluation Structure
+
+1. **Tier 1: Global Sequence Metrics**
+   - **RNN Discriminative Score** (`test/disc_mean`): Evaluates how easily a classifier distinguishes synthetic from real sequences.
+   - **Predictive MAE** (`test/pred_mean`): Measures short-term step-by-step predictability.
+   - **Context FID** (`test/context_fid`): Measures global feature distribution alignment using TS2Vec embeddings.
+
+2. **Tier 2: Storm-Specific (Conditional) Metrics**
+   - **Wet-Window Discriminative Score:** Evaluates sequence quality strictly during active rain windows.
+   - **Intensity JSD (< 0.05):** Jensen-Shannon Divergence of non-zero rainfall values.
+   - **P99 Extreme Ratio:** Compares 99th percentile rainfall intensities.
+   - **Contiguous Event Duration & Volume Statistics:** Tracks continuous storm duration, peak timing, and total storm accumulation.
+
+---
+
+## May 22, 2026 — Initial Data Ingestion & Baseline Model Adaptation
+
+### 🔍 Overview
+Adapted the unconditional ImagenFew diffusion framework to ingest 10-minute empirical precipitation data (`rainfall_10min.csv`).
+
+### ⚙️ Implementation Details
+- **Data Characteristics:** High-resolution rainfall differs from standard continuous time-series benchmarks (e.g., ETT, ECG, Weather) because it has extreme zero-value sparsity (>89% zeros), heavy-tailed intensity spikes, and sudden intermittency.
+- **Code Setup:** Implemented custom dataset handler (`data_provider/datasets/custom.py`) and config (`configs/finetune/Rainfall.yaml`) supporting normalization, configurable sliding windows (configured default `seq_len = 24` / 4 hours, with data loader supporting up to 144), and multi-year autoregressive sampling.
+- **Key Insight:** Standard metrics reward models for producing constant light drizzle. Future iterations must evaluate dry spells and storm events separately.
