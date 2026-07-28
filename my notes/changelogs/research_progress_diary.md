@@ -12,15 +12,15 @@ We audited how seasonal patterns and weather transitions behave in our synthetic
 
 ---
 
-### 📌 5 Core Model Loopholes Discovered
+### 📌 Core Model Loopholes Discovered
 
 1. **Random Block Shuffling Causes the "Daily Max Paradox"**
    - *Problem:* In `regime_training/generate_regime.py`, 14-day generated weather blocks were randomly shuffled (`generated[rng.permutation(...)]`) and glued together.
-   - *Impact:* Real storms persist continuously over 6–12 hours. Randomly shuffling blocks cuts storms off at block boundaries (~60 mins). This explains why `v4` reaches high 10-minute bursts (10.77 mm) but fails to reach realistic 24-hour totals (27.6 mm max vs 52.1 mm real).
+   - *Impact:* Real storms persist continuously over hours. Randomly shuffling blocks method probably generates the peak burst, but the block ends and gets randomly glued to a dry block.
 
 2. **Short Context Horizon ($seq\_len = 24$ = 4 Hours)**
    - *Problem:* Training configs (`configs/finetune/Rainfall.yaml` and `regime_training/config.yaml`) set the context window to `seq_len: 24` (4 hours at 10-minute resolution).
-   - *Impact:* The U-Net self-attention mechanism only sees 4 hours at a time, preventing the model from learning multi-hour storm growth, frontal decay, or multi-day drought recovery.
+   - *Impact:* The U-Net self-attention mechanism only sees 4 hours at a time, preventing the model from learning multi-hour storm growth, decay, or recovery.
 
 3. **Static Window Conditioning & "Single-Regime Lock"**
    - *Problem:* During generation, reverse diffusion uses one static class label for the entire window.
@@ -85,14 +85,14 @@ To fix the missing extreme peaks in unconditional models, we conditioned ImagenF
 
 ### 🛠️ Methodology
 
-1. **Seasonal Labeling (HMM):** Mapped daily rainfall profiles to 4 seasonal states using a 4-state `GaussianHMM` (2 = Winter/Calm, 0 = Monsoon Transition, 3 = Late Summer Storm, 1 = Autumn Decay).
+1. **Number of "K" decision with HMM:** Mapped daily rainfall profiles to $K=4$ seasonal states using a `GaussianHMM` (2 = Winter/Calm, 0 = Monsoon Transition, 3 = Late Summer Storm, 1 = Autumn Decay).
 2. **Regime Clustering (GMM):** Segmented time series into 14-day blocks. Clustered blocks into 4 GMM regimes using intensity, volume, dry fraction, and HMM seasonal labels:
    - **Regime 0 (Extreme Cloudburst):** Max peak ~5.55 mm/10-min in data (generated up to 10.77 mm).
    - **Regime 1 (Secondary Heavy):** Max peak ~3.64 mm/10-min.
    - **Regime 3 (Moderate):** Max peak ~1.55 mm/10-min.
    - **Regime 2 (Dry Baseline):** Max peak ~0.70 mm/10-min.
 3. **Training & Inference:** Fine-tuned diffusion model using one-hot encoded GMM regime vectors.
-4. **Dataset Assembly:** Sampled regime blocks proportional to real-world frequencies (~25.5% R0, 37.0% R1, 27.9% R2, 9.6% R3), then randomly shuffled and concatenated them into a 10-year dataset.
+4. **Dataset Assembly:** Sampled regime blocks proportional to real-world frequencies (~25.5% R0, ~37.0% R1, ~27.9% R2, ~9.6% R3), then randomly shuffled and concatenated them into a 10-year dataset.
 
 ---
 
