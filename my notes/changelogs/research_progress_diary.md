@@ -14,19 +14,19 @@
 - Evaluated the 10-minute historical training dataset `data/rainfall/train/rainfall_10min_labeled.csv`, comparing unsupervised 4-state `GaussianHMM` predictions against supervised 14-day block clustering `gmm_regime` labels.
 - Evaluated synthetic generated datasets:
   - `results/generated_data/rainfall_synthetic_10y_v3.csv` (Unconditional 10-minute generation)
-  - `results/generated_data/rainfall_synthetic_10y_v4.csv` (Conditional GMM regime generation)
+  - `results/generated_data/rainfall_synthetic_10y_v4.csv` (Conditional GMM regime generation, where regime labels are derived from GMM block-clustering incorporating HMM seasonal features)
 
 ### ❓ Why Was It Done
-- **Objective 1 (Label Validation):** Verify that the supervised `gmm_regime` labels (derived from clustering 14-day storm features like volume and intensity) reflect true underlying seasonal meteorological shifts across the annual 365-day cycle.
-- **Objective 2 (Synthetic Audit):** Audit whether current time-series diffusion models (unconditional `v3` and regime-conditioned `v4`) successfully generate realistic seasonal transitions and climatological diversity over multi-year simulation horizons.
+- To verify that the supervised `gmm_regime` labels (derived from clustering 14-day storm features like volume and intensity along with HMM seasonality) reflect true underlying seasonal meteorological shifts across the annual 365-day cycle.
+- To audit whether current time-series diffusion models (unconditional `v3` and regime-conditioned `v4`) successfully generate realistic seasonal transitions and climatological diversity over multi-year simulation horizons.
 
 ### 🧪 What the Results Are
 
 #### 1. Robust Ground-Truth Seasonal Alignment (Training Data)
 When fitting a 4-state `GaussianHMM` on daily resampled and 14-day smoothed features (`Total Rainfall`, `Maximum Intensity`, `Rainy Fraction`), the unsupervised model autonomously segmented the year into contiguous, meteorologically coherent seasonal regimes:
-- **State 2 (Winter / Calm Regime, Months 1–4, 12):** Dominates early spring and winter with low accumulation and low intensity. Aligns strongly with GMM Regimes 1 & 2.
-- **State 0 (Monsoon / Early Summer Transition, Months 5–7):** Captures convective onset and rising rainfall fraction. Aligns with GMM Regimes 2 & 3.
-- **State 3 (Late Summer / Autumn Peak, Months 8–10):** Captures peak annual storm intensities and volumes. Perfect correspondence with GMM Regime 0.
+- **State 2 (Winter / Calm Regime, Months 1–4, 12):** Dominates early spring and winter with low accumulation and low intensity. Aligns strongly with GMM Regimes 2 & 3 (dry baseline / moderate).
+- **State 0 (Monsoon / Early Summer Transition, Months 5–7):** Captures convective onset and rising rainfall fraction. Aligns with GMM Regimes 1 & 3 (secondary heavy / moderate).
+- **State 3 (Late Summer / Autumn Peak, Months 8–10):** Captures peak annual storm intensities and volumes. Perfect correspondence with GMM Regime 0 (extreme cloudbursts).
 - **State 1 (Autumn Transition, Month 11):** Captures post-storm decay transitioning back into winter conditions.
 
 ![Climatological HMM states](../../results/hmm_seasonal_analysis/01_train_climatological_hmm_states.png)
@@ -54,17 +54,30 @@ Applying the same trained scaler and HMM model to the synthetic datasets reveale
 
 ## June 15, 2026 — Regime-Mixed Conditional Generation & The "Daily Max Paradox"
 
-### Stress-Testing Extreme Flood Peak Generation via GMM Regime Conditioning
+### Stress-Testing Extreme Flood Peak Generation via GMM Regime Conditioning (Two-Stage HMM + GMM Pipeline)
 
 ### 🔍 Context
-- To overcome the underestimated extreme peaks identified in our unconditional models, we conditioned the ImagenFew diffusion generation process on 4 distinct Gaussian Mixture Model (GMM) rainfall regime classes / seasonal clusters. 
-  - The code for labelling seasons is in the project `/flood-control/src/rainfall_datagen/notebooks/4_dataset_stratification.ipynb`
+- To overcome the underestimated extreme peaks identified in our unconditional models, we conditioned the ImagenFew diffusion generation process on 4 distinct GMM rainfall regime classes (which incorporate HMM seasonal features). 
+  - The code for labelling seasons and regimes is in the project `/flood-control/src/rainfall_datagen/notebooks/4_dataset_stratification.ipynb`
 - Developed code in directory `regime_training`.
-- **Evaluated Synthetic Dataset / Run ID:** `results/generated_data/rainfall_synthetic_10y_v4.csv` (10-minute resolution inference, conditioned on 4 seasonal regime classes).
+- **Evaluated Synthetic Dataset / Run ID:** `results/generated_data/rainfall_synthetic_10y_v4.csv` (10-minute resolution inference, conditioned on 4 GMM regime classes).
 
 ### ❓ Why Was It Done
 - Primary engineering objective was to force the generative model to produce realistic 1-in-10-year extreme precipitation bursts
 - Without these extreme data points, downstream RL flood control agents cannot be stress-tested against severe hydraulic loading and emergency reservoir spillway scenarios.
+
+### Methodology
+1. **Climatological Season Mapping (When HMM was used):** Historical 10-minute rainfall time series are resampled to daily profiles and mapped to 4 seasonal labels via an unsupervised 4-state `GaussianHMM` (**HMM Labels:** `2` = Winter/Calm baseline, `0` = Monsoon Transition, `3` = Late Summer Storm Peak, `1` = Autumn Decay).
+2. **Storm Severity Block Clustering (When GMM was used):** The continuous time series is segmented into contiguous blocks (14-day windows). Each block is assigned a discrete class label $c \in \{0, 1, 2, 3\}$ derived from a 4-component Gaussian Mixture Model (GMM) clustered on features (intensity, total accumulation, dry/wet fraction, AND the HMM seasonal label from Step 1).
+   - **GMM Conditioning Labels (`gmm_regime`):**
+     - **Label 0:** Extreme Cloudburst Regime (Max peak ~5.55 mm/10-min, up to 10.77 mm in generation).
+     - **Label 1:** Secondary Heavy Regime (Max peak ~3.64 mm/10-min).
+     - **Label 3:** Moderate Regime (Max peak ~1.55 mm/10-min).
+     - **Label 2:** Dry Baseline Regime (Low intensity resting state, Max peak ~0.70 mm/10-min).
+3. The diffusion model is fine-tuned on sliding windows of scaled rainfall paired directly with their block's discrete **GMM regime label** (`gmm_regime`, where Label 0 triggers extreme 1-in-10-year cloudburst generation).
+4. During inference, GMM regime conditioning is passed as one-hot encoded vectors into the diffusion denoising process.
+5. To generate multi-year synthetic datasets, sample allocation across the 4 GMM regimes is set proportionally to the empirical regime distribution observed in training data ($\approx 25.5\%$ Regime 0, $37.0\%$ Regime 1, $27.9\%$ Regime 2, $9.6\%$ Regime 3).
+6. Generated regime blocks are randomly shuffled and concatenated to form a continuous multi-year time series. Note: Because GMM clusters blocks independently without learning sequential Markovian persistence, concatenating blocks causes storm duration to collapse compared to reality (66 mins vs. 100 mins), explaining the "Daily Max Paradox".
 
 ### 🧪 What the Results Are
 The regime-mixed conditional model achieved an Overall RL Fitness Score of **0.622 / 1.000** (Verdict: ⚠️ **MODERATELY  FIT**). 
@@ -114,9 +127,9 @@ To evaluate our `v3` and `v4` datasets against real ground truth and assess thei
     - However, like many unconditioned deep learning models, it suffers from "regression to the mean," smoothing out absolute extremes.
     - It is difficult to simulate a severe flash flood with this dataset.
 2. The Conditional Model `v4` (Overall Score: 0.622 / 1.000):
-    - By using GMM regime clusters, we force the model to output 10.77 mm peaks.
+    - By using GMM regime clusters (conditioned on HMM seasonality and storm features), we force the model to output 10.77 mm peaks.
     - It works perfectly for instantaneous extremes.
-    - But the Markovian nature of regime-switching causes the model to "fall out" of the high-rain regime too quickly, causing storms to hit hard and quickly vanish.
+    - But the non-Markovian nature of GMM block-clustering across windows causes the model to lack sequential persistence across regime transitions, causing storms to hit hard and quickly vanish.
 3. The "Daily Max" Paradox:
   - The conditional model perfectly matches the 10-minute Max Peak (10.77 mm vs 10.68 mm) but fails the Daily Max (27.6 mm vs 52.1 mm).
   - This proves that real-world 50mm+ daily rainfall events are probably caused by short bursts of cloudburst rain, but rather by sustained heavy rain over many continuous hours.
@@ -168,7 +181,7 @@ The application of the $0.005 \text{ mm}$ threshold yielded a breakthrough in st
   * **RL Impact:** A flood-control agent trained solely on this dataset will under-prepare for severe 1-in-10-year flood events.
 
 ### 🚀 Actions & Thoughts for Next Steps
-1. Implement GMM regime conditioning to overcome the underestimated 5.60 mm peak cap and 26.5 mm daily maximum limits.
+1. Implement two-stage HMM + GMM regime conditioning to overcome the underestimated 5.60 mm peak cap and 26.5 mm daily maximum limits.
 2. Consider sequence lengths (`seq_len`) $\ge 144$ steps in training configs to model multi-day droughts and storm systems successfully.
 
 ### 🧠 Interpretations About Our Hypothesis

@@ -1,0 +1,1 @@
+To perform finetuning : ```nohup python run.py --subset_p 0.1 --model_ckpt ./models_ckpt/ImagenFew/ImagenFew_12.ckpt --config configs/finetune/Rainfall.yaml > rainfall_finetune.log 2>&1 &```
