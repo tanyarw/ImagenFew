@@ -6,35 +6,32 @@ This document is a practical developer guide and code walkthrough for the regime
 
 ## 1. Quickstart Execution Commands
 
-### Step 1: Label 10-Minute Historical Data
-Merge regime labels from the 5-minute training dataset into the 10-minute resolution dataset:
-```bash
-python scripts/label_10min_data.py
-```
-
-### Step 2: Fine-Tune Regime-Conditional Model
-Fine-tune the unconditional checkpoint using regime labels ($n\_classes=4$):
-```bash
-python regime_training/train_regime.py \
-    --model_ckpt ./logs/ImagenFew/Rainfall/<run_id>/best_model.pt \
-    --config regime_training/config.yaml \
-    --epochs 1001 --batch_size 2048 --learning_rate 1e-4
-```
+### Step 2.5: Estimate 1st-Order Markov Transition Matrix (v5 prerequisite)
+python scripts/estimate_transition_matrix.py
 
 ### Step 3: Generate Synthetic Rainfall Time Series
 Generate multi-year synthetic sequences using the regime-trained checkpoint and saved scaler:
+
 ```bash
-# Mixed Mode (Proportional regime sampling across a 10-year simulation)
-python regime_training/generate_regime.py \
+# Transition-Aware Markovian Mode (v5: Markovian P_ij regime sampling + Overlap-Add boundary smoothing)
+python regime_training/generate_regime_v5.py \
     --model_ckpt logs/ImagenFew/Rainfall_Regime/<run_id>/best_regime_model.pt \
     --scaler_path logs/ImagenFew/Rainfall_Regime/<run_id>/scaler.pkl \
-    --years 10
+    --years 10 \
+    --overlap 4 \
+    --granularity window
 
 # Single-Regime Mode (Lock generation to Regime 3 extreme cloudbursts for stress-testing)
-python regime_training/generate_regime.py \
+python regime_training/generate_regime_v5.py \
     --model_ckpt logs/ImagenFew/Rainfall_Regime/<run_id>/best_regime_model.pt \
     --scaler_path logs/ImagenFew/Rainfall_Regime/<run_id>/scaler.pkl \
     --years 5 --regime 3
+
+# Baseline Permutation Shuffling Mode (v4 legacy benchmark)
+python regime_training/generate_regime_v4.py \
+    --model_ckpt logs/ImagenFew/Rainfall_Regime/<run_id>/best_regime_model.pt \
+    --scaler_path logs/ImagenFew/Rainfall_Regime/<run_id>/scaler.pkl \
+    --years 10
 ```
 
 ---
@@ -44,9 +41,12 @@ python regime_training/generate_regime.py \
 | Component | File Path | Core Responsibility |
 | :--- | :--- | :--- |
 | **Sequence Tagging** | `scripts/label_10min_data.py` | Merges block-level GMM labels (`gmm_regime` $\in \{0,1,2,3\}$) onto 10-minute timestamps. |
+| **Transition Matrix Estimation** | `scripts/estimate_transition_matrix.py` | Estimates empirical 1st-order Markov transition matrices $P(R_{t+1} \mid R_t)$ and stationary distributions. |
 | **Dataset Engineering** | `regime_training/regime_dataset.py` | Implements `RegimeDataset` for block-constrained sliding window extraction and standardization. |
 | **Model Training** | `regime_training/train_regime.py` | Fine-tunes `ImagenFew` with `load_checkpoint_safe()` to re-initialize the classification head. |
-| **Inference & Sampling** | `regime_training/generate_regime.py` | Executes one-hot conditioned reverse diffusion, block interleaving, and $0.005\text{ mm}$ thresholding. |
+| **Inference (v5 Markovian)** | `regime_training/generate_regime_v5.py` | Generates synthetic series via 1st-order Markov sampling $P_{ij}$ and Overlap-Add (OLA) boundary cross-fading. |
+| **Inference (v4 Baseline)** | `regime_training/generate_regime_v4.py` | Legacy random permutation shuffling baseline generator. |
+| **Inference Dispatcher** | `regime_training/generate_regime.py` | Unified dispatcher delegating to `v5` (default) or `v4`. |
 | **Configuration** | `regime_training/config.yaml` | Hyperparameters overriding base classes to `n_classes: 4` and setting delay embeddings. |
 
 ---
