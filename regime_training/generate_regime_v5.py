@@ -57,8 +57,6 @@ def parse_args():
                    default=os.path.join(PROJECT_ROOT, "results", "generated_data"))
     p.add_argument("--transition_matrix_path", type=str, default=None,
                    help="Path to pre-computed regime_transition_matrix.pkl")
-    p.add_argument("--granularity", type=str, default="window", choices=["window", "block"],
-                   help="Use 'window'-level or 'block'-level Markov transition matrix")
     p.add_argument("--overlap", type=int, default=4,
                    help="Overlap-add boundary smoothing window in steps (default: 4 steps = 40 mins)")
     p.add_argument("--seed", type=int, default=42)
@@ -202,21 +200,18 @@ def main():
         else:
             labeled_csv = os.path.join(PROJECT_ROOT, "data", "rainfall", "train", "rainfall_10min_labeled.csv")
             logging.info("Transition matrix pickle not found. Estimating from %s ...", labeled_csv)
-            trans_data = estimate_transition_matrix(labeled_csv, seq_len=args.seq_len)
+            trans_data = estimate_transition_matrix(labeled_csv)
 
-        p_key = "P_window" if cli.granularity == "window" else "P_block"
-        pi_key = "pi_window" if cli.granularity == "window" else "pi_block"
+        P_mat = trans_data.get("P_block", trans_data["P"])
+        pi_dist = trans_data.get("pi_block", trans_data["pi"])
 
-        P_mat = trans_data[p_key]
-        pi_dist = trans_data[pi_key]
-
-        logging.info("Using %s-level transition matrix:\n%s", cli.granularity, np.round(P_mat, 5))
+        logging.info("Using block-level transition matrix:\n%s", np.round(P_mat, 5))
         logging.info("Stationary distribution: %s", np.round(pi_dist, 4))
 
         regime_sequence = sample_markov_regime_sequence(
             P_mat, pi_dist, num_samples, seed=cli.seed
         )
-        tag = f"markov_v5_{cli.granularity}"
+        tag = "markov_v5_block"
 
     unique_r, counts_r = np.unique(regime_sequence, return_counts=True)
     regime_alloc = {int(r): int(c) for r, c in zip(unique_r, counts_r)}
