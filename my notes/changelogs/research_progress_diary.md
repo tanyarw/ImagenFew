@@ -5,6 +5,27 @@
 
 ---
 
+## August 5, 2026 — Clustering Validation & Model Selection ($K=4$ HMM vs. GMM)
+
+### 🔍 Overview
+We conducted a comparative experiment testing a 4-state Hidden Markov Model (HMM) against a 4-component Gaussian Mixture Model (GMM) to validate our weather regime stratification approach.
+
+---
+
+### 🧪 Validation & Findings
+- **GMM as Validation Baseline:** The 4-component GMM was used primarily as a baseline to validate and compare static state clustering against the temporal transition modeling of the HMM.
+- **Model Selection ($K=4$):** Evaluated clustering behavior and Evidence Lower Bound (ELBO) metrics across the models.
+- **Visual Plots & Analysis:** Refer to the plots and figures in [Astlingen_Rainfall_365Day_Climatological_Clustering.ipynb](file:///Users/tanyawarrier/Desktop/projects/ImagenFew/data_analysis/Astlingen_Rainfall_365Day_Climatological_Clustering.ipynb):
+  - **Section 2.1:** *Side-by-Side Comparison: HMM Seasonal Bands vs Direct GMM Physical Bands (365 DOY)* (image comparing 4 HMM seasonal states against 4 GMM physical regimes over 365 DOY).
+  - **Section 3:** *Extended Model Selection ($K \in [1, 15]$) Across All 365 DOY Feature Representations* (ELBO curves and model selection plots).
+
+---
+
+### 📌 Decision
+- Confirmed **$K=4$** as the optimal number of regimes based on the 4 HMM vs. 4 GMM comparative analysis and ELBO metrics.
+
+---
+
 ## July 27, 2026 — Seasonality Audit & Root Cause Analysis of Generation Loopholes
 
 ### 🔍 Overview

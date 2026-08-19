@@ -1,13 +1,28 @@
 """
-GMM Regime-Conditional Training Script
-=======================================
-Fine-tunes the ImagenFew diffusion model to condition on gmm_regime labels
+Regime-Conditional Training Script
+====================================
+Fine-tunes the ImagenFew diffusion model to condition on regime/state labels
 (0-3) instead of dataset-level class indices.
+
+Supports both:
+  - GMM regimes: config.yaml  (regime_col=gmm_regime)
+  - HMM states:  config_hmm.yaml  (regime_col=hmm_state)
 
 Usage
 -----
+  # HMM states (recommended — use the run script for the full pipeline):
+  bash scripts/run_hmm_training.sh              # 105120-fit (default)
+  bash scripts/run_hmm_training.sh 365          # 365-fit variant
+
+  # Or run directly:
   python regime_training/train_regime.py \\
-      --model_ckpt ./logs/ImagenFew/Rainfall/<run_id>/best_model.pt
+      --model_ckpt models_ckpt/ImagenFew/ImagenFew_24.ckpt \\
+      --config regime_training/config_hmm.yaml
+
+  # GMM regimes (original):
+  python regime_training/train_regime.py \\
+      --model_ckpt ./logs/ImagenFew/Rainfall/<run_id>/best_model.pt \\
+      --config regime_training/config.yaml
 
 Optional overrides:
   --epochs 500  --batch_size 1024  --learning_rate 5e-5
@@ -166,9 +181,17 @@ def main():
     train_csv = os.path.join(PROJECT_ROOT, args.train_csv)
     test_csv = os.path.join(PROJECT_ROOT, args.test_csv)
 
-    train_ds = RegimeDataset(train_csv, seq_len=args.seq_len)
-    test_ds = RegimeDataset(test_csv, seq_len=args.seq_len,
-                            scaler=train_ds.scaler)
+    train_ds = RegimeDataset(
+        train_csv, seq_len=args.seq_len,
+        regime_col=getattr(args, "regime_col", "gmm_regime"),
+        data_col=getattr(args, "data_col", "avg_rainfall"),
+    )
+    test_ds = RegimeDataset(
+        test_csv, seq_len=args.seq_len,
+        scaler=train_ds.scaler,
+        regime_col=getattr(args, "regime_col", "gmm_regime"),
+        data_col=getattr(args, "data_col", "avg_rainfall"),
+    )
 
     train_loader = DataLoader(
         train_ds, batch_size=args.batch_size,

@@ -1,0 +1,62 @@
+# ==============================================================================
+# HMM State-Conditional Training Config
+# ==============================================================================
+# Based on regime_training/config.yaml, adapted for HMM state conditioning.
+# Architecture parameters must match the base checkpoint exactly.
+#
+# Usage:
+#   python regime_training/train_regime.py \
+#       --model_ckpt ./models_ckpt/ImagenFew/ImagenFew_24.ckpt \
+#       --config regime_training/config_hmm.yaml
+
+# --- Training ---
+epochs: 1001
+batch_size: 2048
+learning_rate: 0.0001    # 1e-4
+weight_decay: 0.00001    # 1e-5
+
+# --- Data ---
+# Default: 105120-fit HMM dataset. Switch to hmm_365_train.csv for the 365-fit variant.
+# No separate test split — generative model uses all data for training.
+# Evaluation is done post-hoc by comparing synthetic vs real data.
+train_csv: data/rainfall/astlingen/hmm_datasets/hmm_105120_train.csv
+test_csv: data/rainfall/astlingen/hmm_datasets/hmm_105120_train.csv
+seq_len: 24
+n_classes: 4   # 4 HMM states
+
+# --- Column names ---
+regime_col: hmm_state
+data_col: avg_rainfall
+
+# --- Transform (Delay Embedding) ---
+use_stft: false
+delay: 8
+embedding: 8
+
+# --- Model Architecture (must match base checkpoint) ---
+handler: models.ImagenFew.handler
+img_resolution: 8
+input_channels: 1
+unet_channels: 32
+ch_mult: [1, 2, 2, 4]
+attn_resolution: [8, 4, 2]
+diffusion_steps: 36
+dynamic_size: [128, 128]
+
+# --- Diffusion Sampler ---
+beta1: 0.00001      # 1e-5
+betaT: 0.01         # 1e-2
+deterministic: false
+
+# --- Fine-tuning ---
+finetune: true
+pretrain: false
+ema: true
+ema_warmup: 100
+ft_method: all       # fine-tune all parameters
+lora_dim: 4          # ignored when ft_method != 'lora'
+dropout: 0.0
+
+# --- Logging ---
+logging_iter: 100
+run_dir: ImagenFew/Rainfall_HMM/
