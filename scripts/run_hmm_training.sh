@@ -31,9 +31,11 @@ echo "════════════════════════�
 
 # ── Step 1: Prepare HMM Dataset ──────────────────────────────────────
 echo ""
-echo "[Step 1/3] Preparing HMM dataset (resample 5min→10min, transition matrix)..."
+echo "[Step 1/3] Preparing HMM dataset (5min resolution, transition matrix)..."
 python scripts/prepare_hmm_dataset.py \
     --hmm_variant "${HMM_VARIANT}" \
+    --resolution 5min \
+    --block_size_steps 24 \
     --validate
 
 # If using 365-fit, update config paths on the fly
@@ -77,5 +79,5 @@ echo ""
 echo "  python regime_training/generate_hmm_v1.py \\"
 echo "      --model_ckpt logs/ImagenFew/Rainfall_HMM/<run_id>/best_regime_model.pt \\"
 echo "      --scaler_path logs/ImagenFew/Rainfall_HMM/<run_id>/scaler.pkl \\"
-echo "      --years 10 --hmm_variant ${HMM_VARIANT}"
+echo "      --years 10 --freq 5min --hmm_variant ${HMM_VARIANT}"
 echo "═══════════════════════════════════════════════════════════"

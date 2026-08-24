@@ -28,20 +28,17 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
 
-# ──────────────────────────────────────────────────────────────────────
-# CLI
-# ──────────────────────────────────────────────────────────────────────
-
-def parse_args():
+# ─────────────────────────────────────────────────def parse_args():
     p = argparse.ArgumentParser(description="Prepare HMM Dataset for Conditional Training")
     p.add_argument("--hmm_variant", type=str, default="105120",
                    choices=["105120", "365"],
                    help="Which HMM fit to use: '105120' (recommended) or '365'")
-    # No train/test split — generative model uses all data for training.
-    # Evaluation is done post-hoc by comparing synthetic vs real data.
+    p.add_argument("--resolution", type=str, default="5min",
+                   choices=["5min", "10min"],
+                   help="Temporal resolution of the training dataset (default: '5min')")
     p.add_argument("--block_size_steps", type=int, default=24,
-                   help="Block size in 10-min steps for transition matrix "
-                        "(default: 24 = 4 hours, matching seq_len)")
+                   help="Block size in steps for transition matrix "
+                        "(default: 24, matching seq_len=24)")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--validate", action="store_true",
                    help="Run validation checks after preparation")
@@ -66,7 +63,7 @@ def load_hmm_data(variant):
     }
     path = path_map[variant]
     if not os.path.exists(path):
-        raise FileNotFoundError(f"HMM dataset not found at: {path}")
+        raise FileNotFoundError(f"HMM dataset not found: {path}")
 
     logging.info("Loading HMM dataset (variant=%s): %s", variant, path)
     df = pd.read_csv(path)
@@ -82,10 +79,27 @@ def load_hmm_data(variant):
     return df
 
 
+def prepare_5min_dataset(df):
+    """
+    Format raw 5-minute data with standardized column names.
+    Includes both 'avg_rainfall' and 'rainfall_intensity' for backwards compatibility.
+    """
+    logging.info("Preparing native 5-minute resolution dataset ...")
+    formatted = pd.DataFrame({
+        "datetime": df["datetime"],
+        "avg_rainfall": df["rainfall_intensity"],
+        "rainfall_intensity": df["rainfall_intensity"],
+        "hmm_state": df["hmm_state"],
+        "day_of_year": df["day_of_year"] if "day_of_year" in df.columns else df["datetime"].dt.dayofyear,
+    })
+    logging.info("  5-min dataset shape: %s", formatted.shape)
+    return formatted
+
+
 def resample_to_10min(df):
     """
     Resample 5-minute data to 10-minute resolution.
-    - rainfall_intensity: sum of two consecutive 5-min values (preserves total volume)
+    - rainfall_intensity / avg_rainfall: sum of two consecutive 5-min values (preserves total volume)
     - hmm_state: first value in each pair (states persist for hours, so this is safe)
     """
     logging.info("Resampling 5-min → 10-min ...")
@@ -95,6 +109,23 @@ def resample_to_10min(df):
     n_pairs = n // 2
 
     datetimes = df["datetime"].values[:n_pairs * 2:2]  # Take every other datetime
+    rainfall = df["rainfall_intensity"].values[:n_pairs * 2]
+    hmm = df["hmm_state"].values[:n_pairs * 2]
+
+    rain_pairs = rainfall.reshape(n_pairs, 2)
+    hmm_pairs = hmm.reshape(n_pairs, 2)
+
+    resampled = pd.DataFrame({
+        "datetime": datetimes,
+        "avg_rainfall": rain_pairs.sum(axis=1),
+        "rainfall_intensity": rain_pairs.sum(axis=1),
+        # Take the first value — with 99.97%+ persistence, state changes
+        # within a 10-min window are vanishingly rare
+        "hmm_state": hmm_pairs[:, 0],
+    })
+
+    logging.info("  Resampled shape: %s", resampled.shape)
+    return resampled datetime
     rainfall = df["rainfall_intensity"].values[:n_pairs * 2]
     hmm = df["hmm_state"].values[:n_pairs * 2]
 
@@ -191,10 +222,10 @@ def estimate_block_transition_matrix(df, block_size=24, n_states=4, smooth=1e-5)
 # Validation
 # ──────────────────────────────────────────────────────────────────────
 
-def validate_outputs(out_dir, variant):
+def validate_outputs(out_dir, variant, expected_resolution="5min"):
     """Run sanity checks on the prepared outputs."""
     logging.info("\n" + "=" * 60)
-    logging.info("VALIDATION CHECKS")
+    logging.info("VALIDATION CHECKS (Resolution: %s)", expected_resolution)
     logging.info("=" * 60)
 
     # Load outputs
@@ -246,7 +277,7 @@ def validate_outputs(out_dir, variant):
     else:
         logging.error("  ✗ Stationary dist sum: %f", pi_sum)
 
-    # Check 5: Transition matrix diagonal is NOT degenerate (< 0.999 for 4h blocks)
+    # Check 5: Transition matrix diagonal is NOT degenerate (< 0.999 for block size)
     checks_total += 1
     diag = np.diag(trans["P_block"])
     max_diag = diag.max()
@@ -257,28 +288,31 @@ def validate_outputs(out_dir, variant):
         logging.warning("  ⚠ Block-level diagonals still very high (max P_ii = %.5f)", max_diag)
         checks_passed += 1  # Warning, not failure
 
-    # Check 6: 10-min resolution (consecutive timestamps 10 min apart)
+    # Check 6: Temporal resolution
     checks_total += 1
     train_dt = pd.to_datetime(train_df["datetime"])
     diffs = train_dt.diff().dropna()
     median_diff = diffs.median()
-    if median_diff == pd.Timedelta(minutes=10):
-        logging.info("  ✓ Data is at 10-minute resolution")
+    expected_minutes = 5 if expected_resolution == "5min" else 10
+    if median_diff == pd.Timedelta(minutes=expected_minutes):
+        logging.info("  ✓ Data is at %d-minute resolution", expected_minutes)
         checks_passed += 1
     else:
-        logging.error("  ✗ Median time gap: %s (expected 10 min)", median_diff)
+        logging.error("  ✗ Median time gap: %s (expected %d min)", median_diff, expected_minutes)
 
     logging.info("\nValidation: %d/%d checks passed", checks_passed, checks_total)
 
     # Print summary statistics
-    logging.info("\n--- Transition Matrix (4-hour block level) ---")
+    hours_per_block = (trans["block_size"] * (5 if expected_resolution == "5min" else 10)) / 60.0
+    logging.info("\n--- Transition Matrix (%.1f-hour block level, block_size=%d) ---",
+                 hours_per_block, trans["block_size"])
     logging.info("\n%s", np.round(trans["P_block"], 5))
     logging.info("\nDiagonal (persistence):")
     for s in range(trans["n_states"]):
         p_ii = trans["P_block"][s, s]
         avg_dur = 1.0 / (1.0 - p_ii) if p_ii < 1.0 else float("inf")
         logging.info("  State %d: P_ii=%.5f  (avg run: %.1f blocks = %.1f hours)",
-                     s, p_ii, avg_dur, avg_dur * 4)
+                     s, p_ii, avg_dur, avg_dur * hours_per_block)
     logging.info("Stationary dist: %s", np.round(trans["pi_block"], 4))
     logging.info("Total block transitions: %d", trans["n_transitions"])
     logging.info("Regime proportions: %s", trans["regime_proportions"])
@@ -296,17 +330,20 @@ def main():
     )
 
     logging.info("═" * 60)
-    logging.info("HMM Dataset Preparation (variant=%s)", cli.hmm_variant)
+    logging.info("HMM Dataset Preparation (variant=%s, resolution=%s, block_size=%d)",
+                 cli.hmm_variant, cli.resolution, cli.block_size_steps)
     logging.info("═" * 60)
 
-    # 1. Load raw 5-min data
+    # 1. Load raw data
     df = load_hmm_data(cli.hmm_variant)
 
-    # 2. Resample to 10-min
-    df_10min = resample_to_10min(df)
+    # 2. Format / Resample based on resolution
+    if cli.resolution == "5min":
+        train_df = prepare_5min_dataset(df)
+    else:
+        train_df = resample_to_10min(df)
 
     # 3. Use all data for training (no test split — generative model)
-    train_df = df_10min
     logging.info("  Using all data for training: %d samples (%s to %s)",
                  len(train_df), train_df["datetime"].iloc[0],
                  train_df["datetime"].iloc[-1])
@@ -335,7 +372,7 @@ def main():
 
     # 6. Optional validation
     if cli.validate:
-        validate_outputs(out_dir, cli.hmm_variant)
+        validate_outputs(out_dir, cli.hmm_variant, expected_resolution=cli.resolution)
 
     logging.info("\n✓ Done!")
 

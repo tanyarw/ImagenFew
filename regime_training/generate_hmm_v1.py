@@ -74,11 +74,13 @@ def parse_args():
                    help="Which HMM variant to use for transition matrix (default: 105120)")
 
     # Stitching parameters
+    p.add_argument("--freq", type=str, default="5min", choices=["5min", "10min"],
+                   help="Temporal resolution of generated data (default: '5min')")
     p.add_argument("--overlap", type=int, default=4,
-                   help="Base OLA overlap in steps (default: 4 = 40 mins)")
+                   help="Base OLA overlap in steps (default: 4 steps)")
     p.add_argument("--transition_overlap", type=int, default=8,
                    help="Wider OLA overlap at state transition boundaries "
-                        "(default: 8 = 80 mins)")
+                        "(default: 8 steps)")
     p.add_argument("--bridge_blocks", type=int, default=1,
                    help="Number of soft-label bridge blocks to insert at "
                         "state transitions (default: 1, 0 to disable)")
@@ -339,7 +341,7 @@ def main():
     logging.info("Model loaded from %s", cli.model_ckpt)
 
     # ── Calculate steps needed ────────────────────────────────────────
-    freq = "10min"
+    freq = cli.freq
     steps_per_year = len(
         pd.date_range(start="2026-01-01", end="2027-01-01",
                       freq=freq, inclusive="left")
@@ -474,7 +476,7 @@ def main():
                  df["avg_rainfall"].mean(), nz.mean() if len(nz) else 0.0)
     logging.info("Std        : %.4f  (non-zero: %.4f)",
                  df["avg_rainfall"].std(), nz.std() if len(nz) else 0.0)
-    logging.info("Max 10-min : %.4f mm", df["avg_rainfall"].max())
+    logging.info("Max intensity: %.4f mm (%s)", df["avg_rainfall"].max(), freq)
 
     # Per-state statistics (approximate: assign each output step its
     # source block's majority state)
