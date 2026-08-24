@@ -28,7 +28,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
 
-# ─────────────────────────────────────────────────def parse_args():
+def parse_args():
     p = argparse.ArgumentParser(description="Prepare HMM Dataset for Conditional Training")
     p.add_argument("--hmm_variant", type=str, default="105120",
                    choices=["105120", "365"],
@@ -119,22 +119,6 @@ def resample_to_10min(df):
         "datetime": datetimes,
         "avg_rainfall": rain_pairs.sum(axis=1),
         "rainfall_intensity": rain_pairs.sum(axis=1),
-        # Take the first value — with 99.97%+ persistence, state changes
-        # within a 10-min window are vanishingly rare
-        "hmm_state": hmm_pairs[:, 0],
-    })
-
-    logging.info("  Resampled shape: %s", resampled.shape)
-    return resampled datetime
-    rainfall = df["rainfall_intensity"].values[:n_pairs * 2]
-    hmm = df["hmm_state"].values[:n_pairs * 2]
-
-    rain_pairs = rainfall.reshape(n_pairs, 2)
-    hmm_pairs = hmm.reshape(n_pairs, 2)
-
-    resampled = pd.DataFrame({
-        "datetime": datetimes,
-        "avg_rainfall": rain_pairs.sum(axis=1),
         # Take the first value — with 99.97%+ persistence, state changes
         # within a 10-min window are vanishingly rare
         "hmm_state": hmm_pairs[:, 0],
