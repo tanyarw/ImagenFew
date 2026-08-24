@@ -172,3 +172,5 @@ logs/
 .idea/
 *.db
 *.csv
+
+.DS_Store
