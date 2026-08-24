@@ -120,7 +120,7 @@ class DelayEmbedder(TsImgEmbedder):
         reconstructed_x_time_series[:, :, start:] = img_non_square[:, :, :end, cols - 1]
         reconstructed_x_time_series = reconstructed_x_time_series.permute(0, 2, 1)
 
-        return reconstructed_x_time_series.cuda()
+        return reconstructed_x_time_series.to(self.device)
 
 
 class STFTEmbedder(TsImgEmbedder):

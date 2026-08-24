@@ -6,14 +6,14 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --partition=gpu
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:a100-40:1
 
 mkdir -p logs
 source /home/t/tanyawar/thesis/ImagenFew/.venv/bin/activate
 
-echo "Job ID: $SLURM_JOB_ID | GPU: $CUDA_VISIBLE_DEVICES | Start: $(date)"
+echo "Job ID: $SLURM_JOB_ID | GPU: $CUDA_VISIBLE_DEVICES | Host: $(hostname -s) | Start: $(date)"
 
-# Full pipeline (prep + train)
+# Run full pipeline (prepare dataset at 5min + train)
 bash scripts/run_hmm_training.sh 105120
 
 echo "Job completed at: $(date)"
