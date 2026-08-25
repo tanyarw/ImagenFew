@@ -57,6 +57,7 @@ ft_method: all       # fine-tune all parameters
 lora_dim: 4          # ignored when ft_method != 'lora'
 dropout: 0.0
 
-# --- Logging ---
-logging_iter: 100
-run_dir: ImagenFew/Rainfall_HMM/
+# --- Logging & Monitoring ---
+logging_iter: 25       # Log metrics, evaluate regimes, and update plots every 25 epochs
+run_id: null           # auto-generated if null
+run_dir: ImagenFew/Rainfall_Regime/

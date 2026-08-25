@@ -41,10 +41,15 @@ import pickle
 import uuid
 
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
+
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 from regime_training.regime_dataset import RegimeDataset
 from models.ImagenFew.ImagenFew import ImagenFew
@@ -243,6 +248,8 @@ def main():
     # ── Training loop ─────────────────────────────────────────────────
     best_loss = float("inf")
     channels = 1
+    history = []
+    log_interval = getattr(args, "logging_iter", 25)
 
     for epoch in range(1, args.epochs + 1):
         model.train()
@@ -268,7 +275,6 @@ def main():
             output, weight = model(x_img, x_img_mask, labels=labels)
 
             # Weighted MSE + FFT loss on the signal region only
-            # (matches ImagenFew.loss_fn for consistency)
             fft_x = torch.fft.fft2(x_img, norm='forward')
             fft_output = torch.fft.fft2(output, norm='forward')
             fft_loss = (
@@ -285,33 +291,97 @@ def main():
 
             epoch_losses.append(loss.item())
 
-        avg_loss = np.mean(epoch_losses)
+        avg_loss = float(np.mean(epoch_losses))
+        is_best = avg_loss < best_loss
+        if is_best:
+            best_loss = avg_loss
+
+        # Record epoch metrics
+        epoch_record = {
+            "epoch": epoch,
+            "loss": avg_loss,
+            "best_loss": best_loss,
+        }
 
         # ── Periodic logging & evaluation ─────────────────────────────
-        if epoch == 1 or epoch % args.logging_iter == 0:
+        if epoch == 1 or epoch % log_interval == 0 or epoch == args.epochs:
             logging.info(
-                "Epoch %4d/%d  |  loss = %.6f", epoch, args.epochs, avg_loss,
+                "Epoch %4d/%d  |  loss = %.6f  (best = %.6f)",
+                epoch, args.epochs, avg_loss, best_loss,
             )
 
             # Quick per-regime generation check
             for r in range(args.n_classes):
                 gen = evaluate_regime(model, args, r, n_samples=50, channels=channels)
+                epoch_record[f"regime_{r}_mean"] = float(gen.mean())
+                epoch_record[f"regime_{r}_std"] = float(gen.std())
+                epoch_record[f"regime_{r}_max"] = float(gen.max())
                 logging.info(
                     "  Regime %d  →  mean=%.4f  std=%.4f  min=%.4f  max=%.4f",
                     r, gen.mean(), gen.std(), gen.min(), gen.max(),
                 )
             model.train()
 
-        # ── Save best checkpoint ──────────────────────────────────────
-        if epoch % args.logging_iter == 0 and avg_loss < best_loss:
-            best_loss = avg_loss
-            _save_ckpt(model, args, epoch, avg_loss,
-                       os.path.join(ckpt_dir, "best_regime_model.pt"))
+            # Save best checkpoint
+            if is_best or (epoch % log_interval == 0 and avg_loss <= best_loss):
+                _save_ckpt(model, args, epoch, avg_loss,
+                           os.path.join(ckpt_dir, "best_regime_model.pt"))
+
+        history.append(epoch_record)
+
+        # ── Save tracking CSV and plots periodically ──────────────────
+        if epoch % log_interval == 0 or epoch == args.epochs:
+            history_df = pd.DataFrame(history)
+            history_path = os.path.join(ckpt_dir, "history.csv")
+            history_df.to_csv(history_path, index=False)
+            save_training_plots(history_df, ckpt_dir)
 
     # ── Final save ────────────────────────────────────────────────────
     final_path = os.path.join(ckpt_dir, "final_regime_model.pt")
     _save_ckpt(model, args, args.epochs, avg_loss, final_path)
     logging.info("Training complete.  Final → %s", final_path)
+
+
+def save_training_plots(df_hist, ckpt_dir):
+    """Saves loss curve and regime convergence monitoring plots."""
+    try:
+        # Plot 1: Loss curve
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.plot(df_hist["epoch"], df_hist["loss"], color="#1f77b4", linewidth=2.0, label="Training Loss (EDM + FFT)")
+        ax.plot(df_hist["epoch"], df_hist["best_loss"], color="#2ca02c", linestyle="--", linewidth=1.5, label="Best Loss")
+        best_row = df_hist.loc[df_hist["loss"].idxmin()]
+        ax.scatter([best_row["epoch"]], [best_row["loss"]], color="red", s=60, zorder=5, 
+                   label=f"Best: {best_row['loss']:.5f} (Ep {int(best_row['epoch'])})")
+        ax.set_title("Training Loss Curve", fontsize=13, fontweight="bold")
+        ax.set_xlabel("Epoch", fontsize=11)
+        ax.set_ylabel("Loss", fontsize=11)
+        ax.grid(True, linestyle="--", alpha=0.5)
+        ax.legend(loc="upper right")
+        plt.tight_layout()
+        fig.savefig(os.path.join(ckpt_dir, "loss_curve.png"), dpi=150)
+        plt.close(fig)
+
+        # Plot 2: Per-regime generated intensity separation
+        regime_cols = [c for c in df_hist.columns if c.startswith("regime_") and c.endswith("_mean")]
+        if regime_cols:
+            eval_hist = df_hist.dropna(subset=regime_cols)
+            if len(eval_hist) > 1:
+                colors = ["#3498db", "#2ecc71", "#e67e22", "#e74c3c"]
+                fig, ax = plt.subplots(figsize=(10, 5))
+                for idx, col in enumerate(regime_cols):
+                    r_num = col.split("_")[1]
+                    c = colors[idx % len(colors)]
+                    ax.plot(eval_hist["epoch"], eval_hist[col], color=c, marker="o", markersize=4, linewidth=1.8, label=f"State {r_num} Generated Mean")
+                ax.set_title("Per-Regime Generated Intensity Convergence", fontsize=13, fontweight="bold")
+                ax.set_xlabel("Epoch", fontsize=11)
+                ax.set_ylabel("Generated Mean (Scaled)", fontsize=11)
+                ax.grid(True, linestyle="--", alpha=0.5)
+                ax.legend(loc="best")
+                plt.tight_layout()
+                fig.savefig(os.path.join(ckpt_dir, "regime_convergence.png"), dpi=150)
+                plt.close(fig)
+    except Exception as e:
+        logging.warning("Could not save training plots: %s", e)
 
 
 def _save_ckpt(model, args, epoch, loss, path):
