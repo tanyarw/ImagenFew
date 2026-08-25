@@ -1,5 +1,7 @@
 {
-    "v4": "Finetuned all the parameters and generated with 4 (seasons) classes conditionally `results/generated_data/rainfall_synthetic_10y_v4.csv`",
+    "v6": "Finetuned on 365-day climatological HMM states (DoY broadcast) with 5-min resolution, 24 seq-len, and transition-aware Markov stitching: `results/generated_data/rainfall_synthetic_10y_v6.csv`",
+    "v5": "Finetuned on 105,120-interval direct HMM states with 5-min resolution, 24 seq-len, and transition-aware Markov stitching: `results/generated_data/rainfall_synthetic_10y_v5.csv`",
+    "v4": "Finetuned all the parameters and generated with 4 (seasons) classes conditionally: `results/generated_data/rainfall_synthetic_10y_v4.csv`",
     "v3": "Unconditional inference with 10-min resolution to match training data resolution: `results/generated_data/rainfall_synthetic_10y_v3.csv`",
     "v2": "5-min resolution and remove negative gaussian noise: `results/generated_data/rainfall_synthetic_10y_v2.csv`",
     "v1": "First try with 5-min resolution: `results/generated_data/rainfall_synthetic_10y_v1.csv`"
