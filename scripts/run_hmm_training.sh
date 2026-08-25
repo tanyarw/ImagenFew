@@ -18,10 +18,10 @@
 set -euo pipefail
 
 # ── Config ────────────────────────────────────────────────────────────
-HMM_VARIANT="${1:-105120}"        # 105120 (default) or 365
+HMM_VARIANT="${1:-105120}"        # 105120, 105120_v2, or 365
+EPOCHS="${2:-500}"                # 500 epochs (~12.5h, fully converged) or 1001 (~25.5h)
 BASE_CKPT="models_ckpt/ImagenFew/ImagenFew_24.ckpt"
 CONFIG="regime_training/config_hmm.yaml"
-EPOCHS=1001
 BATCH_SIZE=2048
 LR=0.0001
 
@@ -38,13 +38,13 @@ python scripts/prepare_hmm_dataset.py \
     --block_size_steps 24 \
     --validate
 
-# If using 365-fit, update config paths on the fly
-if [ "${HMM_VARIANT}" = "365" ]; then
+# If using a variant other than default 105120, update config paths on the fly
+if [ "${HMM_VARIANT}" != "105120" ]; then
     echo ""
-    echo "[INFO] Using 365-fit variant — overriding config paths..."
-    # Create a temporary config with 365 paths
-    sed "s/hmm_105120/hmm_365/g" "${CONFIG}" > /tmp/config_hmm_365.yaml
-    CONFIG="/tmp/config_hmm_365.yaml"
+    echo "[INFO] Using ${HMM_VARIANT} variant — overriding config paths..."
+    # Create a temporary config with variant paths
+    sed "s/hmm_105120/hmm_${HMM_VARIANT}/g" "${CONFIG}" > "/tmp/config_hmm_${HMM_VARIANT}.yaml"
+    CONFIG="/tmp/config_hmm_${HMM_VARIANT}.yaml"
 fi
 
 # ── Step 2: Fine-tune Model ──────────────────────────────────────────

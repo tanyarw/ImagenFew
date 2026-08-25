@@ -31,8 +31,8 @@ sys.path.insert(0, PROJECT_ROOT)
 def parse_args():
     p = argparse.ArgumentParser(description="Prepare HMM Dataset for Conditional Training")
     p.add_argument("--hmm_variant", type=str, default="105120",
-                   choices=["105120", "365"],
-                   help="Which HMM fit to use: '105120' (recommended) or '365'")
+                   choices=["105120", "105120_v2", "365"],
+                   help="Which HMM fit to use: '105120', '105120_v2' (median-only), or '365'")
     p.add_argument("--resolution", type=str, default="5min",
                    choices=["5min", "10min"],
                    help="Temporal resolution of the training dataset (default: '5min')")
@@ -55,6 +55,10 @@ def load_hmm_data(variant):
         "105120": os.path.join(
             PROJECT_ROOT, "data", "rainfall", "astlingen",
             "hmm_datasets", "dataset_with_105120_fit_hmm.csv"
+        ),
+        "105120_v2": os.path.join(
+            PROJECT_ROOT, "data", "rainfall", "astlingen",
+            "hmm_datasets", "dataset_with_105120_v2_fit_hmm.csv"
         ),
         "365": os.path.join(
             PROJECT_ROOT, "data", "rainfall", "astlingen",

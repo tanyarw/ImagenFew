@@ -70,7 +70,7 @@ def parse_args():
     p.add_argument("--transition_matrix_path", type=str, default=None,
                    help="Path to pre-computed HMM transition matrix pickle")
     p.add_argument("--hmm_variant", type=str, default="105120",
-                   choices=["105120", "365"],
+                   choices=["105120", "105120_v2", "365"],
                    help="Which HMM variant to use for transition matrix (default: 105120)")
 
     # Stitching parameters
