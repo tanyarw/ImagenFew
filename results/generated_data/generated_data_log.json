@@ -5,5 +5,5 @@
     "v4": "Finetuned on 4 seasonal classes conditionally: `results/generated_data/rainfall_synthetic_10y_v4.csv`",
     "v5": "Finetuned on 105,120-interval direct HMM states (v1, 3 daily features) with 5-min resolution: `results/generated_data/rainfall_synthetic_10y_v5.csv`",
     "v6": "Finetuned on 365-day climatological HMM states (DoY broadcast) with 5-min resolution: `results/generated_data/rainfall_synthetic_10y_v6.csv`",
-    "v7": "Finetuned on 105,120-interval 1D mean smoothed + min-duration post-processed HMM states: `results/generated_data/rainfall_synthetic_10y_105120_v2.csv`"
+    "v7": "Finetuned on 105,120-interval 1D mean smoothed + min-duration post-processed HMM states: `results/generated_data/rainfall_synthetic_10y_v7.csv`"
 }
