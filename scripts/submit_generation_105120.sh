@@ -9,7 +9,7 @@
 #SBATCH --gres=gpu:a100-40:1
 
 # ── Configurable Variables (with defaults or CLI arguments) ────────
-RUN_ID="${1:-3559f298}"
+RUN_ID="${1:-1bff544a}"
 YEARS="${2:-10}"
 FREQ="${3:-5min}"
 
@@ -19,7 +19,7 @@ source /home/t/tanyawar/thesis/ImagenFew/.venv/bin/activate
 
 echo "=========================================================="
 echo "Job ID: $SLURM_JOB_ID | GPU: $CUDA_VISIBLE_DEVICES | Host: $(hostname -s)"
-echo "Variant:       105120 (5-min Interval HMM)"
+echo "Variant:       105120 (5-min Interval HMM v1, Retrained 500 epochs)"
 echo "Run ID:        $RUN_ID"
 echo "Years:         $YEARS | Freq: $FREQ"
 echo "Start Time:    $(date)"
@@ -31,6 +31,7 @@ python regime_training/generate_hmm_v1.py \
     --years "${YEARS}" \
     --freq "${FREQ}" \
     --hmm_variant 105120 \
+    --output_name "rainfall_synthetic_10y_v5.csv" \
     --output_dir results/generated_data
 
 echo ""

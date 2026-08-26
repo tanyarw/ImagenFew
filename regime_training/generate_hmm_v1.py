@@ -85,6 +85,8 @@ def parse_args():
                    help="Number of soft-label bridge blocks to insert at "
                         "state transitions (default: 1, 0 to disable)")
 
+    p.add_argument("--output_name", type=str, default=None,
+                   help="Explicit output CSV filename (e.g., 'rainfall_synthetic_10y_v6.csv')")
     p.add_argument("--seed", type=int, default=42)
     return p.parse_args()
 
@@ -452,11 +454,16 @@ def main():
 
     # ── Save Output ───────────────────────────────────────────────────
     os.makedirs(cli.output_dir, exist_ok=True)
-    run_id = os.path.splitext(os.path.basename(cli.model_ckpt))[0]
-    out_path = os.path.join(
-        cli.output_dir,
-        f"rainfall_{tag}_{cli.years}y_{run_id}.csv",
-    )
+    run_id = os.path.basename(os.path.dirname(cli.model_ckpt))
+    if not run_id or run_id in ["Rainfall_Regime", "logs", "."]:
+        run_id = os.path.splitext(os.path.basename(cli.model_ckpt))[0]
+
+    if cli.output_name:
+        out_filename = cli.output_name if cli.output_name.endswith(".csv") else f"{cli.output_name}.csv"
+    else:
+        out_filename = f"rainfall_synthetic_{cli.years}y_hmm_{cli.hmm_variant}_{run_id}.csv"
+    
+    out_path = os.path.join(cli.output_dir, out_filename)
 
     df = pd.DataFrame(unscaled, columns=["avg_rainfall"])
     df.insert(0, "date", pd.date_range(
