@@ -5,6 +5,255 @@
 
 ---
 
+## September 1, 2026 — Loss-Function Audit & Formal Acceptance Criteria
+
+### 🔍 Overview
+With v7 in hand, we stopped generating and audited two things we had been carrying on faith:
+what the training objective actually optimises, and what would count as "done". Findings are
+written up in [LOSS_FUNCTION.md](../../code_plan/LOSS_FUNCTION.md) and
+[ACCEPTANCE_CRITERIA.md](../../code_plan/ACCEPTANCE_CRITERIA.md).
+
+---
+
+### 📐 What we are optimising
+
+ImagenFew is an **EDM** model (Karras et al. 2022), not a DDPM. The objective is a weighted
+denoising regression in **x-prediction**:
+
+$$\mathcal{L} = \mathbb{E}_{x,\sigma,n}\left[\lambda(\sigma)\,\|D_\theta(x+n;\sigma,c)-x\|^2\right],\quad
+\lambda(\sigma)=\frac{\sigma^2+\sigma_d^2}{(\sigma\sigma_d)^2},\quad \sigma\sim\mathrm{LogNormal}(-1.2,\,1.2)$$
+
+with $c$ the one-hot HMM state and $\sigma_d = 0.5$. $\lambda$ is chosen so
+$\lambda c_{out}^2 = 1$, i.e. the raw network sees a unit-variance target at every noise
+level — which is why the loss curve is nearly flat and its absolute value tells us very little.
+
+---
+
+### 📌 Audit findings
+
+1. **"L2 regresses to the mean" is not the right explanation.** At the optimum the minimiser
+   is $E[x\mid y]$, the exact score — EDM with an exact denoiser reproduces the tails. Our
+   flattened extremes come from a **budget** problem in three parts:
+   - Extremes are ~$10^{-6}$ frequent and contribute ~**1%** of expected loss, so finite
+     capacity under-resolves them first.
+   - `clip_grad_norm_(..., 1.0)` **systematically attenuates exactly those events**: a batch
+     containing a cloudburst has a much larger gradient norm and gets rescaled down, while
+     bulk dry batches pass through unscaled.
+   - EMA at decay 0.9999 has a ~10,000-step memory and averages rare-batch corrections away.
+
+2. **The FFT term is inert as a spectral prior.** `fft2(..., norm='forward')` divides by
+   $N=64$; by Parseval the term is **exactly 1/64 (1.56%)** of the time term — measured
+   0.01560 against a predicted 0.015625. Worse, `fft_loss` is indexed by *frequency* but is
+   multiplied by `(1 - x_img_mask)`, a *spatial* mask. What it actually does is hold the
+   zero-padded columns near zero: a 5× error confined to padding leaves the time term
+   unchanged but multiplies the FFT term **16×**.
+
+3. **Two code paths, two different losses.** `handler.py:44` (→ **v3, v4**) has **no FFT
+   term**; `train_regime.py` (→ **v5, v6, v7**) has it. `ImagenFew.loss_fn` — the one that
+   looks canonical — is dead code, called by nothing. Given finding 2 this shifts the loss by
+   ~1.5%, but the results table must now say which objective produced which checkpoint.
+
+4. **`sigma_data` is mis-tuned by 2×.** ImagenFew hardcodes $\sigma_d = 0.5$; `RegimeDataset`
+   uses `StandardScaler`, which yields std **1.0**.
+
+5. **⚠️ There is no held-out real data.** `config_hmm.yaml` sets `train_csv == test_csv`, and
+   `hmm_105120_train.csv` spans **2000–2009** — the entire record. `hmm_105120_test.csv` (2009)
+   is a *subset of the training range*, not a holdout. **Every TSTR number computed today would
+   be contaminated.** Fix before any downstream claim: split by year (train 2000–2007, hold out
+   2008–2009) and **re-fit the HMM on training years only** — the state labels are fitted
+   quantities and leak exactly as the diffusion weights do.
+
+---
+
+### 🛠️ Code changes
+- `intensity_weights()` in `train_regime.py`: $w(x) = 1 + \alpha\,\mathrm{relu}(x)^\gamma$ on the
+  time term. `relu` because z-scoring puts dry steps at a small *negative* value, so the 91% dry
+  mass stays at weight 1.0. $\gamma=0.5$ is sub-linear on purpose — $z$ reaches ~119 at the 10-yr
+  maximum. Measured profile at $\alpha=0.3$: dry 1.00×, P99 1.54×, P99.9 2.04×, max 4.27×.
+  Weights renormalise to batch-mean 1.0 so sweeping $\alpha$ does not silently sweep the LR.
+- `grad_clip`, `fft_weight` now configurable; `grad_norm` and `clip_frac` logged per epoch.
+- Per-regime **p99.9** logged + new `tail_health.png`. The mean can look right while the tail is
+  dead — exactly how v6 passed epoch checks yet capped at 1.79 mm.
+- **All defaults reproduce v5–v7 exactly** ($\alpha=0$, clip 1.0, fft_weight 1.0).
+
+---
+
+### 📊 Acceptance criteria (replaces the "RL Fitness Score")
+
+The old equal-weighted score was gameable — it ranked v3 (0.733) above v4 (0.622) while v3
+halved the flood peaks. Replaced by three staged gates:
+
+- **Gate A — statistical screening.** Five tiers with hard pass bands: water balance &
+  intermittency, intensity marginal, temporal structure, multi-scale extremes (IDF table over
+  duration × return period — **not yet computed, biggest hole**), seasonality.
+- **Gate B — hydraulic response.** Route real vs synthetic through SWMM-Astlingen under a
+  **fixed** controller and compare CSO counts, spill volumes, tank levels, flooding.
+  This is the first metric that is **non-linear in the rainfall** — sewer response is
+  threshold-driven, so two series with near-identical marginals can spill very differently.
+  No RL needed; cheap enough for every version. **Highest-value thing we are not yet doing.**
+- **Gate C — TSTR.** Four PPO arms (real-full / real-scarce / synthetic-only /
+  scarce+synthetic) evaluated on held-out real rainfall. Headline claim: scarce+synthetic
+  within 10% of real-full. Plus a **non-negotiable safety check** on the largest held-out
+  storm — an agent trained on too-weak extremes has learned that storms are survivable, and
+  that must never be averaged into a mean return.
+
+---
+
+### 📌 Next actions, ranked
+1. **`seq_len` 24 → 288.** Not a loss problem (see Aug 26). Run before any further loss tuning.
+2. Read `clip_frac` on one diagnostic run; if high, raise `grad_clip` before touching $\alpha$.
+3. Re-split by year and re-fit the HMM on training years only.
+4. Build Gate B in `flood-control` — cheapest large gain available.
+
+---
+
+## August 26, 2026 — Full-Version Benchmark: v7 Wins on Intensity, Loses on Storm Shape
+
+### 🔍 Overview
+Regenerated all three HMM variants from the retrained checkpoints (SLURM 760225/760226/760227)
+and built `scripts/compare_all_versions.py` — a single benchmark of all seven synthetic
+versions against the 10-yr Astlingen gauge average across 8 evaluation axes. Outputs in
+[results/comparison_all_versions/](../../results/comparison_all_versions/).
+
+---
+
+### 📊 Benchmark (5-min versions + real; v3/v4 excluded here — see resolution note)
+
+| Version | Annual Vol (mm) | Vol Ratio | Zero % | Mean Wet | P99 | P99.9 | Max | Wet Spell (min) | N Storms | Storm Dur (min) | Lag-1 ACF |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| **Real** | 709.4 | 1.000 | 90.95 | 0.0746 | 0.160 | 0.565 | 5.555 | 32.1 | 6,800 | 62.3 | 0.854 |
+| v1 | 1365.9 | 1.926 | 90.03 | 0.1304 | 0.318 | 1.198 | 5.426 | 19.7 | 11,070 | 38.1 | 0.684 |
+| v2 | 1363.3 | 1.922 | 90.10 | 0.1310 | 0.318 | 1.208 | 5.731 | 19.7 | 11,075 | 37.9 | 0.679 |
+| v5 | 664.6 | 0.937 | 91.11 | 0.0711 | 0.151 | 0.542 | 4.134 | 25.5 | 8,715 | 46.6 | 0.855 |
+| v6 | 644.7 | 0.909 | 91.11 | 0.0690 | 0.160 | 0.483 | **1.787** | 23.9 | 8,722 | 45.5 | 0.860 |
+| **v7** | **709.5** | **1.000** | **90.97** | **0.0747** | **0.161** | **0.568** | **5.644** | 27.4 | 8,824 | 47.6 | **0.848** |
+
+---
+
+### 💡 Findings
+
+1. **v7 is the best generator produced so far, by a clear margin.** Volume ratio 1.000, zero
+   fraction within 0.02 pp, and — the first time in the project — the **entire intensity
+   marginal** matches including the tail: P99 1.006×, P99.9 1.006×, maximum 1.016×. The
+   May–June problem of halved cloudbursts is solved.
+2. **HMM conditioning fixed the 2× volume bias.** v1/v2 generated 1.93× the real annual
+   volume; all three HMM versions land in 0.91–1.00.
+3. **v6 has a dead tail.** Maximum 1.787 mm against a real 5.555 mm, while its *mean* wet
+   intensity is fine (0.069 vs 0.0746). The 365-day DoY-broadcast labels are too coarse to
+   carry storm intensity. This is the textbook case for the p99.9 monitoring added Sep 1.
+4. **Storm geometry still fails, in all seven versions.** v7: mean storm duration **47.6 min
+   vs 62.3** (−24%), storm count **8,824 vs 6,800** (+30%), wet spell **27.4 vs 32.1** (−15%),
+   hourly ACF RMSE **0.0906** — *worse* than v3's 0.0688. The rain is broken into too many,
+   too-short pieces.
+
+> **One-line verdict: v7 delivers the right amount of water, in the right sized drops,
+> arriving in the wrong shaped storms.**
+
+---
+
+### 📌 Root cause: the context window shrank when we moved to 5-min
+
+`seq_len` is **still 24** — unchanged since May. v3/v4 saw 24 × 10 min = **4 hours**; v5–v7 see
+24 × 5 min = **2 hours**. Migrating to 5-min resolution (Aug 24) **halved the physical context
+window** without anyone changing `seq_len`. Real mean storm duration is 62 minutes, so the model
+is learning storm persistence through a window barely twice the length of a storm.
+
+"Experiment 2: expand the context horizon" has been on the plan since **July 27** and has never
+been run. It is now the top-priority experiment — and note this is *not* a loss-function issue,
+so it should be run before any further loss tuning.
+
+---
+
+### ⚠️ Reporting trap identified
+The benchmark table mixes 5-min and 10-min versions, and **per-step metrics are not
+resolution-invariant**. v3's `Mean_Wet` of 0.130 mm/10-min is roughly *equal* to real, not
+double it. Reading down that column across resolutions is wrong. All cross-version claims must
+be made on hourly or daily aggregates, or restricted to one resolution.
+
+---
+
+## August 25, 2026 — HMM v2 Labels (Mean-Smoothed) & Training Instrumentation
+
+### 🔍 Overview
+Two threads: a third HMM labelling variant, and proper monitoring so we stop flying blind
+during 500-epoch fine-tunes.
+
+---
+
+### 🧪 HMM variant v2 (→ synthetic v7)
+Notebooks: `Rainfall_10Yr_105120_Interval_HMM_v2_Mean.ipynb` and
+`..._v2_Mean_smoothed.ipynb`.
+
+- Refit the 105,120-interval HMM on a **single smoothed 1-D mean feature** rather than the
+  3 daily features used in v1, then applied **minimum-duration post-processing** to remove
+  physically implausible one-step state flips.
+- Motivation: the v1 3-feature labels produced state sequences that switched far too fast for
+  the block-level Markov assembly to be meaningful.
+- Produced `dataset_with_105120_v2_fit_hmm.csv` and `hmm_105120_v2_transition_matrix.pkl`.
+
+This turned out to be the change that mattered — v7 is the only version to match the intensity
+tail (see Aug 26).
+
+---
+
+### 🛠️ Training instrumentation (`train_regime.py`)
+Previously the fine-tunes logged a scalar loss and nothing else. Added:
+- Per-epoch `history.csv` with loss and best-loss tracking.
+- `loss_curve.png` with the best-epoch marked.
+- `regime_convergence.png` — per-state generated mean intensity over epochs, so state
+  separation collapse is visible during training rather than after a 10-year generation run.
+- Persisted `scaler.pkl` and `regime_proportions.pkl` per run, removing the hardcoded regime
+  frequencies the v4 generator relied on.
+
+Retrained the 365 and 105120-v2 variants with monitoring (SLURM 756911/756912) and ran the
+first generation pass (755849/755850).
+
+---
+
+## August 19–24, 2026 — Migration to 5-min Resolution & HMM State Conditioning
+
+### 🔍 Overview
+Executed **Experiment 1** and **Experiment 3** from the July 27 plan: replaced the GMM
+14-day block conditioning with per-timestep HMM state conditioning, and replaced random block
+shuffling with transition-aware Markov assembly.
+
+---
+
+### 🛠️ Implementation
+
+1. **5-minute native resolution.** Rebuilt the datasets at the gauge's native 5-min interval
+   (105,120 intervals/year) instead of the 10-min downsample used for v3/v4.
+   *(Consequence not noticed at the time: this halved the effective context window — see Aug 26.)*
+
+2. **HMM state conditioning replaces GMM regimes.** `RegimeDataset` generalised to accept
+   `regime_col = hmm_state`, with per-window labels assigned by **majority state within the
+   window** rather than by whole-block summary statistics. This closes the information-leakage
+   loophole recorded on July 27, where 14-day window statistics leaked into conditioning.
+
+3. **Two labelling variants trained** (a third followed on Aug 25):
+   - **v5** — 105,120-interval HMM fit on 3 daily features.
+   - **v6** — 365-day climatological HMM, day-of-year broadcast.
+
+4. **Transition-aware generation** (`generate_hmm_v1.py`), directly addressing the "Random
+   Block Shuffling" loophole:
+   - Block-level 1st-order Markov sampling of the state sequence from the estimated
+     $P(R_{t+1}\mid R_t)$, replacing `rng.permutation`.
+   - **Overlap-add** stitching, with a **wider overlap at state-transition boundaries**
+     (`--overlap 4`, `--transition_overlap 8`).
+   - **Soft-label bridge blocks** inserted at transitions to blend between states.
+
+5. **Retrained 500 epochs** from the base ImagenFew checkpoint with shape-safe loading
+   (`load_checkpoint_safe`) to handle the 43 → 4 class change in `map_label`.
+
+---
+
+### 📌 Outcome
+Both variants completed and generated 10-year series. Volume calibration improved dramatically
+over v1/v2 (1.93× → ~0.91×) and lag-1 autocorrelation was restored to ~0.855 against a real
+0.854. Storm duration improved but did not close (46.6 min vs 62.3). Full assessment on Aug 26.
+
+---
+
 ## August 5, 2026 — Clustering Validation & Model Selection ($K=4$ HMM vs. GMM)
 
 ### 🔍 Overview

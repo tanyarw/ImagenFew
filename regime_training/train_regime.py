@@ -132,6 +132,36 @@ def load_checkpoint_safe(model, ckpt_path, device):
         logging.info("Loaded EMA weights (%d params)", len(ema_filtered))
 
 # ──────────────────────────────────────────────────────────────────────
+# Heavy-tail loss reweighting
+# ──────────────────────────────────────────────────────────────────────
+
+def intensity_weights(x_img, alpha, gamma, normalize=True):
+    """
+    Per-pixel weight w(x) = 1 + alpha * relu(x)^gamma, used to stop the plain
+    L2 denoising objective from under-fitting extreme rainfall.
+
+    `x_img` is StandardScaler-normalised, so a dry step sits at a small
+    NEGATIVE z (about -0.15 for Astlingen) and only genuine above-mean
+    rainfall is positive.  Taking relu() therefore leaves the ~91% dry mass at
+    weight 1.0 and boosts only the wet tail, which is exactly the mass the
+    unweighted objective spends almost no expected loss on.
+
+    gamma < 1 is deliberate: raw z reaches ~120 at the 10-yr maximum, so a
+    linear weight would let a single cloudburst dominate an entire batch.
+
+    With `normalize`, weights are rescaled to mean 1.0 over the batch so the
+    overall loss magnitude — and therefore the usable learning rate and the
+    grad-clip threshold — stays comparable to the alpha=0 baseline.
+    """
+    if alpha <= 0.0:
+        return torch.ones_like(x_img)
+    w = 1.0 + alpha * torch.relu(x_img).pow(gamma)
+    if normalize:
+        w = w / w.mean().clamp_min(1e-8)
+    return w
+
+
+# ──────────────────────────────────────────────────────────────────────
 # Evaluation helper
 # ──────────────────────────────────────────────────────────────────────
 
@@ -245,6 +275,23 @@ def main():
         pickle.dump(regime_proportions, f)
     logging.info("Regime proportions: %s", regime_proportions)
 
+    # ── Loss / optimisation knobs ─────────────────────────────────────
+    # Defaults reproduce the v5–v7 runs exactly (alpha=0 → all weights 1.0,
+    # grad_clip=1.0), so any change here is opt-in from the config.
+    tail_alpha = float(getattr(args, "intensity_weight_alpha", 0.0))
+    tail_gamma = float(getattr(args, "intensity_weight_gamma", 0.5))
+    tail_normalize = bool(getattr(args, "intensity_weight_normalize", True))
+    grad_clip = float(getattr(args, "grad_clip", 1.0))
+    fft_weight = float(getattr(args, "fft_weight", 1.0))
+
+    logging.info(
+        "Loss    : EDM-weighted (time + %.3g*FFT)  |  tail w(x)=1+%.3g*relu(x)^%.3g "
+        "(normalize=%s)  |  grad_clip=%.3g",
+        fft_weight, tail_alpha, tail_gamma, tail_normalize, grad_clip,
+    )
+    if tail_alpha <= 0:
+        logging.info("          tail reweighting DISABLED (alpha=0) — baseline objective")
+
     # ── Training loop ─────────────────────────────────────────────────
     best_loss = float("inf")
     channels = 1
@@ -254,6 +301,10 @@ def main():
     for epoch in range(1, args.epochs + 1):
         model.train()
         epoch_losses = []
+        epoch_time_losses = []
+        epoch_fft_losses = []
+        epoch_grad_norms = []
+        epoch_clip_frac = []
 
         for x_ts, regime_labels in train_loader:
             x_ts = x_ts.to(args.device)                    # [B, seq_len, 1]
@@ -282,14 +333,25 @@ def main():
                 + (torch.imag(fft_output) - torch.imag(fft_x)).square()
             )
             time_loss = (output - x_img).square()
-            loss = (weight * (time_loss + fft_loss) * (1 - x_img_mask)).mean()
+
+            # Heavy-tail reweighting applies to the TIME term only. The FFT
+            # term lives in frequency space, where a per-pixel intensity
+            # weight has no meaningful counterpart.
+            w_int = intensity_weights(x_img, tail_alpha, tail_gamma, tail_normalize)
+
+            signal = 1 - x_img_mask
+            loss = (weight * (w_int * time_loss + fft_weight * fft_loss) * signal).mean()
 
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
             optimizer.step()
             model.on_train_batch_end()          # EMA update
 
             epoch_losses.append(loss.item())
+            epoch_time_losses.append((weight * time_loss * signal).mean().item())
+            epoch_fft_losses.append((weight * fft_loss * signal).mean().item())
+            epoch_grad_norms.append(float(grad_norm))
+            epoch_clip_frac.append(1.0 if float(grad_norm) > grad_clip else 0.0)
 
         avg_loss = float(np.mean(epoch_losses))
         is_best = avg_loss < best_loss
@@ -301,24 +363,40 @@ def main():
             "epoch": epoch,
             "loss": avg_loss,
             "best_loss": best_loss,
+            "time_loss": float(np.mean(epoch_time_losses)),
+            "fft_loss": float(np.mean(epoch_fft_losses)),
+            "grad_norm": float(np.mean(epoch_grad_norms)),
+            # Fraction of steps whose gradient was truncated by the clip.
+            # A high value means rare heavy-rain batches are being attenuated
+            # relative to bulk dry batches — the suspected cause of the
+            # flattened extremes in v5/v6.
+            "clip_frac": float(np.mean(epoch_clip_frac)),
         }
 
         # ── Periodic logging & evaluation ─────────────────────────────
         if epoch == 1 or epoch % log_interval == 0 or epoch == args.epochs:
             logging.info(
-                "Epoch %4d/%d  |  loss = %.6f  (best = %.6f)",
+                "Epoch %4d/%d  |  loss = %.6f  (best = %.6f)  |  time = %.6f  "
+                "fft = %.6f  |  grad = %.3f  clipped = %.0f%%",
                 epoch, args.epochs, avg_loss, best_loss,
+                epoch_record["time_loss"], epoch_record["fft_loss"],
+                epoch_record["grad_norm"], 100 * epoch_record["clip_frac"],
             )
 
             # Quick per-regime generation check
             for r in range(args.n_classes):
                 gen = evaluate_regime(model, args, r, n_samples=50, channels=channels)
+                p999 = float(np.percentile(gen, 99.9))
                 epoch_record[f"regime_{r}_mean"] = float(gen.mean())
                 epoch_record[f"regime_{r}_std"] = float(gen.std())
                 epoch_record[f"regime_{r}_max"] = float(gen.max())
+                # Tail health: the mean can look right while the tail is dead,
+                # which is exactly how v6 passed epoch-level checks yet capped
+                # out at 1.79 mm against a real maximum of 5.56 mm.
+                epoch_record[f"regime_{r}_p999"] = p999
                 logging.info(
-                    "  Regime %d  →  mean=%.4f  std=%.4f  min=%.4f  max=%.4f",
-                    r, gen.mean(), gen.std(), gen.min(), gen.max(),
+                    "  Regime %d  →  mean=%.4f  std=%.4f  min=%.4f  p99.9=%.4f  max=%.4f",
+                    r, gen.mean(), gen.std(), gen.min(), p999, gen.max(),
                 )
             model.train()
 
@@ -379,6 +457,39 @@ def save_training_plots(df_hist, ckpt_dir):
                 ax.legend(loc="best")
                 plt.tight_layout()
                 fig.savefig(os.path.join(ckpt_dir, "regime_convergence.png"), dpi=150)
+                plt.close(fig)
+
+        # Plot 3: Tail health + gradient clipping
+        # The generated p99.9 is the early-warning signal for a collapsed tail;
+        # clip_frac says how often the extremes' gradient is being truncated.
+        tail_cols = [c for c in df_hist.columns if c.startswith("regime_") and c.endswith("_p999")]
+        if tail_cols and "clip_frac" in df_hist.columns:
+            eval_hist = df_hist.dropna(subset=tail_cols)
+            if len(eval_hist) > 1:
+                colors = ["#3498db", "#2ecc71", "#e67e22", "#e74c3c"]
+                fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+                for idx, col in enumerate(tail_cols):
+                    r_num = col.split("_")[1]
+                    ax1.plot(eval_hist["epoch"], eval_hist[col],
+                             color=colors[idx % len(colors)], marker="o",
+                             markersize=4, linewidth=1.8, label=f"State {r_num} p99.9")
+                ax1.set_title("Generated Tail Health (p99.9, scaled)",
+                              fontsize=13, fontweight="bold")
+                ax1.set_ylabel("p99.9 (scaled)", fontsize=11)
+                ax1.grid(True, linestyle="--", alpha=0.5)
+                ax1.legend(loc="best")
+
+                ax2.plot(df_hist["epoch"], 100 * df_hist["clip_frac"],
+                         color="#8e44ad", linewidth=1.8, label="% steps grad-clipped")
+                ax2.plot(df_hist["epoch"], df_hist["grad_norm"],
+                         color="#7f8c8d", linewidth=1.2, alpha=0.7, label="mean grad norm")
+                ax2.set_title("Gradient Clipping Pressure", fontsize=13, fontweight="bold")
+                ax2.set_xlabel("Epoch", fontsize=11)
+                ax2.grid(True, linestyle="--", alpha=0.5)
+                ax2.legend(loc="best")
+
+                plt.tight_layout()
+                fig.savefig(os.path.join(ckpt_dir, "tail_health.png"), dpi=150)
                 plt.close(fig)
     except Exception as e:
         logging.warning("Could not save training plots: %s", e)

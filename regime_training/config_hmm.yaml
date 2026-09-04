@@ -15,6 +15,34 @@ batch_size: 2048
 learning_rate: 0.0001    # 1e-4
 weight_decay: 0.00001    # 1e-5
 
+# --- Loss: heavy-tail reweighting ---
+# The EDM objective is a plain weighted L2 denoiser. Its expected loss is
+# dominated by the ~91% of steps that are dry, so the wet tail contributes
+# almost nothing to the gradient and the network under-resolves cloudbursts.
+# w(x) = 1 + alpha * relu(x)^gamma up-weights above-mean rainfall only.
+#
+#   alpha: 0.0 reproduces v5/v6/v7 exactly. Start the v8 sweep at 0.3.
+#   gamma: sub-linear on purpose — scaled z reaches ~120 at the 10-yr max,
+#          so gamma=1.0 would let a single cloudburst dominate a batch.
+#   normalize: rescale weights to batch-mean 1.0 so the loss magnitude,
+#          learning rate and grad_clip stay comparable across alpha values.
+intensity_weight_alpha: 0.0
+intensity_weight_gamma: 0.5
+intensity_weight_normalize: true
+
+# Scale on the 2-D FFT term. NOTE: with norm='forward' Parseval makes that
+# term exactly 1/64 of the time term (verified numerically), so at weight 1.0
+# it contributes ~1.5% of the loss and is effectively inert as a spectral
+# prior — what it actually does is hold the 5/8 padded columns near zero.
+# Raise it deliberately if you want real spectral pressure.
+fft_weight: 1.0
+
+# Gradient-norm clip. At 1.0 the rare heavy-rain batches produce a large
+# gradient that is truncated hard, attenuating exactly the events we want
+# the model to learn. Watch `clip_frac` in history.csv; if it stays high,
+# raise this before raising alpha.
+grad_clip: 1.0
+
 # --- Data ---
 # Default: 105120-fit HMM dataset. Switch to hmm_365_train.csv for the 365-fit variant.
 # No separate test split — generative model uses all data for training.
