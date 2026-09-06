@@ -22,7 +22,7 @@ with
 | Symbol | Meaning | Where |
 |---|---|---|
 | `x` | one rainfall window, delay-embedded to an 8x8 image, StandardScaler-normalised | `RegimeDataset`, `DelayEmbedder` |
-| `c` | one-hot HMM state label (4 classes) | `train_regime.py` |
+| `c` | one-hot seasonal-phase index (4 levels, ascending mean intensity) | `train_regime.py` |
 | `n ~ N(0, sigma^2 I)` | the noise actually added | `ImagenFew.forward` |
 | `sigma ~ LogNormal(P_mean=-1.2, P_std=1.2)` | noise level, sampled per **sample** | `ImagenFew.forward` |
 | `lambda(sigma) = (sigma^2 + sigma_d^2) / (sigma * sigma_d)^2`, `sigma_d = 0.5` | EDM loss weighting | `ImagenFew.forward` |
@@ -47,6 +47,15 @@ deviation. Note that ImagenFew hardcodes `sigma_data = 0.5` while `RegimeDataset
 `StandardScaler`, which produces **std 1.0**. The preconditioning is therefore mis-tuned by
 2x for this data. Not fatal — it shifts which noise levels get emphasis — but it is a free
 improvement to correct.
+
+### Why we no longer call this an HMM
+
+Previous versions referred to conditioning variable `c` as an "HMM state" and the model as conditioned on Hidden Markov Model states. We have formally retired this terminology for three concrete mathematical and physical reasons (panel §2):
+1. **The label is a periodic function of day-of-year identical in all 10 years:** The state assignment repeats identically across all 10 years on the calendar rather than identifying dynamically evolving meteorological weather states.
+2. **Autocorrelation and violation of emission independence:** The HMM was fitted on a 14-day moving-average smoothed series. As a result, consecutive 5-minute samples have ~100% autocorrelation, completely voiding the core HMM conditional emission-independence assumption ($P(X_t \mid S_t, X_{<t}) = P(X_t \mid S_t)$).
+3. **The transition matrix is a calendar lookup, not a Markov chain:** The 4×4 block transition matrix is estimated from a few hundred near-deterministic seasonal crossings with `smooth=1e-5` Laplace fill. Its off-diagonal entries merely capture "which season follows which" in the annual cycle rather than a stochastic 1st-order Markov process.
+
+The conditioning variable $c$ is therefore accurately designated as a **one-hot seasonal-phase index (4 levels, ascending mean intensity)** under **seasonal-phase conditioning**.
 
 ### The extra spectral term
 

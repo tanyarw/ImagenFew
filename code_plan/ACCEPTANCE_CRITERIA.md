@@ -140,9 +140,9 @@ site.
 Any TSTR number computed against 2009 today is contaminated and cannot be reported. Before
 Gate C:
 
-1. Re-split by **year**: train the HMM and the diffusion model on 2000–2007, hold out
+1. Re-split by **year**: fit the seasonal-phase index and train the diffusion model on 2000–2007, hold out
    2008–2009 untouched.
-2. Re-fit the HMM on the training years only — the state labels are themselves fitted
+2. Re-fit the seasonal-phase index on the training years only — the phase labels are themselves fitted
    quantities and leak just as the diffusion weights do.
 3. Retrain the best configuration on the reduced set. Expect metrics to degrade; that
    degradation is the honest number.
@@ -175,6 +175,17 @@ the KPIs are not.
   perform *worse than* a fixed baseline controller. An agent trained on rain whose extremes
   are too weak will have learned that storms are survivable and can act catastrophically when
   a real one arrives. Report this separately; it must never be averaged into a mean return.
+
+---
+
+## Why we no longer call this an HMM
+
+Previous versions framed the conditioning model as an HMM and sequence generation as Markovian weather-state sampling. We have abandoned this framing for three concrete reasons (panel §2):
+1. **The label is a periodic function of day-of-year identical in all 10 years:** The state assignment is a deterministic seasonal calendar pattern rather than a dynamic meteorological weather state.
+2. **Autocorrelation and violation of emission independence:** The model is fitted on a 14-day moving-average smoothed series, making consecutive 5-minute intervals ~100% autocorrelated and voiding the HMM conditional emission-independence assumption ($P(X_t \mid S_t, X_{<t}) = P(X_t \mid S_t)$).
+3. **The transition matrix is a calendar lookup, not a Markov chain:** The 4×4 block transition matrix is estimated from a few hundred near-deterministic seasonal boundary crossings with `smooth=1e-5` Laplace fill. Its off-diagonal entries merely reflect "which season follows which" in the annual calendar rather than true transitions of a 1st-order Markov chain.
+
+All conditioning is therefore referred to as **seasonal-phase conditioning** using a discrete **seasonal-phase index**, assembled via **calendar-ordered block assembly**.
 
 ---
 

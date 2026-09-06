@@ -5,7 +5,36 @@
 
 ---
 
+## September 4, 2026 — Renaming the Conditioning Mechanism
+
+### 🔍 Overview
+Following the panel audit (§0, §2), we audited the mathematical validity of framing our conditioning pipeline as a Hidden Markov Model (HMM) and 1st-order Markov chain. We formally retired this terminology across all documentation, guides, and plans in favor of descriptive definitions that accurately describe the statistical mechanism.
+
+---
+
+### 📌 Findings
+The mechanism previously described as an HMM with Markovian block assembly is not a weather-state process for three concrete reasons:
+1. **Periodic calendar function:** The 4-state labels assigned to timestamps are a periodic function of day-of-year, repeating identically across all 10 years rather than identifying stochastically evolving weather states.
+2. **Autocorrelation & emission independence:** The HMM was fitted on a 14-day moving-average smoothed series. Successive 5-minute samples have ~100% autocorrelation, completely voiding the core HMM conditional emission-independence assumption ($P(X_t \mid S_t, X_{<t}) = P(X_t \mid S_t)$).
+3. **Degenerate transition matrix:** The 4×4 block transition matrix is estimated from a few hundred near-deterministic seasonal boundary crossings with `smooth=1e-5` Laplace fill. Its off-diagonal entries merely capture "which calendar season follows which" rather than a stochastic 1st-order Markov chain.
+
+---
+
+### ⚖️ Decision
+We have executed a global terminology shift across all documentation, guides, and plans:
+- "HMM state" / "HMM state conditioning" $\rightarrow$ **"seasonal-phase index"** / **"seasonal-phase conditioning"**.
+- "transition-aware Markov assembly" $\rightarrow$ **"calendar-ordered block assembly"**.
+- "1st-order Markov chain" / "stationary distribution" $\rightarrow$ deleted or retained strictly with explicit caveats.
+- Conditioning vector $c$ in the denoiser objective is formally designated as a **one-hot seasonal-phase index (4 levels, ascending mean intensity)**.
+
+> **Verdict: The conditioning mechanism is seasonal-phase conditioning on smoothed climatology with calendar-ordered block assembly, not an HMM or Markovian weather state process.**
+
+---
+
 ## September 1, 2026 — Loss-Function Audit & Formal Acceptance Criteria
+
+> [!NOTE]
+> **Correction (2026-09-04):** This entry referred to conditioning vector $c$ as an "HMM state" and recommended re-fitting the HMM on training years. The conditioning variable is actually a discrete seasonal-phase index (4 levels of smoothed climatological mean intensity), not a latent weather state. What was termed an HMM transition matrix is a calendar-ordered transition table between seasonal blocks.
 
 ### 🔍 Overview
 With v7 in hand, we stopped generating and audited two things we had been carrying on faith:
@@ -109,6 +138,9 @@ halved the flood peaks. Replaced by three staged gates:
 
 ## August 26, 2026 — Full-Version Benchmark: v7 Wins on Intensity, Loses on Storm Shape
 
+> [!NOTE]
+> **Correction (2026-09-04):** This entry described v5–v7 as "HMM variants" and attributed volume calibration to "HMM conditioning". In reality, the model was conditioned on a 4-level seasonal-phase index derived from smoothed calendar climatology. The underlying sequence assembly was calendar-ordered block assembly rather than genuine Markovian weather state generation.
+
 ### 🔍 Overview
 Regenerated all three HMM variants from the retrained checkpoints (SLURM 760225/760226/760227)
 and built `scripts/compare_all_versions.py` — a single benchmark of all seven synthetic
@@ -174,6 +206,9 @@ be made on hourly or daily aggregates, or restricted to one resolution.
 
 ## August 25, 2026 — HMM v2 Labels (Mean-Smoothed) & Training Instrumentation
 
+> [!NOTE]
+> **Correction (2026-09-04):** This entry discussed "HMM variant v2" and "hmm_105120_v2_transition_matrix.pkl". Fitting an HMM on a 14-day smoothed 1-D mean produces a periodic seasonal-phase index with near-100% sample autocorrelation, violating emission independence. The 4×4 transition matrix simply encodes deterministic calendar progression between seasonal phases with Laplace smoothing, not a physical Markovian weather process.
+
 ### 🔍 Overview
 Two threads: a third HMM labelling variant, and proper monitoring so we stop flying blind
 during 500-epoch fine-tunes.
@@ -211,6 +246,9 @@ first generation pass (755849/755850).
 ---
 
 ## August 19–24, 2026 — Migration to 5-min Resolution & HMM State Conditioning
+
+> [!NOTE]
+> **Correction (2026-09-04):** This entry introduced "HMM state conditioning" and "transition-aware Markov assembly". In fact, the conditioning signal is a 4-level seasonal-phase index tracking day-of-year mean intensity. The block assembly was calendar-ordered assembly from an empirical transition matrix whose off-diagonals reflect seasonal boundaries, rather than a 1st-order Markov chain of meteorological weather states.
 
 ### 🔍 Overview
 Executed **Experiment 1** and **Experiment 3** from the July 27 plan: replaced the GMM

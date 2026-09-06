@@ -6,14 +6,19 @@ This document is a practical developer guide and code walkthrough for the regime
 
 ## 1. Quickstart Execution Commands
 
-### Step 2.5: Estimate 1st-Order Markov Transition Matrix (v5 prerequisite)
+### Step 2.5: Estimate Phase Transition Matrix (v5 prerequisite)
+> [!NOTE]
+> **Terminology Caveat:** In v5, block transitions were termed a "1st-order Markov transition matrix". In reality, the transitions reflect calendar-ordered block transitions across seasonal phases rather than a true stochastic Markov chain.
+
+```bash
 python scripts/estimate_transition_matrix.py
+```
 
 ### Step 3: Generate Synthetic Rainfall Time Series
 Generate multi-year synthetic sequences using the regime-trained checkpoint and saved scaler:
 
 ```bash
-# Transition-Aware Markovian Mode (v5: Markovian P_ij regime sampling + Overlap-Add boundary smoothing)
+# Calendar-Ordered Block Assembly Mode (v5: calendar-derived P_ij phase sampling + Overlap-Add boundary smoothing)
 python regime_training/generate_regime_v5.py \
     --model_ckpt logs/ImagenFew/Rainfall_Regime/<run_id>/best_regime_model.pt \
     --scaler_path logs/ImagenFew/Rainfall_Regime/<run_id>/scaler.pkl \
@@ -41,10 +46,10 @@ python regime_training/generate_regime_v4.py \
 | Component | File Path | Core Responsibility |
 | :--- | :--- | :--- |
 | **Sequence Tagging** | `scripts/label_10min_data.py` | Merges block-level GMM labels (`gmm_regime` $\in \{0,1,2,3\}$) onto 10-minute timestamps. |
-| **Transition Matrix Estimation** | `scripts/estimate_transition_matrix.py` | Estimates empirical 1st-order Markov transition matrices $P(R_{t+1} \mid R_t)$ and stationary distributions. |
+| **Transition Matrix Estimation** | `scripts/estimate_transition_matrix.py` | Estimates empirical transition matrices between seasonal phases $P(R_{t+1} \mid R_t)$ (caveat: calendar-ordered transitions, not a 1st-order Markov chain). |
 | **Dataset Engineering** | `regime_training/regime_dataset.py` | Implements `RegimeDataset` for block-constrained sliding window extraction and standardization. |
 | **Model Training** | `regime_training/train_regime.py` | Fine-tunes `ImagenFew` with `load_checkpoint_safe()` to re-initialize the classification head. |
-| **Inference (v5 Markovian)** | `regime_training/generate_regime_v5.py` | Generates synthetic series via 1st-order Markov sampling $P_{ij}$ and Overlap-Add (OLA) boundary cross-fading. |
+| **Inference (v5 Block Assembly)** | `regime_training/generate_regime_v5.py` | Generates synthetic series via calendar-ordered block assembly ($P_{ij}$ sampling) and Overlap-Add (OLA) boundary cross-fading. |
 | **Inference (v4 Baseline)** | `regime_training/generate_regime_v4.py` | Legacy random permutation shuffling baseline generator. |
 | **Inference Dispatcher** | `regime_training/generate_regime.py` | Unified dispatcher delegating to `v5` (default) or `v4`. |
 | **Configuration** | `regime_training/config.yaml` | Hyperparameters overriding base classes to `n_classes: 4` and setting delay embeddings. |
