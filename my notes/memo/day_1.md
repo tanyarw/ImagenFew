@@ -53,6 +53,23 @@ Random shuffling or row-based 80/10/10 splitting across time is strictly prohibi
   - **Climatology:** Mild precipitation year; annual depth $661.0\text{ mm}$ ($0.93\times$ train mean), zero fraction $91.38\%$, maximum burst $2.005\text{ mm}/5\text{-min}$.
   - **Usage:** Locked. Evaluated strictly once for final thesis figures and Gate C (TSTR).
 
+### 2.3 Seasonal-Phase Labeling & Post-Processing Filter Protocol
+To prevent data contamination, the conditioning profile is derived strictly from the 2000–2007 training partition:
+1. **Train-Only Climatology:** 8-year mean precipitation calculated per annual 5-minute interval slot ($i \in [0, 105119]$) and smoothed via a 14-day centered rolling mean ($4,032$ steps).
+2. **4-State GaussianHMM Fitting:** Fitted on standardized smoothed feature (`StandardScaler`, $200$ iterations, `random_state=42`) and ordered monotonically by ascending mean intensity (Phase 0: Dry Baseline $\to$ Phase 3: Peak Cloudburst).
+3. **Intra-Day Mode Pooling:** Each of the 365 calendar days is assigned its modal state across its 288 intervals, eliminating intra-day chattering.
+4. **Minimum-Duration Spell Filter (`smooth_hmm_states_min_duration`):** Contiguous state spells are audited for duration ($\text{median} = 4.0\text{ days}$). Spells with $\text{duration} < \text{min\_days} = 4\text{ days}$ are merged into their dominant adjacent state:
+   - **Transitions Before Smoothing:** $73$ raw 5-min transitions $\to$ $50$ post-mode transitions.
+   - **Transitions After Smoothing:** **$21$ transitions/year** (matching canonical v2 stability).
+5. **Out-of-Sample Broadcast:** The 105,120 post-processed annual labels are projected onto holdout years 2008 and 2009 strictly by calendar interval slot ($0$ to $105,119$).
+6. **Canonical Export Files (`data/rainfall/splits/`):**
+   - `train_years_labelled.csv` ($840,960$ rows, SHA-256: `2ad64cacbb...`)
+   - `val_years_labelled.csv` ($105,120$ rows, SHA-256: `722dcb7323...`)
+   - `test_years_labelled.csv` ($105,120$ rows, SHA-256: `a3f3fd816a...`)
+   - `seasonal_transition_matrix_train.pkl` (Unified multi-scale bundle with `by_block_size` mapping for `seq_len` $\in \{1, 12, 24, 48, 72, 96, 144, 288\}$, defaulting to `seq_len = 24` for backward compatibility)
+   - Standalone pickles for direct CLI use: `seasonal_transition_matrix_train_len{24,48,72,96,144,288}.pkl`
+   - `MANIFEST.json`
+
 ---
 
 ## 3. Frozen Metric Definitions & Resolution of Discrepancies
