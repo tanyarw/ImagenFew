@@ -51,13 +51,18 @@ Designed specifically for sparse data to ensure the model isn't just "cheating" 
 
 ## Interpretation Summary Table
 
-| Metric | "Good" Result | Indicates... |
-| :--- | :--- | :--- |
-| Global Disc Score | $< 0.1$ | Overall statistical matching. |
-| Wet-Window Disc | $< 0.1$ | Realism during actual events. |
-| Intensity JSD | $< 0.05$ | Correct rainfall amounts/magnitudes. |
-| Extreme Ratio | $0.8 - 1.2$ | Successfully captures heavy storms. |
-| Duration Match | $\pm 10\%$ | Correct temporal persistence. |
+These metrics give you concrete ground-truth targets to evaluate your generated synthetic rainfall (derived from the empirical baseline in `data_analysis/Train_Val_Test_Split_Analysis.ipynb`):
+
+| Metric | Real Ground Truth (Train) | "Good" Result (Pass Band) | Indicates... |
+| :--- | :---: | :--- | :--- |
+| **Zero Fraction** | $91.03\%$ | $\le 1.0\text{ pp}$ diff | Dry/wet balance (absence of noise haze). |
+| **Mean Wet Spell** | $30.4\text{ min}$ | $\pm 10\%$ ($27.4$–$33.4\text{ min}$) | Correct continuous burst duration. |
+| **Mean Storm Duration ($\ge 15$m)** | $61.0\text{ min}$ | $\pm 10\%$ ($54.9$–$67.1\text{ min}$) | Physical storm lifespan persistence. |
+| **Lag-1 ACF (5-min)** | $0.8518$ | Diff $\le 0.02$ ($0.83$–$0.87$) | High-frequency physical inertia. |
+| **Intensity JSD** | $0.0$ | $< 0.05$ | Correct rainfall magnitude distribution. |
+| **Extreme Ratio ($P_{99}$)** | $0.595\text{ mm}/5\text{m}$ | $0.90$–$1.10$ ($0.54$–$0.65\text{ mm}$) | Captures heavy storm tails. |
+| **Global Disc Score** | $0.0$ | $< 0.1$ | Overall statistical sequence matching. |
+| **Wet-Window Disc** | $0.0$ | $< 0.1$ | Realism during actual rain events. |
 
 ---
 

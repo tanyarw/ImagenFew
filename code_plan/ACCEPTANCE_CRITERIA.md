@@ -16,6 +16,14 @@ Metrics are ordered by how directly they bear on that.
 Runs from `scripts/compare_all_versions.py` against the 10-yr Astlingen gauge average.
 All ratios are synthetic / real. **A version must pass every tier to proceed to Gate B.**
 
+These metrics give you concrete ground-truth targets to evaluate your generated synthetic rainfall (established in `data_analysis/Train_Val_Test_Split_Analysis.ipynb`):
+* **Zero Fraction:** $91.03\%$ (Train baseline), Pass band: $\le 1.0\text{ pp}$ difference.
+* **Mean Wet Spell:** $30.4\text{ min}$ (Train baseline), Pass band: ratio $0.90$–$1.10$ ($27.4$–$33.4\text{ min}$).
+* **Mean Storm Duration ($\ge 15$m):** $61.0\text{ min}$ (Train baseline), Pass band: ratio $0.90$–$1.10$ ($54.9$–$67.1\text{ min}$).
+* **Lag-1 Autocorrelation (5-min):** $0.8518$ (Train baseline), Pass band: absolute difference $\le 0.02$.
+* **P99 Intensity:** $0.595\text{ mm}/5\text{min}$, Pass band: ratio $0.90$–$1.10$.
+* **P99.9 Intensity:** $1.613\text{ mm}/5\text{min}$, Pass band: ratio $0.85$–$1.15$.
+
 ### Tier 1 — Water balance and intermittency
 *Does the agent see the right amount of water, arriving as often?*
 

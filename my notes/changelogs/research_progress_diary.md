@@ -3,6 +3,49 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## September 7, 2026 — Empirical Baseline Audit & Ground-Truth Evaluation Targets
+
+### 🔍 Overview
+Conducted an exhaustive statistical and hydrological analysis of the 10-year Astlingen rainfall record partitioned into chronological holdouts:
+- **Training Set (2000–2007):** 840,960 intervals (8 years, 80.05% of dataset), mean annual depth $709.6\text{ mm}$, $91.03\%$ zero intervals.
+- **Validation Set (2008):** 105,120 intervals (1 year, 10.03%), annual depth $755.7\text{ mm}$ ($1.07\times$ train mean), $92.22\%$ zero intervals.
+- **Held-Out Test Set (2009):** 105,120 intervals (1 year, 9.92%), annual depth $661.0\text{ mm}$ ($0.93\times$ train mean), $91.38\%$ zero intervals.
+
+The findings are codified in `data_analysis/Train_Val_Test_Split_Analysis.ipynb` and establish our physical evaluation targets for synthetic rainfall generation.
+
+---
+
+### 📊 Key Findings & Ground-Truth Targets
+
+1. **Intensity Marginals & Heavy Tails:**
+   - Evaluated strictly on wet intervals ($> 0.005\text{ mm}$):
+     - Train Mean: $0.0751\text{ mm}$ vs. Median: $0.0350\text{ mm}$ (proves severe right-skewness; drizzle dominates frequency while rare downpours drive volume).
+     - Extremes: Train $P_{90} = 0.169\text{ mm}$, $P_{95} = 0.263\text{ mm}$, $P_{99} = 0.595\text{ mm}$, $P_{99.9} = 1.613\text{ mm}$, Max = $5.555\text{ mm}/5\text{min}$.
+   - **Validation (2008) is a Heavy Convective Year:** Mean wet intensity reached $0.0923\text{ mm}$ ($+23\%$), $P_{99} = 0.719\text{ mm}$, $P_{99.9} = 1.734\text{ mm}$. Its survival curve sits consistently above training, making it an honest challenge for generative flood risk.
+   - **Test (2009) is a Mild Year:** Max burst reached only $2.005\text{ mm}/5\text{min}$, testing whether generators over-predict extremes during calm years.
+   - **Two-Sample KS Test:** Val vs. Train stat = $0.0758$ ($p = 2.56 \times 10^{-37}$); Test vs. Train stat = $0.0243$ ($p = 1.38 \times 10^{-4}$).
+
+2. **Storm Dynamics & Spell Durations:**
+   - **Mean Storm Duration ($\ge 15$ min):** $61.0\text{ minutes}$ (Train), $60.5\text{ minutes}$ (Val), $67.5\text{ minutes}$ (Test). Storm duration is an invariant physical characteristic of the Astlingen climate (${\approx} 1\text{ hour}$).
+   - **Mean Wet Spell Length:** $30.4\text{ minutes}$ (${\approx} 6$ consecutive 5-min intervals).
+   - **Storm Frequency:** Train averaged $682.6\text{ storms/yr}$ vs. Val $597.0\text{ storms/yr}$. 2008 concentrated greater annual rain volume into fewer, more intense downpours.
+   - **Maximum Dry Spell:** Train captures a $33.40\text{ day}$ drought (Summer 2003 European heatwave), while single-year holdouts maxed out at $11.8$–$13.6$ days.
+
+3. **Temporal Autocorrelation & Memory Decay:**
+   - **Lag-1 5-Min ACF:** Train = $0.8518$, Val = $0.8665$, Test = $0.8535$. Rainfall exhibits massive short-term physical inertia, proving it cannot be modeled as memoryless noise.
+   - **Convective Decay (0 to 2 Hours):** Rapid decay from $0.85 \to 0.20$ within 2 hours, matching the 60-minute storm cell lifecycle.
+   - **Decorrelation Horizon (12 to 18 Hours):** Autocorrelation drops below $0.03$ by 12–18 hours, defining the maximum memory horizon of the physical process.
+
+---
+
+### 🎯 Synthesis: Evaluation Targets for Synthetic Series
+These metrics give you concrete ground-truth targets to evaluate your generated synthetic rainfall:
+- **Zero fraction:** Must match $91.0 \pm 1.0\%$.
+- **Mean storm duration:** Must target $61.0 \pm 6.0\text{ min}$ (cannot collapse to 10 min or smear to 4 hours).
+- **Mean wet spell:** Must target $30.4 \pm 3.0\text{ min}$.
+- **Lag-1 ACF:** Must target $0.85 \pm 0.02$.
+- **Extreme tail ($P_{99}$):** Must target $0.60 \pm 0.06\text{ mm}/5\text{min}$.
+
 ---
 
 ## September 4, 2026 — Renaming the Conditioning Mechanism
