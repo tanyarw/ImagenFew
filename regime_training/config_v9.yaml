@@ -1,0 +1,68 @@
+# ==============================================================================
+# Clean v9 Training Configuration (Holdout Split 2000–2007, seq_len = 144)
+# ==============================================================================
+# Identical architecture, delay embedding, and loss weights as v8 baseline,
+# but trained with sequence length seq_len = 144 (12 hours at 5-min resolution).
+#
+# Usage:
+#   python regime_training/train_regime.py \
+#       --model_ckpt models_ckpt/ImagenFew/ImagenFew_24.ckpt \
+#       --config regime_training/config_v9.yaml
+
+# --- Training ---
+epochs: 500
+batch_size: 2048
+learning_rate: 0.0001    # 1e-4
+weight_decay: 0.00001    # 1e-5
+
+# --- Loss: matching v7/v8 exact baseline ---
+# alpha = 0.0 reproduces v7/v8 unweighted loss baseline
+intensity_weight_alpha: 0.0
+intensity_weight_gamma: 0.5
+intensity_weight_normalize: true
+fft_weight: 1.0
+grad_clip: 1.0
+
+# --- Data: Clean Chronological Holdout Datasets ---
+train_csv: data/rainfall/splits/train_years_labelled.csv
+test_csv: data/rainfall/splits/val_years_labelled.csv
+seq_len: 144
+n_classes: 4   # 4 seasonal phases (0: Dry Baseline -> 3: Peak Cloudburst)
+
+# --- Column names ---
+regime_col: hmm_state
+data_col: avg_rainfall
+
+# --- Transform (Delay Embedding) ---
+use_stft: false
+delay: 8
+embedding: 8
+
+# --- Model Architecture (must match base checkpoint) ---
+handler: models.ImagenFew.handler
+img_resolution: 8
+input_channels: 1
+unet_channels: 32
+ch_mult: [1, 2, 2, 4]
+attn_resolution: [8, 4, 2]
+diffusion_steps: 36
+dynamic_size: [128, 128]
+
+# --- Diffusion Sampler ---
+beta1: 0.00001      # 1e-5
+betaT: 0.01         # 1e-2
+deterministic: false
+
+# --- Fine-tuning ---
+finetune: true
+pretrain: false
+ema: true
+ema_warmup: 100
+ft_method: all       # fine-tune all parameters
+lora_dim: 4          # ignored when ft_method != 'lora'
+dropout: 0.0
+
+# --- Logging & Monitoring ---
+logging_iter: 25       # Log metrics, evaluate regimes, and update plots every 25 epochs
+run_id: null           # auto-generated if null
+run_dir: ImagenFew/Rainfall_v9/
