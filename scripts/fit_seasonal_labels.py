@@ -194,6 +194,7 @@ unified_bundle = {
     'post_processing_min_days': min_days_val,
     'by_block_size': by_block_size,
     'supported_block_sizes': candidate_block_sizes,
+    'climatology_profile_1yr': clim_105120['hmm_state'].values,
     'calendar_sequence_1yr_step24': clim_105120['hmm_state'].values[::24],
     'calendar_sequence_1yr_step288': clim_105120['hmm_state'].values[::288],
 }
@@ -216,7 +217,9 @@ for bs in [24, 48, 72, 96, 144, 288]:
         'n_transitions': by_block_size[bs]['n_transitions'],
         'regime_proportions': regime_proportions,
         'n_states': 4,
-        'post_processing_min_days': min_days_val
+        'post_processing_min_days': min_days_val,
+        'calendar_sequence_1yr': clim_105120['hmm_state'].values[::bs],
+        'climatology_profile_1yr': clim_105120['hmm_state'].values,
     }
     with open(os.path.join(SPLITS_DIR, f'seasonal_transition_matrix_train_len{bs}.pkl'), 'wb') as f:
         pickle.dump(standalone, f)
@@ -241,13 +244,34 @@ manifest = {
         'annual_transitions': n_annual_trans
     },
     'splits': {
-        'train': {'file': 'train_years_labelled.csv', 'years': '2000-2007', 'rows': len(df_train), 'sha256': get_sha256(train_csv)},
-        'val': {'file': 'val_years_labelled.csv', 'years': '2008', 'rows': len(df_val), 'sha256': get_sha256(val_csv)},
-        'test': {'file': 'test_years_labelled.csv', 'years': '2009', 'rows': len(df_test), 'sha256': get_sha256(test_csv)}
+        'train': {
+            'file': 'train_years_labelled.csv',
+            'years': '2000-2007',
+            'rows': len(df_train),
+            'sha256': get_sha256(train_csv),
+            'phase_distribution': {int(k): int(v) for k, v in df_train['hmm_state'].value_counts().sort_index().items()}
+        },
+        'val': {
+            'file': 'val_years_labelled.csv',
+            'years': '2008',
+            'rows': len(df_val),
+            'sha256': get_sha256(val_csv),
+            'phase_distribution': {int(k): int(v) for k, v in df_val['hmm_state'].value_counts().sort_index().items()}
+        },
+        'test': {
+            'file': 'test_years_labelled.csv',
+            'years': '2009',
+            'rows': len(df_test),
+            'sha256': get_sha256(test_csv),
+            'phase_distribution': {int(k): int(v) for k, v in df_test['hmm_state'].value_counts().sort_index().items()}
+        }
     },
     'transition_matrices': {
         'unified_bundle': 'seasonal_transition_matrix_train.pkl',
-        'supported_block_sizes': candidate_block_sizes
+        'supported_block_sizes': candidate_block_sizes,
+        'standalone_files': {
+            f'len{bs}': f'seasonal_transition_matrix_train_len{bs}.pkl' for bs in [24, 48, 72, 96, 144, 288]
+        }
     }
 }
 

@@ -85,6 +85,10 @@ def parse_args():
                    help="Number of soft-label bridge blocks to insert at "
                         "state transitions (default: 1, 0 to disable)")
 
+    p.add_argument("--assembly_mode", type=str, default="markov",
+                   choices=["markov", "calendar"],
+                   help="Sequence assembly mode: 'markov' (legacy stochastic random walk) "
+                        "or 'calendar' (deterministic annual seasonal calendar progression)")
     p.add_argument("--output_name", type=str, default=None,
                    help="Explicit output CSV filename (e.g., 'rainfall_synthetic_10y_v6.csv')")
     p.add_argument("--seed", type=int, default=42)
@@ -365,8 +369,43 @@ def main():
         state_sequence = np.full(num_base_blocks, cli.state, dtype=int)
         tag = f"hmm_state{cli.state}"
         logging.info("Single-state mode: locked to HMM State %d", cli.state)
+    elif cli.assembly_mode == "calendar":
+        # Calendar-ordered assembly mode (deterministic annual seasonal cycle)
+        trans_path = cli.transition_matrix_path
+        if trans_path is None:
+            trans_path = os.path.join(
+                PROJECT_ROOT, "data", "rainfall", "splits", "seasonal_transition_matrix_train_len24.pkl"
+            )
+        if not os.path.exists(trans_path):
+            trans_path = os.path.join(
+                PROJECT_ROOT, "data", "rainfall", "splits", "seasonal_transition_matrix_train.pkl"
+            )
+        if os.path.exists(trans_path):
+            with open(trans_path, "rb") as f:
+                trans_data = pickle.load(f)
+            logging.info("Loaded seasonal profile from %s", trans_path)
+        else:
+            raise FileNotFoundError(f"Transition matrix/profile not found at {trans_path}")
+
+        if "climatology_profile_1yr" in trans_data:
+            clim = trans_data["climatology_profile_1yr"]
+            state_sequence = np.array([clim[(k * base_stride) % len(clim)] for k in range(num_base_blocks)], dtype=int)
+        elif "calendar_sequence_1yr" in trans_data:
+            cal_seq = trans_data["calendar_sequence_1yr"]
+            reps = int(np.ceil(num_base_blocks / len(cal_seq)))
+            state_sequence = np.tile(cal_seq, reps)[:num_base_blocks].astype(int)
+        elif "calendar_sequence_1yr_step24" in trans_data:
+            cal_seq = trans_data["calendar_sequence_1yr_step24"]
+            reps = int(np.ceil(num_base_blocks / len(cal_seq)))
+            state_sequence = np.tile(cal_seq, reps)[:num_base_blocks].astype(int)
+        else:
+            raise ValueError(f"No calendar sequence profile found in {trans_path}")
+
+        tag = "calendar_v1"
+        logging.info("Calendar-Ordered Assembly: %d blocks mapped across %.1f annual seasonal cycles",
+                     num_base_blocks, cli.years)
     else:
-        # Load or compute transition matrix
+        # Load or compute transition matrix (stochastic Markov sampling)
         trans_path = cli.transition_matrix_path
         if trans_path is None:
             trans_path = os.path.join(

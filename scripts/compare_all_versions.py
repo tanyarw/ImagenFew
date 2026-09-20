@@ -59,15 +59,19 @@ VERSION_META = {
     "v5": {"desc": "HMM 105k v1 (3-feat, retrained)",  "res_min": 5, "group": "hmm"},
     "v6": {"desc": "HMM 365-day (DoY, retrained)",     "res_min": 5, "group": "hmm"},
     "v7": {"desc": "HMM 105k v2 (1D mean, smoothed)",  "res_min": 5, "group": "hmm"},
+    "v8":     {"desc": "Clean Holdout (Markov assembly)",   "res_min": 5, "group": "holdout"},
+    "v8_cal": {"desc": "Clean Holdout (Calendar assembly)", "res_min": 5, "group": "holdout"},
 }
 
 # Colour palette — grouped by generation strategy
 COLORS = {
-    "Real":  "#1a1a1a",
-    "v1":    "#aec7e8", "v2": "#7fb0e0",   # baselines: light blues
-    "v3":    "#c5b0d5", "v4": "#9e86c8",   # 10-min / seasonal: purples
-    "v5":    "#2ca02c", "v6": "#17becf",   # HMM retrained: green/teal
-    "v7":    "#d62728",                     # HMM v2: red (highlight)
+    "Real":   "#1a1a1a",
+    "v1":     "#aec7e8", "v2": "#7fb0e0",   # baselines: light blues
+    "v3":     "#c5b0d5", "v4": "#9e86c8",   # 10-min / seasonal: purples
+    "v5":     "#2ca02c", "v6": "#17becf",   # HMM retrained: green/teal
+    "v7":     "#d62728",                     # HMM v2: red (highlight)
+    "v8":     "#ff7f0e",                     # Clean holdout v8 Markov: orange
+    "v8_cal": "#e377c2",                     # Clean holdout v8 Calendar: pink
 }
 
 
