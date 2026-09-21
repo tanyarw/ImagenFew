@@ -1,12 +1,13 @@
 # ==============================================================================
-# Clean v9 Training Configuration (Holdout Split 2000–2007, seq_len = 144)
+# Clean v9 Training Configuration (Holdout Split 2000–2007, seq_len = 36)
 # ==============================================================================
 # Identical architecture, delay embedding, and loss weights as v8 baseline,
-# but trained with sequence length seq_len = 144 (12 hours at 5-min resolution).
+# but trained with sequence length seq_len = 36 (3 hours at 5-min resolution)
+# fine-tuning from ImagenFew_36.ckpt.
 #
 # Usage:
 #   python regime_training/train_regime.py \
-#       --model_ckpt models_ckpt/ImagenFew/ImagenFew_24.ckpt \
+#       --model_ckpt models_ckpt/ImagenFew/ImagenFew_36.ckpt \
 #       --config regime_training/config_v9.yaml
 
 # --- Training ---
@@ -26,7 +27,7 @@ grad_clip: 1.0
 # --- Data: Clean Chronological Holdout Datasets ---
 train_csv: data/rainfall/splits/train_years_labelled.csv
 test_csv: data/rainfall/splits/val_years_labelled.csv
-seq_len: 144
+seq_len: 36
 n_classes: 4   # 4 seasonal phases (0: Dry Baseline -> 3: Peak Cloudburst)
 
 # --- Column names ---

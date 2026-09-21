@@ -19,3 +19,4 @@ gluonts==0.16.0
 loralib==0.1.2
 sktime==0.35.0
 argparse
+hmmlearn>=0.3.0

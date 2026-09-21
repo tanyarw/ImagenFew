@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-09-20T23:50:30.450554",
+  "created_at": "2026-09-21T18:26:59.978749",
   "source_file": "data/rainfall/real_rainfall_data.csv",
   "source_sha256": "8f888e31edde837cb4fddad0c184e9ee15ca887690e21065dd75a06efeb3fffa",
   "wet_threshold_mm": 0.005,
@@ -54,7 +54,9 @@
       1,
       12,
       24,
+      36,
       48,
+      64,
       72,
       96,
       144,
@@ -62,7 +64,9 @@
     ],
     "standalone_files": {
       "len24": "seasonal_transition_matrix_train_len24.pkl",
+      "len36": "seasonal_transition_matrix_train_len36.pkl",
       "len48": "seasonal_transition_matrix_train_len48.pkl",
+      "len64": "seasonal_transition_matrix_train_len64.pkl",
       "len72": "seasonal_transition_matrix_train_len72.pkl",
       "len96": "seasonal_transition_matrix_train_len96.pkl",
       "len144": "seasonal_transition_matrix_train_len144.pkl",

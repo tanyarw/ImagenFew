@@ -152,12 +152,12 @@ print(f"Exported clean splits: Train={len(df_train):,}, Val={len(df_val):,}, Tes
 # 9. Compute multi-scale transition matrices
 smooth = 1e-5
 train_states = df_train['hmm_state'].values
-candidate_block_sizes = [1, 12, 24, 48, 72, 96, 144, 288]
+candidate_block_sizes = [1, 12, 24, 36, 48, 64, 72, 96, 144, 288]
 by_block_size = {}
 
 for bs in candidate_block_sizes:
     n_blocks = len(train_states) // bs
-    block_seq = train_states.reshape(n_blocks, bs)[:, 0] if (288 % bs == 0) else train_states
+    block_seq = train_states[:n_blocks * bs].reshape(n_blocks, bs)[:, 0]
     C_block = np.zeros((4, 4), dtype=np.float64) + smooth
     for i in range(len(block_seq) - 1):
         C_block[block_seq[i], block_seq[i + 1]] += 1.0
@@ -203,7 +203,7 @@ main_pkl = os.path.join(SPLITS_DIR, 'seasonal_transition_matrix_train.pkl')
 with open(main_pkl, 'wb') as f:
     pickle.dump(unified_bundle, f)
 
-for bs in [24, 48, 72, 96, 144, 288]:
+for bs in [24, 36, 48, 64, 72, 96, 144, 288]:
     standalone = {
         'P_block': by_block_size[bs]['P_block'],
         'P': by_block_size[bs]['P'],
@@ -270,7 +270,7 @@ manifest = {
         'unified_bundle': 'seasonal_transition_matrix_train.pkl',
         'supported_block_sizes': candidate_block_sizes,
         'standalone_files': {
-            f'len{bs}': f'seasonal_transition_matrix_train_len{bs}.pkl' for bs in [24, 48, 72, 96, 144, 288]
+            f'len{bs}': f'seasonal_transition_matrix_train_len{bs}.pkl' for bs in [24, 36, 48, 64, 72, 96, 144, 288]
         }
     }
 }
