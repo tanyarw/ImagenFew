@@ -1,5 +1,24 @@
 """
-run_evaluation.py  —  compute all sanity metrics for v8/v9/v10 and print structured results.
+run_evaluation.py  —  compute descriptive sanity metrics for v8/v9/v10 and print
+structured results.
+
+CAVEATS (added 2026-09-22, see code_plan/AUDIT_2026-09-22.md §5 items 5 and 8):
+
+1. REAL_PATH below is the full 2000-2009 record, 80% of which is v8/v9/v10's own
+   training data. `my notes/memo/day_1.md` §3.1 freezes the 2000-2007 TRAINING
+   PARTITION as the canonical Gate A reference, and designates full-record values as
+   a documented sensitivity result, not a pass/fail target. Verdicts computed here can
+   differ materially from the canonical ones (e.g. v10's hourly ACF RMSE is 0.055
+   FAIL against this file's reference vs 0.049 PASS against the canonical one).
+   Use `scripts/gate_a_scorecard.py --reference train` (or `--reference test` for the
+   locked 2009 year) for any number that will be reported as a result.
+2. "P99"/"P99.9" below are computed over the FULL series including zeros (e.g. real
+   P99 = 0.160 mm). `code_plan/ACCEPTANCE_CRITERIA.md` and
+   `code_plan/EVALUATION_GUIDE.md` use the same names for the WET-ONLY quantile
+   (real P99_wet = 0.595 mm) — a different number. Do not compare the two.
+3. This script has no machine-readable pass/fail column and does not compute Tier 4
+   (IDF) or Tier 5 (seasonality/diurnal). `scripts/gate_a_scorecard.py` covers all of
+   Gate A as specified in `code_plan/ACCEPTANCE_CRITERIA.md`, with explicit bands.
 """
 import os, warnings
 warnings.filterwarnings('ignore')
@@ -10,7 +29,7 @@ from scipy.spatial.distance import jensenshannon
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GEN_DIR   = os.path.join(PROJECT_ROOT, 'results', 'generated_data')
-REAL_PATH = os.path.join(PROJECT_ROOT, 'data', 'rainfall', 'real_rainfall_data.csv')
+REAL_PATH = os.path.join(PROJECT_ROOT, 'data', 'rainfall', 'real_rainfall_data.csv')  # full 2000-2009 record — see caveat 1 above
 VERSIONS  = ['v8','v8_cal','v9','v9_cal','v10','v10_cal']
 
 # ── Load ────────────────────────────────────────────────────────────────

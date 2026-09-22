@@ -3,6 +3,163 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## September 22, 2026 — Comprehensive Evaluation Suite, Scorecard, and Fine-Tuning Analysis (v8–v10)
+
+> **Correction (2026-09-22, later same day):** An independent audit
+> ([`code_plan/AUDIT_2026-09-22.md`](../../code_plan/AUDIT_2026-09-22.md)) found that this
+> entry's scorecard and verdict were computed against the **full 2000–2009 record**
+> (`scripts/run_evaluation.py`'s default), not the 2000–2007 training partition
+> `my notes/memo/day_1.md` §3.1 freezes as canonical — 80% of the full record is these
+> models' own training data. Rescored against the canonical partition with the added
+> Tier 4 (IDF) and Tier 5 (seasonality) tiers that this entry's tables do not cover:
+> - **No version passes Gate A.** Best is v10 at 11/18 banded metrics
+>   (`results/reference/gate_a_train.json`), not the near-passing picture this entry's
+>   verdict implies.
+> - **"v10 (Markov)" is corrected to "v10 (transition-sampled assembly)"** — the CLI flag
+>   name `--assembly_mode markov` does not describe a physical Markov weather process (see
+>   the Sept 4 entry below and `my notes/memo/day_1.md` §4).
+> - The **Recommended Downstream RL Configuration** line below is withdrawn. `my notes/memo/day_1.md`
+>   §7 bars claiming synthetic-data validity for RL control before Gate B (SWMM routing)
+>   and Gate C (TSTR), neither of which has run.
+> - **v10 under transition-sampled assembly has no seasonal cycle** (monthly Pearson r =
+>   −0.11 against observed, computed 2026-09-22); only v10 under calendar-ordered assembly
+>   (r = 0.65) and v8_cal (r = 0.91) carry one. "Seasonality Match: Flat" for v10 in the
+>   table below was correctly logged at the time but undersells how large this gap is.
+> - **v9/v9_cal rejection reasoning is corrected:** the quoted $2.83\text{ mm}$ max is
+>   within the observed record's own per-year range ($1.92$–$5.55\text{ mm}$) and is not on
+>   its own evidence of tail truncation; v9's decisive defect is its volume deficit
+>   (ratio $0.831$, $z=-6.5$ against the interannual spread of the observed record), not
+>   the single-draw maximum.
+> - **"The EDM Generative Paradox"** (last bullet of the Loss Function section below) is
+>   withdrawn: the loss values being compared are `.mean()`-reduced over a fixed 64-cell
+>   grid regardless of how many cells are active at each `seq_len`, so raw scalars across
+>   different `seq_len` are not on the same scale. Rescaled by $64/seq\_len$, v10 has the
+>   **lowest** per-active-cell loss ($0.1556$) of the six versions compared — there is no
+>   paradox, loss and sample quality agree once normalised correctly.
+>
+> The scorecard table, "Most Significant Change" section and loss bullets below are kept
+> as originally written for the record of what was concluded at the time; read them with
+> the five corrections above. Full derivation of every correction:
+> [`code_plan/AUDIT_2026-09-22.md`](../../code_plan/AUDIT_2026-09-22.md).
+> [`docs/RESEARCH_CONTRIBUTIONS.md`](../../docs/RESEARCH_CONTRIBUTIONS.md) and
+> [`docs/FINETUNING_ANALYSIS.md`](../../docs/FINETUNING_ANALYSIS.md) have been revised in
+> place to reflect them (they are living technical documents, not dated diary entries).
+
+### 🔍 Overview
+Completed the evaluation and synthesis across all six clean synthetic holdout datasets (**v8**, **v8_cal**, **v9**, **v9_cal**, **v10**, **v10_cal**) alongside historical benchmarks (v1–v7). Built the unified automated evaluation script [`scripts/run_evaluation.py`](../../scripts/run_evaluation.py) and interactive sanity notebook [`notebooks/synthetic_rainfall_evaluation.ipynb`](../../notebooks/synthetic_rainfall_evaluation.ipynb) (commit `e34a342`). Codified fine-tuning methodology, training loss dynamics, and physical storm metrics in [`docs/FINETUNING_ANALYSIS.md`](../../docs/FINETUNING_ANALYSIS.md), and authored the comparative research innovation and limitation report in [`docs/RESEARCH_CONTRIBUTIONS.md`](../../docs/RESEARCH_CONTRIBUTIONS.md) evaluating our contributions against the base paper (*Gonen et al., NeurIPS 2025*).
+
+
+---
+
+### 📊 Summary Scorecard & Version Rankings
+
+| Evaluation Axis | Real Ground Truth | v8 (L=24) | v8_cal (L=24) | v9 (L=36) | v9_cal (L=36) | v10 (L=64) | v10_cal (L=64) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Annual Volume** | $709.3\text{ mm}$ | $688.0\text{ mm}$ ($97\%$) | $692.4\text{ mm}$ ($98\%$) | $589.5\text{ mm}$ ($83\%$) | $588.3\text{ mm}$ ($83\%$) | $649.2\text{ mm}$ ($92\%$) | $630.0\text{ mm}$ ($89\%$) |
+| **Zero Fraction** | $90.96\%$ | $91.58\%$ | $91.56\%$ | $91.30\%$ | $91.29\%$ | $91.75\%$ | $91.84\%$ |
+| **Mean Wet Intensity**| $0.0746\text{ mm}$ | $0.0778\text{ mm}$ | $0.0780\text{ mm}$ | $0.0645\text{ mm}$ | $0.0642\text{ mm}$ | $0.0749\text{ mm}$ | $0.0735\text{ mm}$ |
+| **Storm Count ($N/\text{yr}$)**| **$679.7$** | $840.8$ ($+24\%$) | $848.0$ ($+25\%$) | $835.5$ ($+23\%$) | $835.4$ ($+23\%$) | **$699.8$** ($+2.9\%$) | **$693.3$** ($+2.0\%$) |
+| **Mean Storm Duration**| **$62.3\text{ min}$** | $45.8\text{ min}$ ($-26\%$) | $45.7\text{ min}$ ($-27\%$) | $45.3\text{ min}$ ($-27\%$) | $45.2\text{ min}$ ($-27\%$) | **$54.1\text{ min}$** ($87\%$) | **$54.1\text{ min}$** ($87\%$) |
+| **Hourly Lag-1 ACF** | **$0.4831$** | $0.3069$ | $0.2948$ | $0.3782$ | $0.3623$ | **$0.4475$** | **$0.4319$** |
+| **Hourly ACF RMSE** | **$0.0000$** | $0.0926$ | $0.0936$ | $0.0784$ | $0.0797$ | **$0.0554$** | **$0.0564$** |
+| **Hourly KS Distance** | $0.0000$ | $0.0312$ | $0.0320$ | $0.0415$ | $0.0421$ | **$0.0093$** | **$0.0114$** |
+| **Wet-Only JSD** | $0.0000$ | $0.0624$ | $0.0634$ | $0.1007$ | $0.1001$ | **$0.0439$** | $0.0486$ |
+| **Max 5-Min Burst** | $5.555\text{ mm}$ | $4.396\text{ mm}$ | $4.983\text{ mm}$ | $2.830\text{ mm}$ | $3.159\text{ mm}$ | $4.612\text{ mm}$ | **$5.638\text{ mm}$** |
+| **Seasonality Match**| Ground Truth | Flat | **Strong** | Flat | Partial | Flat | Partial |
+
+#### Verdict & Production Deployments:
+- **Best Overall Generator:** **`v10` (Markov)** — Achieves the highest statistical fidelity, best hourly autocorrelation, lowest KS/JSD divergence, and restores storm geometry to within $+2.9\%$ of real storm frequency and $87\%$ of real storm duration.
+- **Best for Seasonality:** **`v8_cal` (Calendar Assembly)** — Preserves the monthly annual precipitation cycle accurately across calendar months.
+- **Recommended Downstream RL Configuration:** Primary training on **`v10`**, supplemented with **`v8_cal`** for seasonal cycle diversity.
+- **Reject / Marginal:** **`v9` / `v9_cal`** rejected due to a $17\%$ volume deficit and truncated extreme tail ($2.83\text{ mm}$ max vs $5.555\text{ mm}$ real).
+
+---
+
+### 🏆 The Most Significant Change for the Research
+The architectural expansion of the receptive context window from **$seq\_len = 24$ ($2.0\text{ hours}$)** to **$seq\_len = 64$ ($5.33\text{ hours}$)** in **v10** resolved the storm geometry failure that persisted through all prior iterations:
+- **Annual Storm Count:** Normalized from $840.8\text{ storms/yr}$ (v8) down to **$699.8\text{ storms/yr}$** ($693.3/\text{yr}$ under calendar assembly), matching real ground truth ($679.7\text{ storms/yr}$) within **$+2.9\%$**.
+- **Mean Storm Duration:** Rebounded from $45.8\text{ min}$ (v8) to **$54.1\text{ min}$** ($87\%$ of real $62.3\text{ min}$), reversing the $-26\%$ collapse.
+- **Hourly Autocorrelation RMSE:** Slashed by **$40\%$** from $0.0926$ to **$0.0554$**, lifting hourly lag-1 ACF from $0.3069$ to **$0.4475$** (Real: $0.4831$).
+- **Extreme Tail:** Peak burst maintained at **$5.638\text{ mm}/5\text{-min}$** (Real: $5.555\text{ mm}$).
+- **Hourly KS Divergence:** Dropped from $0.0312$ to **$0.0093$** ($>3\times$ improvement).
+
+---
+
+### 📈 Loss Function Behavior Across Versions
+- **Invariance across $L=24$ runs:** v5, v6, v7, and v8 all converged to a plateau between $0.0617$ and $0.0624$, proving that scalar loss is insensitive to conditioning or extreme tail health under EDM preconditioning.
+- **Proportional loss scaling with context length:** Loss scaled directly with active delay-embedding tensor volume:
+  - $L=24$ (v8): Initial $0.1276 \to$ Best **$0.0624$** (Ep 433)
+  - $L=36$ (v9): Initial $0.1601 \to$ Best **$0.0909$** (Ep 453)
+  - $L=64$ (v10): Initial $0.2545 \to$ Best **$0.1556$** (Ep 498)
+- **Early optimization dynamics:** v10 experienced severe initial gradient shock (Epoch 1 mean grad norm $1.350$, $63.2\%$ clipped) before stabilizing by Epoch 25 ($10\%$ clipped) and settling under $0.45$.
+- **The EDM Generative Paradox:** Higher scalar loss in v10 ($0.156$ vs $0.062$) corresponds to substantially superior generative hydrology.
+
+---
+
+## September 21, 2026 — Sequence Length Adaptation (v9 & v10) to Base Checkpoint Geometries
+
+> **Correction (2026-09-22):** The claim below that base checkpoints are "constrained to
+> these exact delay-embedding sequence lengths" and that targeting $seq\_len=144/288$
+> "caused shape mismatches with base weights" is not what the training logs show. All four
+> checkpoints (`ImagenFew_{12,24,36,64}.ckpt`) are byte-identical in size (54,577,102
+> bytes), and every v8/v9/v10 run — including the failed 144/288 attempts — loads exactly
+> 1006/1008 parameters, skipping only the two class-embedding heads, regardless of which
+> checkpoint or target `seq_len` was used. The 144/288 runs instead failed with
+> `IndexError: index 8 is out of bounds for dimension 3 with size 8` in
+> `models/ImagenFew/img_transformations.py` — a limit set by the training config's
+> `delay=embedding=8` grid size, not by the checkpoint. See
+> [`code_plan/AUDIT_2026-09-22.md`](../../code_plan/AUDIT_2026-09-22.md) §3.1 and
+> [`code_plan/PROVENANCE.md`](../../code_plan/PROVENANCE.md). A consequence: the v9/v10
+> context-length comparison changed checkpoint initialisation and context length at the
+> same time, which was not a necessary constraint, and the two have not yet been
+> decoupled.
+
+### 🔍 Overview
+Following the decision to scale context length (Tasks T4.2 / Experiment 2), we audited the available pretrained base checkpoints in `models_ckpt/ImagenFew/` (`ImagenFew_12.ckpt`, `ImagenFew_24.ckpt`, `ImagenFew_36.ckpt`, `ImagenFew_64.ckpt`). Because base checkpoints are constrained to these exact delay-embedding sequence lengths, targeting $seq\_len = 144$ or $288$ caused shape mismatches with base weights.
+
+---
+
+### 🛠️ Modifications (Commits `aeec47e`, `6172f29`, `8b0db23`)
+1. **Config Realignment:**
+   - Realized v9 at **$seq\_len = 36$** ($3.0\text{ hours}$) fine-tuned from `ImagenFew_36.ckpt` ([`regime_training/config_v9.yaml`](../../regime_training/config_v9.yaml)).
+   - Realized v10 at **$seq\_len = 64$** ($5.33\text{ hours}$) fine-tuned from `ImagenFew_64.ckpt` ([`regime_training/config_v10.yaml`](../../regime_training/config_v10.yaml)).
+2. **Transition Matrix Derivation (`scripts/fit_seasonal_labels.py`):**
+   - Added candidate block sizes $36$ and $64$ into the multi-scale block transition calculation:
+     - `seasonal_transition_matrix_train_len36.pkl`
+     - `seasonal_transition_matrix_train_len64.pkl`
+   - Updated `data/rainfall/splits/MANIFEST.json`.
+3. **Training & Inference Scripts:**
+   - Updated training wrappers: [`scripts/run_v9_training.sh`](../../scripts/run_v9_training.sh) and [`scripts/run_v10_training.sh`](../../scripts/run_v10_training.sh).
+   - Created generation scripts supporting dual Markov and Calendar assembly: [`scripts/run_v9_generation.sh`](../../scripts/run_v9_generation.sh) and [`scripts/run_v10_generation.sh`](../../scripts/run_v10_generation.sh).
+
+---
+
+## September 19–20, 2026 — Clean Chronological Holdout Split, De-Notebooked Pipeline & v8 Baseline
+
+### 🔍 Overview
+Executed Phase 0 and Phase 1 of the remediation plan ([`code_plan/REMEDIATION_PLAN.md`](../../code_plan/REMEDIATION_PLAN.md)) to eliminate cross-year data leakage and establish a defensible, reproducible experimental foundation (commits `fcd8e75`, `0933259`, `1a84713`, `47b4ffe`, `b846b3b`, `5044617`).
+
+---
+
+### 🛠️ Key Deliverables
+1. **Canonical Partitioning (`data/rainfall/splits/`):**
+   - **Training Set (2000–2007):** $840,960$ intervals ($80.00\%$), mean annual depth $709.6\text{ mm}$, zero fraction $91.03\%$.
+   - **Validation Set (2008):** $105,120$ intervals ($10.00\%$, convective heavy-rain year), annual depth $755.7\text{ mm}$, wet mean $0.0923\text{ mm}$.
+   - **Test Set (2009):** $105,120$ intervals ($10.00\%$, mild year), annual depth $661.0\text{ mm}$, maximum burst $2.005\text{ mm}$.
+2. **De-Notebooked Seasonal-Phase Fitting (`scripts/fit_seasonal_labels.py`):**
+   - Replaced interactive notebooks with a deterministic CLI script.
+   - Fitted a 4-state `GaussianHMM` strictly on 2000–2007 training years' 14-day rolling mean climatology with 4-day minimum duration spell filtering (`smooth_hmm_states_min_duration`), stabilizing annual transitions to $21\text{ transitions/year}$.
+   - Projected labels onto holdout years (2008–2009) out-of-sample via calendar slot index ($0$ to $105,119$).
+3. **Frozen Governance Memo ([`my notes/memo/day_1.md`](../memo/day_1.md)):**
+   - Established the One-Page Experiment Control Sheet for v1–v7.
+   - Codified canonical ground-truth baseline targets and mathematical metric definitions.
+   - Established the Claims Governance Table barring unsafe claims (retiring "HMM weather states" and "DDPM" terminology).
+4. **Clean Baseline Pipeline (v8):**
+   - Implemented [`regime_training/config_v8.yaml`](../../regime_training/config_v8.yaml) and [`scripts/run_v8_training.sh`](../../scripts/run_v8_training.sh).
+   - Fine-tuned clean baseline (Run ID: `ed17d299`) for 500 epochs, confirming v7 parity on holdout splits without data contamination.
+
+---
+
 ## September 7, 2026 — Empirical Baseline Audit & Ground-Truth Evaluation Targets
 
 ### 🔍 Overview

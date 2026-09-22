@@ -1,6 +1,12 @@
 # Remediation Plan — Responding to the Panel Review
 
-Companion to [`PANEL_REVIEW.md`](PANEL_REVIEW.md). Written 2026-09-04.
+Companion to `PANEL_REVIEW.md`. Written 2026-09-04.
+
+> **Note (added 2026-09-22):** `PANEL_REVIEW.md` is not present in this repository as of
+> this audit. Do not fabricate its contents from the section references below (§0–§10 are
+> cited throughout this file); if it exists outside version control, add it under
+> `code_plan/` so the citations resolve, or note here that it was never committed. See
+> `code_plan/AUDIT_2026-09-22.md` §5 item 11.
 
 This is the chronological work plan that takes the project from "promising" to "defensible".
 Every task cites the panel section(s) it closes. Nothing here is optional for the thesis;

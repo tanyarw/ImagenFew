@@ -21,8 +21,17 @@ These metrics give you concrete ground-truth targets to evaluate your generated 
 * **Mean Wet Spell:** $30.4\text{ min}$ (Train baseline), Pass band: ratio $0.90$–$1.10$ ($27.4$–$33.4\text{ min}$).
 * **Mean Storm Duration ($\ge 15$m):** $61.0\text{ min}$ (Train baseline), Pass band: ratio $0.90$–$1.10$ ($54.9$–$67.1\text{ min}$).
 * **Lag-1 Autocorrelation (5-min):** $0.8518$ (Train baseline), Pass band: absolute difference $\le 0.02$.
-* **P99 Intensity:** $0.595\text{ mm}/5\text{min}$, Pass band: ratio $0.90$–$1.10$.
-* **P99.9 Intensity:** $1.613\text{ mm}/5\text{min}$, Pass band: ratio $0.85$–$1.15$.
+* **P99 Intensity (wet-only):** $0.595\text{ mm}/5\text{min}$, Pass band: ratio $0.90$–$1.10$.
+* **P99.9 Intensity (wet-only):** $1.613\text{ mm}/5\text{min}$, Pass band: ratio $0.85$–$1.15$.
+
+> **Naming note (added 2026-09-22):** "P99"/"P99.9" here are computed over **wet intervals
+> only** ($x_t > 0$), matching `my notes/memo/day_1.md` §3.2. Evaluated over the *full*
+> series including zeros, the same percentile ranks are $0.160$/$0.565\text{ mm}$ — a
+> different quantity that happens to share the name. `scripts/run_evaluation.py` reports
+> the all-steps version under the unqualified label `P99`/`P99.9`;
+> `scripts/gate_a_scorecard.py` reports the wet-only version used by this file and labels
+> it `P99_wet`/`P99.9_wet` to avoid the collision. See `code_plan/AUDIT_2026-09-22.md` §5
+> item 5.
 
 ### Tier 1 — Water balance and intermittency
 *Does the agent see the right amount of water, arriving as often?*

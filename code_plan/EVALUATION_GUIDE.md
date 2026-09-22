@@ -60,9 +60,15 @@ These metrics give you concrete ground-truth targets to evaluate your generated 
 | **Mean Storm Duration ($\ge 15$m)** | $61.0\text{ min}$ | $\pm 10\%$ ($54.9$–$67.1\text{ min}$) | Physical storm lifespan persistence. |
 | **Lag-1 ACF (5-min)** | $0.8518$ | Diff $\le 0.02$ ($0.83$–$0.87$) | High-frequency physical inertia. |
 | **Intensity JSD** | $0.0$ | $< 0.05$ | Correct rainfall magnitude distribution. |
-| **Extreme Ratio ($P_{99}$)** | $0.595\text{ mm}/5\text{m}$ | $0.90$–$1.10$ ($0.54$–$0.65\text{ mm}$) | Captures heavy storm tails. |
+| **Extreme Ratio ($P_{99,\text{wet}}$)** | $0.595\text{ mm}/5\text{m}$ | $0.90$–$1.10$ ($0.54$–$0.65\text{ mm}$) | Captures heavy storm tails. |
 | **Global Disc Score** | $0.0$ | $< 0.1$ | Overall statistical sequence matching. |
 | **Wet-Window Disc** | $0.0$ | $< 0.1$ | Realism during actual rain events. |
+
+> **Naming note (added 2026-09-22):** $P_{99,\text{wet}}$ is computed over wet intervals
+> only ($x_t > 0$). Evaluated over the full series including zeros — as
+> `scripts/run_evaluation.py` does under the plain label `P99` — the same percentile rank
+> is $0.160\text{ mm}$, a different quantity. Do not compare the two across scripts. See
+> `code_plan/AUDIT_2026-09-22.md` §5 item 5.
 
 ---
 

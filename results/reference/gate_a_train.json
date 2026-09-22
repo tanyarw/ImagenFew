@@ -1,0 +1,1301 @@
+{
+  "reference": "train",
+  "reference_stats": {
+    "volume": 709.5765625,
+    "zero_pct": 90.79575722983257,
+    "wet_spell_min": 31.974553866490417,
+    "dry_spell_min": 315.41473892927957,
+    "p99_wet": 0.5875,
+    "p999_wet": 1.5979850000000442,
+    "max_burst": 5.555,
+    "acf1_native": 0.8518353305382772,
+    "storm_count_yr": 697.125,
+    "storm_dur_min": 61.82266451497221,
+    "storm_vol_mm": 0.9993522503137886,
+    "daily_max": 50.905
+  },
+  "wet_threshold_mm": 0.005,
+  "versions": {
+    "v7": {
+      "T1 volume ratio": {
+        "value": 0.9999434147632096,
+        "band": "0.95-1.05",
+        "verdict": "PASS",
+        "tier": 1
+      },
+      "T1 zero frac diff pp": {
+        "value": 0.17237442922373702,
+        "band": "<=1.0",
+        "verdict": "PASS",
+        "tier": 1
+      },
+      "T1 wet-spell ratio": {
+        "value": 0.8564057269374116,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 1
+      },
+      "T1 dry-spell ratio": {
+        "value": 0.8743568140811683,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 1
+      },
+      "T2 P99 wet ratio": {
+        "value": 1.0137420418723422,
+        "band": "0.90-1.10",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T2 P99.9 wet ratio": {
+        "value": 0.943160927543106,
+        "band": "0.85-1.15",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T2 max ratio": {
+        "value": 1.016001800180018,
+        "band": "0.80-1.25",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T2 JSD hourly": {
+        "value": 0.05491857639428321,
+        "band": "<=0.05",
+        "verdict": "FAIL",
+        "tier": 2
+      },
+      "T2 KS hourly": {
+        "value": 0.03577625570776255,
+        "band": "<=0.05",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T3 lag1 ACF diff": {
+        "value": -0.004036649331195741,
+        "band": "<=0.02",
+        "verdict": "PASS",
+        "tier": 3
+      },
+      "T3 ACF RMSE 1-24h": {
+        "value": 0.08439988123427798,
+        "band": "<=0.05",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 storm duration ratio": {
+        "value": 0.769600644671004,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 storm count ratio": {
+        "value": 1.2657701273085888,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 storm volume ratio": {
+        "value": 0.788543452302907,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T4 daily max ratio": {
+        "value": 0.5367475689657205,
+        "band": "0.85-1.15",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T5 monthly Pearson r": {
+        "value": -0.3560094342073992,
+        "band": ">=0.90",
+        "verdict": "FAIL",
+        "tier": 5
+      },
+      "T5 diurnal Pearson r": {
+        "value": 0.22539125767838805,
+        "band": ">=0.80",
+        "verdict": "FAIL",
+        "tier": 5
+      },
+      "T4 IDF 15min": {
+        "ratios": [
+          0.9438202584758225,
+          0.9403110845614912,
+          0.9388873386265375
+        ],
+        "band": "0.80-1.20",
+        "verdict": "PASS",
+        "tier": 4
+      },
+      "T4 IDF 1h": {
+        "ratios": [
+          1.0116777691800527,
+          0.9872872921244777,
+          0.9761411918922821
+        ],
+        "band": "0.80-1.20",
+        "verdict": "PASS",
+        "tier": 4
+      },
+      "T4 IDF 3h": {
+        "ratios": [
+          0.7793127027505413,
+          0.7723970164240569,
+          0.7691434407033142
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF 6h": {
+        "ratios": [
+          0.6606290598210464,
+          0.6949864415388025,
+          0.7131464650519115
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF 24h": {
+        "ratios": [
+          0.5996735539407779,
+          0.5633518933924885,
+          0.5473415459553888
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF overall": {
+        "cells_pass": 6,
+        "cells_total": 15,
+        "worst_ratio": 0.5473415459553888,
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "interannual": {
+        "volume": {
+          "mean": 709.5364109421901,
+          "sd": 59.35344833688859,
+          "z_vs_real": 0.011196800282598215
+        },
+        "storm_count_yr": {
+          "mean": 882.7,
+          "sd": 34.17942851092354,
+          "z_vs_real": 12.140703436265587
+        },
+        "storm_dur_min": {
+          "mean": 47.569536165922784,
+          "sd": 1.582049380152087,
+          "z_vs_real": -10.330643028447916
+        },
+        "max_burst": {
+          "mean": 3.08971315,
+          "sd": 1.3211341446594422,
+          "z_vs_real": -0.43541370403615987
+        }
+      }
+    },
+    "v8": {
+      "T1 volume ratio": {
+        "value": 0.9696599889888979,
+        "band": "0.95-1.05",
+        "verdict": "PASS",
+        "tier": 1
+      },
+      "T1 zero frac diff pp": {
+        "value": 0.7861491628614914,
+        "band": "<=1.0",
+        "verdict": "PASS",
+        "tier": 1
+      },
+      "T1 wet-spell ratio": {
+        "value": 0.7966449275536943,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 1
+      },
+      "T1 dry-spell ratio": {
+        "value": 0.8785333096339791,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 1
+      },
+      "T2 P99 wet ratio": {
+        "value": 1.151595506382979,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 2
+      },
+      "T2 P99.9 wet ratio": {
+        "value": 1.0563310187517245,
+        "band": "0.85-1.15",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T2 max ratio": {
+        "value": 0.7913052205220523,
+        "band": "0.80-1.25",
+        "verdict": "FAIL",
+        "tier": 2
+      },
+      "T2 JSD hourly": {
+        "value": 0.06172455343833533,
+        "band": "<=0.05",
+        "verdict": "FAIL",
+        "tier": 2
+      },
+      "T2 KS hourly": {
+        "value": 0.028801369863013626,
+        "band": "<=0.05",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T3 lag1 ACF diff": {
+        "value": -0.0026633534706579365,
+        "band": "<=0.02",
+        "verdict": "PASS",
+        "tier": 3
+      },
+      "T3 ACF RMSE 1-24h": {
+        "value": 0.08643060180023256,
+        "band": "<=0.05",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 storm duration ratio": {
+        "value": 0.7415858394191986,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 storm count ratio": {
+        "value": 1.206096467634929,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 storm volume ratio": {
+        "value": 0.8005815242027589,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T4 daily max ratio": {
+        "value": 0.4572961631863275,
+        "band": "0.85-1.15",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T5 monthly Pearson r": {
+        "value": 0.4393260635901794,
+        "band": ">=0.90",
+        "verdict": "FAIL",
+        "tier": 5
+      },
+      "T5 diurnal Pearson r": {
+        "value": -0.02192729787055763,
+        "band": ">=0.80",
+        "verdict": "FAIL",
+        "tier": 5
+      },
+      "T4 IDF 15min": {
+        "ratios": [
+          1.0088179170095064,
+          0.8723386499546202,
+          0.8169661302623744
+        ],
+        "band": "0.80-1.20",
+        "verdict": "PASS",
+        "tier": 4
+      },
+      "T4 IDF 1h": {
+        "ratios": [
+          0.9392959469802192,
+          0.8629146611216693,
+          0.828009502600024
+        ],
+        "band": "0.80-1.20",
+        "verdict": "PASS",
+        "tier": 4
+      },
+      "T4 IDF 3h": {
+        "ratios": [
+          0.7516126646372338,
+          0.7135569689634061,
+          0.6956531656913911
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF 6h": {
+        "ratios": [
+          0.6466578234337008,
+          0.6736655063440647,
+          0.687940754694358
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF 24h": {
+        "ratios": [
+          0.570982156146407,
+          0.5718008622976731,
+          0.5721617425474413
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF overall": {
+        "cells_pass": 6,
+        "cells_total": 15,
+        "worst_ratio": 0.570982156146407,
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "interannual": {
+        "volume": {
+          "mean": 688.0480017805301,
+          "sd": 71.416849481993,
+          "z_vs_real": -1.1615479882986335
+        },
+        "storm_count_yr": {
+          "mean": 840.8,
+          "sd": 44.334085206656866,
+          "z_vs_real": 9.63481440188367
+        },
+        "storm_dur_min": {
+          "mean": 45.8602186274585,
+          "sd": 1.0902036305367422,
+          "z_vs_real": -11.520645572031501
+        },
+        "max_burst": {
+          "mean": 3.2343289,
+          "sd": 0.5532128234099002,
+          "z_vs_real": -0.02861119226292276
+        }
+      }
+    },
+    "v8_cal": {
+      "T1 volume ratio": {
+        "value": 0.9758492775154053,
+        "band": "0.95-1.05",
+        "verdict": "PASS",
+        "tier": 1
+      },
+      "T1 zero frac diff pp": {
+        "value": 0.7617960426179593,
+        "band": "<=1.0",
+        "verdict": "PASS",
+        "tier": 1
+      },
+      "T1 wet-spell ratio": {
+        "value": 0.7983980108496075,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 1
+      },
+      "T1 dry-spell ratio": {
+        "value": 0.8776933770163505,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 1
+      },
+      "T2 P99 wet ratio": {
+        "value": 1.1357929831489328,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 2
+      },
+      "T2 P99.9 wet ratio": {
+        "value": 1.051320391493022,
+        "band": "0.85-1.15",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T2 max ratio": {
+        "value": 0.8970505310531054,
+        "band": "0.80-1.25",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T2 JSD hourly": {
+        "value": 0.06348500242139155,
+        "band": "<=0.05",
+        "verdict": "FAIL",
+        "tier": 2
+      },
+      "T2 KS hourly": {
+        "value": 0.02962328767123279,
+        "band": "<=0.05",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T3 lag1 ACF diff": {
+        "value": -0.004095568045746734,
+        "band": "<=0.02",
+        "verdict": "PASS",
+        "tier": 3
+      },
+      "T3 ACF RMSE 1-24h": {
+        "value": 0.0874975897730996,
+        "band": "<=0.05",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 storm duration ratio": {
+        "value": 0.738904000811553,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 storm count ratio": {
+        "value": 1.2164246010399857,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 storm volume ratio": {
+        "value": 0.7989921182128791,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T4 daily max ratio": {
+        "value": 0.4908466976917788,
+        "band": "0.85-1.15",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T5 monthly Pearson r": {
+        "value": 0.9050156973447159,
+        "band": ">=0.90",
+        "verdict": "PASS",
+        "tier": 5
+      },
+      "T5 diurnal Pearson r": {
+        "value": -0.4947295413077115,
+        "band": ">=0.80",
+        "verdict": "FAIL",
+        "tier": 5
+      },
+      "T4 IDF 15min": {
+        "ratios": [
+          1.099284841101115,
+          0.9606213853273178,
+          0.9043626941640541
+        ],
+        "band": "0.80-1.20",
+        "verdict": "PASS",
+        "tier": 4
+      },
+      "T4 IDF 1h": {
+        "ratios": [
+          0.987801452594139,
+          0.9059727947504976,
+          0.8685782649053829
+        ],
+        "band": "0.80-1.20",
+        "verdict": "PASS",
+        "tier": 4
+      },
+      "T4 IDF 3h": {
+        "ratios": [
+          0.7323378279366008,
+          0.7179283994835779,
+          0.7111492940772216
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF 6h": {
+        "ratios": [
+          0.6337687487450185,
+          0.6859504018596466,
+          0.7135316667912754
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF 24h": {
+        "ratios": [
+          0.6120869027890498,
+          0.5575290704117616,
+          0.5334803391976659
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF overall": {
+        "cells_pass": 6,
+        "cells_total": 15,
+        "worst_ratio": 0.5334803391976659,
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "interannual": {
+        "volume": {
+          "mean": 692.4397758574901,
+          "sd": 47.23072532164977,
+          "z_vs_real": -0.9218638812698777
+        },
+        "storm_count_yr": {
+          "mean": 848.0,
+          "sd": 46.74517206205483,
+          "z_vs_real": 10.065420632135458
+        },
+        "storm_dur_min": {
+          "mean": 45.683012716739306,
+          "sd": 0.8366209522580139,
+          "z_vs_real": -11.644013805112026
+        },
+        "max_burst": {
+          "mean": 3.5209417100000002,
+          "sd": 0.7957878085892544,
+          "z_vs_real": 0.7776274851590442
+        }
+      }
+    },
+    "v9": {
+      "T1 volume ratio": {
+        "value": 0.8307461036687641,
+        "band": "0.95-1.05",
+        "verdict": "FAIL",
+        "tier": 1
+      },
+      "T1 zero frac diff pp": {
+        "value": 0.5035197869102035,
+        "band": "<=1.0",
+        "verdict": "PASS",
+        "tier": 1
+      },
+      "T1 wet-spell ratio": {
+        "value": 0.6985937858772379,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 1
+      },
+      "T1 dry-spell ratio": {
+        "value": 0.7431204708894994,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 1
+      },
+      "T2 P99 wet ratio": {
+        "value": 0.935301207489361,
+        "band": "0.90-1.10",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T2 P99.9 wet ratio": {
+        "value": 0.9946427266213304,
+        "band": "0.85-1.15",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T2 max ratio": {
+        "value": 0.5094258685868587,
+        "band": "0.80-1.25",
+        "verdict": "FAIL",
+        "tier": 2
+      },
+      "T2 JSD hourly": {
+        "value": 0.10008487934334832,
+        "band": "<=0.05",
+        "verdict": "FAIL",
+        "tier": 2
+      },
+      "T2 KS hourly": {
+        "value": 0.039132420091324116,
+        "band": "<=0.05",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T3 lag1 ACF diff": {
+        "value": -0.07516657963374318,
+        "band": "<=0.02",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 ACF RMSE 1-24h": {
+        "value": 0.07162712933516967,
+        "band": "<=0.05",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 storm duration ratio": {
+        "value": 0.732225038948504,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 storm count ratio": {
+        "value": 1.1984938138784293,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 storm volume ratio": {
+        "value": 0.6778533061187714,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T4 daily max ratio": {
+        "value": 0.6173896876240055,
+        "band": "0.85-1.15",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T5 monthly Pearson r": {
+        "value": 0.11097717632501758,
+        "band": ">=0.90",
+        "verdict": "FAIL",
+        "tier": 5
+      },
+      "T5 diurnal Pearson r": {
+        "value": 0.017731279087549085,
+        "band": ">=0.80",
+        "verdict": "FAIL",
+        "tier": 5
+      },
+      "T4 IDF 15min": {
+        "ratios": [
+          0.6989732432811084,
+          0.5442260708541801,
+          0.4814418763209293
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF 1h": {
+        "ratios": [
+          0.6890118151469592,
+          0.5976853593239039,
+          0.5559504712306713
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF 3h": {
+        "ratios": [
+          0.5885869797666953,
+          0.5584338618136865,
+          0.5442479303175026
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF 6h": {
+        "ratios": [
+          0.5219231686785339,
+          0.5599138589183261,
+          0.5799943130606541
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF 24h": {
+        "ratios": [
+          0.47305086482171027,
+          0.47005490446866705,
+          0.46873430498516544
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF overall": {
+        "cells_pass": 0,
+        "cells_total": 15,
+        "worst_ratio": 0.46873430498516544,
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "interannual": {
+        "volume": {
+          "mean": 589.4779645515499,
+          "sd": 38.83852251973895,
+          "z_vs_real": -6.541075928263381
+        },
+        "storm_count_yr": {
+          "mean": 835.5,
+          "sd": 47.197575267285835,
+          "z_vs_real": 9.317840371281665
+        },
+        "storm_dur_min": {
+          "mean": 45.33656866716815,
+          "sd": 1.9535099546334433,
+          "z_vs_real": -11.885203221894978
+        },
+        "max_burst": {
+          "mean": 2.4547020500000003,
+          "sd": 0.2216250268192714,
+          "z_vs_real": -2.2216929335383853
+        }
+      }
+    },
+    "v9_cal": {
+      "T1 volume ratio": {
+        "value": 0.8290170371763511,
+        "band": "0.95-1.05",
+        "verdict": "FAIL",
+        "tier": 1
+      },
+      "T1 zero frac diff pp": {
+        "value": 0.49400684931507044,
+        "band": "<=1.0",
+        "verdict": "PASS",
+        "tier": 1
+      },
+      "T1 wet-spell ratio": {
+        "value": 0.6960258622829509,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 1
+      },
+      "T1 dry-spell ratio": {
+        "value": 0.7395031931396979,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 1
+      },
+      "T2 P99 wet ratio": {
+        "value": 0.8920513855319141,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 2
+      },
+      "T2 P99.9 wet ratio": {
+        "value": 0.9849748814288161,
+        "band": "0.85-1.15",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T2 max ratio": {
+        "value": 0.5687484068406841,
+        "band": "0.80-1.25",
+        "verdict": "FAIL",
+        "tier": 2
+      },
+      "T2 JSD hourly": {
+        "value": 0.09917298490137176,
+        "band": "<=0.05",
+        "verdict": "FAIL",
+        "tier": 2
+      },
+      "T2 KS hourly": {
+        "value": 0.039783105022831,
+        "band": "<=0.05",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T3 lag1 ACF diff": {
+        "value": -0.0790680640948247,
+        "band": "<=0.02",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 ACF RMSE 1-24h": {
+        "value": 0.07310328308439487,
+        "band": "<=0.05",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 storm duration ratio": {
+        "value": 0.7310734989130027,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 storm count ratio": {
+        "value": 1.1983503675811369,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 storm volume ratio": {
+        "value": 0.6763637985753518,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T4 daily max ratio": {
+        "value": 0.36128257845005396,
+        "band": "0.85-1.15",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T5 monthly Pearson r": {
+        "value": 0.763922860931857,
+        "band": ">=0.90",
+        "verdict": "FAIL",
+        "tier": 5
+      },
+      "T5 diurnal Pearson r": {
+        "value": -0.23161046089270892,
+        "band": ">=0.80",
+        "verdict": "FAIL",
+        "tier": 5
+      },
+      "T4 IDF 15min": {
+        "ratios": [
+          0.6869741124432373,
+          0.530170228927083,
+          0.46655158328820295
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF 1h": {
+        "ratios": [
+          0.6477543561229938,
+          0.5741785626596566,
+          0.5405554741592927
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF 3h": {
+        "ratios": [
+          0.5848372508492522,
+          0.5552666137900141,
+          0.5413547181023242
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF 6h": {
+        "ratios": [
+          0.5120003820103207,
+          0.5180876129545661,
+          0.5213050949497114
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF 24h": {
+        "ratios": [
+          0.4941368126780172,
+          0.4398023066110091,
+          0.4158520161555532
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF overall": {
+        "cells_pass": 0,
+        "cells_total": 15,
+        "worst_ratio": 0.4158520161555532,
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "interannual": {
+        "volume": {
+          "mean": 588.25105949353,
+          "sd": 36.39534241489885,
+          "z_vs_real": -6.608035120172481
+        },
+        "storm_count_yr": {
+          "mean": 835.4,
+          "sd": 40.93680767014231,
+          "z_vs_real": 9.311859729194834
+        },
+        "storm_dur_min": {
+          "mean": 45.2089483163045,
+          "sd": 1.3218285934277556,
+          "z_vs_real": -11.974050693896709
+        },
+        "max_burst": {
+          "mean": 2.3679860600000002,
+          "sd": 0.2998402279985059,
+          "z_vs_real": -2.465624058211203
+        }
+      }
+    },
+    "v10": {
+      "T1 volume ratio": {
+        "value": 0.9149677560856436,
+        "band": "0.95-1.05",
+        "verdict": "FAIL",
+        "tier": 1
+      },
+      "T1 zero frac diff pp": {
+        "value": 0.9552891933028889,
+        "band": "<=1.0",
+        "verdict": "PASS",
+        "tier": 1
+      },
+      "T1 wet-spell ratio": {
+        "value": 0.8659911100787022,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 1
+      },
+      "T1 dry-spell ratio": {
+        "value": 0.9764457296248629,
+        "band": "0.90-1.10",
+        "verdict": "PASS",
+        "tier": 1
+      },
+      "T2 P99 wet ratio": {
+        "value": 0.9723949072340449,
+        "band": "0.90-1.10",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T2 P99.9 wet ratio": {
+        "value": 0.8995342579561738,
+        "band": "0.85-1.15",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T2 max ratio": {
+        "value": 0.8302117731773178,
+        "band": "0.80-1.25",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T2 JSD hourly": {
+        "value": 0.04444336933952666,
+        "band": "<=0.05",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T2 KS hourly": {
+        "value": 0.011837899543378994,
+        "band": "<=0.05",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T3 lag1 ACF diff": {
+        "value": -0.013898940747987143,
+        "band": "<=0.02",
+        "verdict": "PASS",
+        "tier": 3
+      },
+      "T3 ACF RMSE 1-24h": {
+        "value": 0.04856126245602576,
+        "band": "<=0.05",
+        "verdict": "PASS",
+        "tier": 3
+      },
+      "T3 storm duration ratio": {
+        "value": 0.875148784790326,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 storm count ratio": {
+        "value": 1.003837188452573,
+        "band": "0.90-1.10",
+        "verdict": "PASS",
+        "tier": 3
+      },
+      "T3 storm volume ratio": {
+        "value": 0.9075236385997032,
+        "band": "0.90-1.10",
+        "verdict": "PASS",
+        "tier": 3
+      },
+      "T4 daily max ratio": {
+        "value": 0.7204378503290443,
+        "band": "0.85-1.15",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T5 monthly Pearson r": {
+        "value": -0.11292278853804204,
+        "band": ">=0.90",
+        "verdict": "FAIL",
+        "tier": 5
+      },
+      "T5 diurnal Pearson r": {
+        "value": -0.27989553798509975,
+        "band": ">=0.80",
+        "verdict": "FAIL",
+        "tier": 5
+      },
+      "T4 IDF 15min": {
+        "ratios": [
+          0.8776486441152184,
+          0.8294033678796064,
+          0.8098292408633767
+        ],
+        "band": "0.80-1.20",
+        "verdict": "PASS",
+        "tier": 4
+      },
+      "T4 IDF 1h": {
+        "ratios": [
+          0.8816278179663376,
+          0.9243191737130156,
+          0.9438285145560247
+        ],
+        "band": "0.80-1.20",
+        "verdict": "PASS",
+        "tier": 4
+      },
+      "T4 IDF 3h": {
+        "ratios": [
+          0.8452982734826261,
+          0.791855642254719,
+          0.7667128524856348
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF 6h": {
+        "ratios": [
+          0.7764115029580945,
+          0.7845084035908887,
+          0.7887881216172148
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF 24h": {
+        "ratios": [
+          0.6804612428542841,
+          0.6272545083390125,
+          0.6038013321151314
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF overall": {
+        "cells_pass": 7,
+        "cells_total": 15,
+        "worst_ratio": 0.6038013321151314,
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "interannual": {
+        "volume": {
+          "mean": 649.2396751615901,
+          "sd": 79.35366411195183,
+          "z_vs_real": -3.279539248308888
+        },
+        "storm_count_yr": {
+          "mean": 699.7,
+          "sd": 49.499831649545364,
+          "z_vs_real": 1.1961284173660678
+        },
+        "storm_dur_min": {
+          "mean": 54.1101480564689,
+          "sd": 2.691544681519572,
+          "z_vs_real": -5.777162115044437
+        },
+        "max_burst": {
+          "mean": 2.8897961700000003,
+          "sd": 0.9477041972982593,
+          "z_vs_real": -0.9977779666432411
+        }
+      }
+    },
+    "v10_cal": {
+      "T1 volume ratio": {
+        "value": 0.8878712786380405,
+        "band": "0.95-1.05",
+        "verdict": "FAIL",
+        "tier": 1
+      },
+      "T1 zero frac diff pp": {
+        "value": 1.0483257229832503,
+        "band": "<=1.0",
+        "verdict": "FAIL",
+        "tier": 1
+      },
+      "T1 wet-spell ratio": {
+        "value": 0.872267709152903,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 1
+      },
+      "T1 dry-spell ratio": {
+        "value": 0.9957508543740005,
+        "band": "0.90-1.10",
+        "verdict": "PASS",
+        "tier": 1
+      },
+      "T2 P99 wet ratio": {
+        "value": 0.9559085926808539,
+        "band": "0.90-1.10",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T2 P99.9 wet ratio": {
+        "value": 0.8980312164381823,
+        "band": "0.85-1.15",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T2 max ratio": {
+        "value": 1.0148529252925294,
+        "band": "0.80-1.25",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T2 JSD hourly": {
+        "value": 0.04891117810670576,
+        "band": "<=0.05",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T2 KS hourly": {
+        "value": 0.01391552511415528,
+        "band": "<=0.05",
+        "verdict": "PASS",
+        "tier": 2
+      },
+      "T3 lag1 ACF diff": {
+        "value": -0.021647642462833572,
+        "band": "<=0.02",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 ACF RMSE 1-24h": {
+        "value": 0.04956158148948228,
+        "band": "<=0.05",
+        "verdict": "PASS",
+        "tier": 3
+      },
+      "T3 storm duration ratio": {
+        "value": 0.8753512079944816,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T3 storm count ratio": {
+        "value": 0.9945131791285636,
+        "band": "0.90-1.10",
+        "verdict": "PASS",
+        "tier": 3
+      },
+      "T3 storm volume ratio": {
+        "value": 0.8887333987947629,
+        "band": "0.90-1.10",
+        "verdict": "FAIL",
+        "tier": 3
+      },
+      "T4 daily max ratio": {
+        "value": 0.7310384578371476,
+        "band": "0.85-1.15",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T5 monthly Pearson r": {
+        "value": 0.6501122651506325,
+        "band": ">=0.90",
+        "verdict": "FAIL",
+        "tier": 5
+      },
+      "T5 diurnal Pearson r": {
+        "value": -0.11364065206744993,
+        "band": ">=0.80",
+        "verdict": "FAIL",
+        "tier": 5
+      },
+      "T4 IDF 15min": {
+        "ratios": [
+          0.8983091334399738,
+          0.9035603169557691,
+          0.9056908329594857
+        ],
+        "band": "0.80-1.20",
+        "verdict": "PASS",
+        "tier": 4
+      },
+      "T4 IDF 1h": {
+        "ratios": [
+          0.8654024705779674,
+          0.8937971394761587,
+          0.9067730982849231
+        ],
+        "band": "0.80-1.20",
+        "verdict": "PASS",
+        "tier": 4
+      },
+      "T4 IDF 3h": {
+        "ratios": [
+          0.815902762845075,
+          0.7789699282000876,
+          0.7615943896886084
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF 6h": {
+        "ratios": [
+          0.7820066649876907,
+          0.78466000707093,
+          0.7860624641910849
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF 24h": {
+        "ratios": [
+          0.646407716217079,
+          0.6059032323050938,
+          0.5880491240291482
+        ],
+        "band": "0.80-1.20",
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "T4 IDF overall": {
+        "cells_pass": 7,
+        "cells_total": 15,
+        "worst_ratio": 0.5880491240291482,
+        "verdict": "FAIL",
+        "tier": 4
+      },
+      "interannual": {
+        "volume": {
+          "mean": 630.01264983846,
+          "sd": 67.38851529246348,
+          "z_vs_real": -4.3288674502239655
+        },
+        "storm_count_yr": {
+          "mean": 693.4,
+          "sd": 46.426046329380426,
+          "z_vs_real": 0.8193479658957523
+        },
+        "storm_dur_min": {
+          "mean": 54.16099824733592,
+          "sd": 3.0752282106657867,
+          "z_vs_real": -5.741760935853455
+        },
+        "max_burst": {
+          "mean": 2.8834397199999997,
+          "sd": 1.17034533430774,
+          "z_vs_real": -1.0156585904754396
+        }
+      }
+    }
+  }
+}

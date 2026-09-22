@@ -202,5 +202,61 @@ The following paths, code configurations, and metrics are permanently retired:
 
 ---
 
+## 9. Addendum (2026-09-22) — Corrections after the v8–v10 cycle
+
+This memo is frozen; the items below are appended rather than edited in place, following the
+same convention as the diary's dated `Correction` blocks. Full derivation:
+[`code_plan/AUDIT_2026-09-22.md`](../../code_plan/AUDIT_2026-09-22.md). Nothing in §1–§8
+above is retracted; the following four points update or narrow it.
+
+1. **§2.3 block-size list is stale.** v9 (`seq_len=36`) and v10 (`seq_len=64`) were trained
+   after this memo was frozen, adding `seasonal_transition_matrix_train_len36.pkl` and
+   `..._len64.pkl` to `data/rainfall/splits/`. The supported block sizes in
+   `MANIFEST.json` are now $\{1, 12, 24, 36, 48, 64, 72, 96, 144, 288\}$.
+
+2. **§6 claims table, row "validated on an unpolluted held-out test split" — status
+   changes from DISALLOWED to conditionally allowed.** v8, v9 and v10 were fine-tuned
+   strictly on `train_years_labelled.csv` (2000–2007); the 2008/2009 years were not used in
+   training or in fitting the seasonal-phase labels. The retrain this row asked for is done.
+   **Condition:** the claim is only true of the numbers reported *against the 2000–2007
+   training partition or the locked 2009 test year*. `scripts/run_evaluation.py`
+   evaluates against the **full 2000–2009 record** (80% of which is training data), so any
+   number quoted from it is not evidence for this row. Use
+   `scripts/gate_a_scorecard.py --reference train` or `--reference test` instead.
+
+3. **§2.2 val/test zero fractions have drifted from the frozen values.** This memo states
+   $92.22\%$ (2008) / $91.38\%$ (2009); recomputing from the committed
+   `val_years_labelled.csv` / `test_years_labelled.csv` today gives $92.08\%$ / $91.16\%$.
+   The difference is small (≤0.2 pp) and does not change any pass/fail verdict, but it is
+   exactly the kind of drift `results/reference/observed_stats.json` (T0.4) exists to catch
+   once it is frozen. T0.4 is still open — treat both sets of numbers as provisional until
+   it lands.
+
+4. **§3.2 already disambiguates P99/P99.9 correctly** (all-steps: $0.160/0.565$; wet-only:
+   $0.595/1.613$, "on train"). `code_plan/ACCEPTANCE_CRITERIA.md`,
+   `code_plan/EVALUATION_GUIDE.md` and `scripts/run_evaluation.py` did not carry that
+   disambiguation and have been corrected to name the quantity explicitly
+   (`P99_wet`/`P99` all-steps) — see `code_plan/AUDIT_2026-09-22.md` §5 item 5.
+
+5. **§2.2's stated usage of the Validation Set — "checkpoint early stopping, and
+   intermediate tuning" — is not yet true of v8, v9 or v10.**
+   `regime_training/train_regime.py` builds a validation `RegimeDataset` from
+   `val_years_labelled.csv` and logs its size, but never computes a validation loss or
+   uses one for checkpoint selection; `is_best = avg_loss < best_loss` is evaluated on the
+   training loss throughout. This is `code_plan/REMEDIATION_PLAN.md` task T6.5, still open.
+   Until it lands, read §2.2's Validation Set description as the *intended* usage, not the
+   current one.
+
+None of v8, v9 or v10 pass Gate A (best is v10 at 11/18 banded metrics against the
+2000–2007 reference; Tier 4 and Tier 5 — never computed before this addendum — both fail
+for every version). §6 item 5 ("synthetic data validated for RL stormwater control") and
+item 2 ("storm dynamics ... solved in v7") remain DISALLOWED, and now explicitly also cover
+v8–v10: storm duration and wet-spell ratios still fail their bands at every context length,
+and no version reproduces the monthly or diurnal cycle under the assembly mode it is
+recommended with (`docs/RESEARCH_CONTRIBUTIONS.md` §5, `docs/FINETUNING_ANALYSIS.md` §7,
+as revised 2026-09-22).
+
+---
+
 **Sign-off:**  
 This control sheet represents the canonical state of project governance. All subsequent modeling, evaluation, and documentation must adhere strictly to these frozen definitions.
