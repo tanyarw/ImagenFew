@@ -7,11 +7,15 @@
 #SBATCH --mem=32G
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:a100-40:1
+#SBATCH --exclude=xgph10
 
 mkdir -p logs
 source /home/t/tanyawar/thesis/ImagenFew/.venv/bin/activate
 
 echo "Job ID: $SLURM_JOB_ID | GPU: $CUDA_VISIBLE_DEVICES | Host: $(hostname -s) | Start: $(date)"
+
+# Fail fast if CUDA is not functional on the allocated node
+python -c "import torch; assert torch.cuda.is_available(), 'ERROR: CUDA is not available on ' + '$(hostname -s)'"
 
 # E1 Control Run B: seq_len=24 (v8's config), initialised from ImagenFew_64.ckpt
 # instead of ImagenFew_24.ckpt. See code_plan/AUDIT_2026-09-22.md §3.1 / §6 E1.
