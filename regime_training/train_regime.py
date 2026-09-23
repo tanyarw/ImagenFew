@@ -38,6 +38,7 @@ sys.path.insert(0, PROJECT_ROOT)
 import argparse
 import logging
 import pickle
+import socket
 import uuid
 
 import numpy as np
@@ -51,9 +52,9 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from regime_training.regime_dataset import RegimeDataset
 from models.ImagenFew.ImagenFew import ImagenFew
 from models.ImagenFew.sampler import DiffusionProcess
+from regime_training.regime_dataset import RegimeDataset
 
 # ──────────────────────────────────────────────────────────────────────
 # CLI
@@ -71,13 +72,15 @@ def parse_args():
     p.add_argument("--epochs", type=int, default=None)
     p.add_argument("--batch_size", type=int, default=None)
     p.add_argument("--learning_rate", type=float, default=None)
+    p.add_argument("--device", type=str, default=None,
+                   help="Compute device ('cuda' or 'cpu'). Defaults to 'cuda' (errors if unavailable).")
     return p.parse_args()
 
 
 def load_config(config_path, cli):
     """Merge YAML config with CLI overrides into a single Namespace."""
     cfg = OmegaConf.to_container(OmegaConf.load(config_path), resolve=True)
-    for key in ("epochs", "batch_size", "learning_rate"):
+    for key in ("epochs", "batch_size", "learning_rate", "device"):
         cli_val = getattr(cli, key, None)
         if cli_val is not None:
             cfg[key] = cli_val
@@ -202,7 +205,17 @@ def main():
     )
 
     args = load_config(cli.config, cli)
-    args.device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = getattr(args, "device", None)
+    if device is None or device == "cuda":
+        if not torch.cuda.is_available():
+            raise RuntimeError(
+                f"CUDA is not available on {socket.gethostname()}! "
+                "Refusing to run 500 epochs on CPU. "
+                "Pass --device cpu explicitly if CPU execution is really intended."
+            )
+        args.device = "cuda"
+    else:
+        args.device = device
 
     logging.info("═" * 60)
     logging.info("GMM Regime-Conditional Training")

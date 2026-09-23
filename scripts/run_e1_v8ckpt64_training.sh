@@ -56,8 +56,7 @@ python regime_training/train_regime.py \
     --run_id "${RUN_ID}" \
     --epochs "${EPOCHS}" \
     --batch_size "${BATCH_SIZE}" \
-    --learning_rate "${LR}" \
-    --device cuda
+    --learning_rate "${LR}"
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"

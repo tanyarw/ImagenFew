@@ -7,7 +7,6 @@
 #SBATCH --mem=32G
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:a100-40:1
-#SBATCH --exclude=xgph10
 
 mkdir -p logs
 source /home/t/tanyawar/thesis/ImagenFew/.venv/bin/activate
