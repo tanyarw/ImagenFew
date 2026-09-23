@@ -37,6 +37,7 @@ sys.path.insert(0, PROJECT_ROOT)
 import argparse
 import logging
 import pickle
+import socket
 import numpy as np
 import pandas as pd
 import torch
@@ -91,6 +92,8 @@ def parse_args():
                         "or 'calendar' (deterministic annual seasonal calendar progression)")
     p.add_argument("--output_name", type=str, default=None,
                    help="Explicit output CSV filename (e.g., 'rainfall_synthetic_10y_v6.csv')")
+    p.add_argument("--device", type=str, default=None,
+                   help="Device ('cuda' or 'cpu'). Defaults to 'cuda' (errors if unavailable).")
     p.add_argument("--seed", type=int, default=42)
     return p.parse_args()
 
@@ -327,7 +330,17 @@ def main():
     # Config → Namespace
     cfg = OmegaConf.to_container(OmegaConf.load(cli.config), resolve=True)
     args = argparse.Namespace(**cfg)
-    args.device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = getattr(cli, "device", None)
+    if device is None or device == "cuda":
+        if not torch.cuda.is_available():
+            raise RuntimeError(
+                f"CUDA is not available on {socket.gethostname()}! "
+                "Refusing to run 10-year diffusion generation on CPU. "
+                "Pass --device cpu explicitly if CPU execution is really intended."
+            )
+        args.device = "cuda"
+    else:
+        args.device = device
     args.model_ckpt = cli.model_ckpt
 
     # ── Scaler ────────────────────────────────────────────────────────
