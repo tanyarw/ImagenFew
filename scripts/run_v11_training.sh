@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Clean v11 Unconditional Training Pipeline (Strict Holdout 2000–2007, seq_len = 64)
+# Clean v11 Unconditional Training Pipeline (Strict Holdout 2000–2007, seq_len = 24)
 # ==============================================================================
 # Ablation study: fine-tunes ImagenFew unconditionally (n_classes = 0) on the
-# clean 2000–2007 holdout split with sequence length 64 (5.33h block).
+# clean 2000–2007 holdout split with sequence length 24 (2.0h block).
 #
 # Usage:
 #   chmod +x scripts/run_v11_training.sh
@@ -14,7 +14,7 @@ set -euo pipefail
 
 EPOCHS="${1:-500}"
 RUN_ID="${2:-v11}"
-BASE_CKPT="models_ckpt/ImagenFew/ImagenFew_64.ckpt"
+BASE_CKPT="models_ckpt/ImagenFew/ImagenFew_24.ckpt"
 CONFIG="regime_training/config_v11.yaml"
 BATCH_SIZE=2048
 LR=0.0001
@@ -27,7 +27,7 @@ echo "  Base Checkpoint : ${BASE_CKPT}"
 echo "  Config File     : ${CONFIG}"
 echo "  Training Split  : data/rainfall/splits/train_years_labelled.csv"
 echo "  Validation Split: data/rainfall/splits/val_years_labelled.csv"
-echo "  Sequence Length : 64 (5.33 hours)"
+echo "  Sequence Length : 24 (2.0 hours)"
 echo "  Conditioning    : Unconditional (n_classes = 0)"
 echo "  Epochs          : ${EPOCHS}"
 echo "  Batch Size      : ${BATCH_SIZE}"

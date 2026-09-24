@@ -1,14 +1,14 @@
 # ==============================================================================
-# Clean v11 Unconditional Training Configuration (Holdout Split 2000–2007, seq_len = 64)
+# Clean v11 Unconditional Training Configuration (Holdout Split 2000–2007, seq_len = 24)
 # ==============================================================================
-# Unconditional ablation study: Identical holdout split, sequence length (seq_len = 64),
+# Unconditional ablation study: Identical holdout split, sequence length (seq_len = 24),
 # delay embedding (8x8), EDM diffusion schedule, loss weights, and base checkpoint
-# (ImagenFew_64.ckpt) as the v10 baseline, but trained WITHOUT class conditioning
+# (ImagenFew_24.ckpt) as the v8 baseline, but trained WITHOUT class conditioning
 # (n_classes = 0, regime_col = null).
 #
 # Usage:
 #   python regime_training/train_regime.py \
-#       --model_ckpt models_ckpt/ImagenFew/ImagenFew_64.ckpt \
+#       --model_ckpt models_ckpt/ImagenFew/ImagenFew_24.ckpt \
 #       --config regime_training/config_v11.yaml
 
 # --- Training ---
@@ -17,7 +17,7 @@ batch_size: 2048
 learning_rate: 0.0001    # 1e-4
 weight_decay: 0.00001    # 1e-5
 
-# --- Loss: matching v7/v8/v10 exact baseline ---
+# --- Loss: matching v7/v8 exact baseline ---
 # alpha = 0.0 reproduces unweighted loss baseline
 intensity_weight_alpha: 0.0
 intensity_weight_gamma: 0.5
@@ -28,7 +28,7 @@ grad_clip: 1.0
 # --- Data: Clean Chronological Holdout Datasets ---
 train_csv: data/rainfall/splits/train_years_labelled.csv
 test_csv: data/rainfall/splits/val_years_labelled.csv
-seq_len: 64
+seq_len: 24
 n_classes: 0   # 0: Unconditional training ablation (no seasonal regime conditioning)
 
 # --- Column names ---

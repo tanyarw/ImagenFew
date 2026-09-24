@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Clean v11 Unconditional Synthetic Generation (10-Year Realization, seq_len = 64)
+# Clean v11 Unconditional Synthetic Generation (10-Year Realization, seq_len = 24)
 # ==============================================================================
 # Generates 10-year synthetic rainfall realization from the clean v11
 # unconditional checkpoint (fine-tuned without class conditioning on 2000–2007
-# holdout split with seq_len = 64 / 5.33h block).
+# holdout split with seq_len = 24 / 2.0h block).
 #
 # Usage:
 #   chmod +x scripts/run_v11_generation.sh

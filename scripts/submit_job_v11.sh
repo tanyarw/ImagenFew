@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=v11_len64_uncond_finetune
+#SBATCH --job-name=v11_len24_uncond_finetune
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 #SBATCH --time=16:00:00
@@ -16,7 +16,7 @@ echo "Job ID: $SLURM_JOB_ID | GPU: $CUDA_VISIBLE_DEVICES | Host: $(hostname -s) 
 # Fast CUDA sanity check to fail immediately if driver is unhealthy
 python -c "import torch; assert torch.cuda.is_available(), 'ERROR: CUDA is not available on ' + '$(hostname -s)'"
 
-# Train clean v11 unconditional ablation (seq_len=64) for 500 epochs with run_id 'v11'
+# Train clean v11 unconditional ablation (seq_len=24) for 500 epochs with run_id 'v11'
 bash scripts/run_v11_training.sh 500 v11
 
 echo "Job completed at: $(date)"

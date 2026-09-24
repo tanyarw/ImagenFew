@@ -7,7 +7,6 @@
 #SBATCH --mem=32G
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:a100-40:1
-#SBATCH --nodelist=xgpg[0-7]
 
 RUN_ID="${1:-v11}"
 YEARS="${2:-10}"
@@ -19,7 +18,7 @@ source /home/t/tanyawar/thesis/ImagenFew/.venv/bin/activate
 
 echo "=========================================================="
 echo "Job ID: $SLURM_JOB_ID | GPU: $CUDA_VISIBLE_DEVICES | Host: $(hostname -s)"
-echo "Clean v11 Synthetic Generation (Holdout Split 2000–2007, seq_len = 64, Unconditional)"
+echo "Clean v11 Synthetic Generation (Holdout Split 2000–2007, seq_len = 24, Unconditional)"
 echo "Run ID:        $RUN_ID"
 echo "Years:         $YEARS | Freq: 5min | Seed: $SEED"
 echo "Start Time:    $(date)"
