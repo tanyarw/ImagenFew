@@ -2,14 +2,15 @@
 #SBATCH --job-name=v11_len24_uncond_finetune
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
-#SBATCH --time=16:00:00
+#SBATCH --time=10:00:00
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:a100-40:1
+#SBATCH --qos=high
+#SBATCH --nodelist=xgpg[0-7]
 
-source /etc/profile.d/modules.sh
-module load cuda
+
 
 mkdir -p logs
 source /home/t/tanyawar/thesis/ImagenFew/.venv/bin/activate
