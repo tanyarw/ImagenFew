@@ -19,5 +19,9 @@
     "arima_len24": "Textbook Vanilla ARIMA(24, 0, 0) baseline matching v8 context length (2.0h / 24 steps): `results/generated_data/rainfall_synthetic_10y_arima_len24.csv`",
     "arima_len64": "Textbook Vanilla ARIMA(64, 0, 0) baseline matching v10 context length (5.33h / 64 steps): `results/generated_data/rainfall_synthetic_10y_arima_len64.csv`",
     "arima_copula_len24": "Gaussian-Copula AR(24) with empirical quantile mapping matching v8 context length (2.0h): `results/generated_data/rainfall_synthetic_10y_arima_copula_len24.csv`",
-    "arima_copula_len64": "Gaussian-Copula AR(64) with empirical quantile mapping matching v10 context length (5.33h): `results/generated_data/rainfall_synthetic_10y_arima_copula_len64.csv`"
+    "arima_copula_len64": "Gaussian-Copula AR(64) with empirical quantile mapping matching v10 context length (5.33h): `results/generated_data/rainfall_synthetic_10y_arima_copula_len64.csv`",
+    "arima_copula_seas_markov_len24": "Seasonal Gaussian-Copula AR(24) conditioned on 4 seasonal states with Markov block assembly: `results/generated_data/rainfall_synthetic_10y_arima_copula_seas_markov_len24.csv`",
+    "arima_copula_seas_cal_len24": "Seasonal Gaussian-Copula AR(24) conditioned on 4 seasonal states with Calendar assembly: `results/generated_data/rainfall_synthetic_10y_arima_copula_seas_cal_len24.csv`",
+    "arima_copula_seas_markov_len64": "Seasonal Gaussian-Copula AR(64) conditioned on 4 seasonal states with Markov block assembly matching v10: `results/generated_data/rainfall_synthetic_10y_arima_copula_seas_markov_len64.csv`",
+    "arima_copula_seas_cal_len64": "Seasonal Gaussian-Copula AR(64) conditioned on 4 seasonal states with Calendar assembly matching v10_cal: `results/generated_data/rainfall_synthetic_10y_arima_copula_seas_cal_len64.csv`"
 }
