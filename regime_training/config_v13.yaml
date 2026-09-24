@@ -1,0 +1,79 @@
+# ==============================================================================
+# v13 — v12 with an asinh data transform (single-variable ablation)
+# ==============================================================================
+# IDENTICAL to config_v12.yaml (split, seq_len = 64, delay embedding, EDM
+# schedule, loss weights, base checkpoint, epochs) except for ONE thing: how
+# rainfall is mapped into model space.
+#
+#   v12       : z = (x - mean) / std                 (StandardScaler)
+#   v13 : z = (asinh(x / s) - mean) / std      (AsinhScaler, s = 0.035)
+#
+# Both are standardised to mean 0 / std 1, so only the SHAPE of the mapping
+# changes. See regime_training/transforms.py for the reasoning.
+#
+# Usage:
+#   sbatch scripts/submit_v13.sh
+#
+# ==============================================================================
+
+# --- Training ---
+epochs: 500
+batch_size: 2048
+learning_rate: 0.0001    # 1e-4
+weight_decay: 0.00001    # 1e-5
+
+# --- Loss: matching v7/v8/v10 exact baseline ---
+# alpha = 0.0 reproduces unweighted loss baseline
+intensity_weight_alpha: 0.0
+intensity_weight_gamma: 0.5
+intensity_weight_normalize: true
+fft_weight: 1.0
+grad_clip: 1.0
+
+# --- Data: Clean Chronological Holdout Datasets ---
+train_csv: data/rainfall/splits/train_years_labelled.csv
+test_csv: data/rainfall/splits/val_years_labelled.csv
+seq_len: 64
+n_classes: 0   # 0: Direct unconditional ablation of v10 (no seasonal regime conditioning)
+
+# --- Column names ---
+regime_col: null
+data_col: avg_rainfall
+
+# --- Rainfall -> model-space transform (the ONLY change vs v12) ---
+data_transform: asinh    # 'standard' = v12 behaviour
+asinh_scale: 0.035       # s in mm/5min = median wet step (>= 0.005 mm), 2000-2007 train split
+
+# --- Transform (Delay Embedding) ---
+use_stft: false
+delay: 8
+embedding: 8
+
+# --- Model Architecture (must match base checkpoint) ---
+handler: models.ImagenFew.handler
+img_resolution: 8
+input_channels: 1
+unet_channels: 32
+ch_mult: [1, 2, 2, 4]
+attn_resolution: [8, 4, 2]
+diffusion_steps: 36
+dynamic_size: [128, 128]
+
+# --- Diffusion Sampler ---
+beta1: 0.00001      # 1e-5
+betaT: 0.01         # 1e-2
+deterministic: false
+
+# --- Fine-tuning ---
+finetune: true
+pretrain: false
+ema: true
+ema_warmup: 100
+ft_method: all       # fine-tune all parameters
+lora_dim: 4          # ignored when ft_method != 'lora'
+dropout: 0.0
+
+# --- Logging & Monitoring ---
+logging_iter: 25       # Log metrics, evaluate, and update plots every 25 epochs
+run_id: null           # auto-generated if null
+run_dir: ImagenFew/Rainfall_v13/

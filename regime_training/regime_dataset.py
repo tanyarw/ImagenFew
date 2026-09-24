@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
-from sklearn.preprocessing import StandardScaler
+from regime_training.transforms import make_scaler
 
 
 class RegimeDataset(Dataset):
@@ -27,12 +27,12 @@ class RegimeDataset(Dataset):
 
     def __init__(self, csv_path, seq_len=24, scale=True, scaler=None,
                  regime_col="gmm_regime", data_col="avg_rainfall",
-                 block_col="block_id"):
+                 block_col="block_id", transform="standard", asinh_scale=0.035):
         """
         Args:
             csv_path   : Path to train or test CSV
             seq_len    : Length of each sliding window
-            scale      : Whether to apply StandardScaler normalization
+            scale      : Whether to scale rainfall into model space
             scaler     : Pre-fitted scaler (pass the train scaler when
                         building the test set).  If None, fits on this data.
             regime_col : Column name for regime/state labels
@@ -42,6 +42,10 @@ class RegimeDataset(Dataset):
             block_col  : Column name for block grouping.
                         If not present, uses contiguous runs of the same
                         regime as implicit blocks.
+            transform  : 'standard' (StandardScaler, default) or 'asinh'
+                        (AsinhScaler, see regime_training/transforms.py).
+                        Ignored when a pre-fitted `scaler` is passed.
+            asinh_scale: s in asinh(x / s), mm per 5 min (asinh only).
         """
         self.seq_len = seq_len
         self.scale = scale
@@ -80,7 +84,7 @@ class RegimeDataset(Dataset):
                 if scaler is not None:
                     self.scaler = scaler
                 else:
-                    self.scaler = StandardScaler()
+                    self.scaler = make_scaler(transform, asinh_scale)
                     self.scaler.fit(values)
                 scaled = self.scaler.transform(values)
             else:
@@ -110,7 +114,7 @@ class RegimeDataset(Dataset):
             if scaler is not None:
                 self.scaler = scaler
             else:
-                self.scaler = StandardScaler()
+                self.scaler = make_scaler(transform, asinh_scale)
                 self.scaler.fit(all_values)
         else:
             self.scaler = None

@@ -232,10 +232,18 @@ def main():
     train_csv = os.path.join(PROJECT_ROOT, args.train_csv)
     test_csv = os.path.join(PROJECT_ROOT, args.test_csv)
 
+    # Rainfall → model-space transform. 'standard' (default) reproduces
+    # v1–v12; 'asinh' is opt-in from the config (see transforms.py).
+    data_transform = getattr(args, "data_transform", "standard")
+    asinh_scale = float(getattr(args, "asinh_scale", 0.035))
+    logging.info("Transform : %s%s", data_transform,
+                 f" (s = {asinh_scale} mm/5min)" if data_transform == "asinh" else "")
+
     train_ds = RegimeDataset(
         train_csv, seq_len=args.seq_len,
         regime_col=getattr(args, "regime_col", "gmm_regime"),
         data_col=getattr(args, "data_col", "avg_rainfall"),
+        transform=data_transform, asinh_scale=asinh_scale,
     )
     test_ds = RegimeDataset(
         test_csv, seq_len=args.seq_len,

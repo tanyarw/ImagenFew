@@ -141,7 +141,7 @@ def main():
                     help="observed partition used as ground truth (default: train, "
                          "the canonical thesis baseline of day_1.md §3.1)")
     ap.add_argument('--versions', nargs='*',
-                    default=['v7', 'v8', 'v8_cal', 'v9', 'v9_cal', 'v10', 'v10_cal', 'v11', 'v12'])
+                    default=['v7', 'v8', 'v8_cal', 'v9', 'v9_cal', 'v10', 'v10_cal', 'v11', 'v12', 'v13'])
     ap.add_argument('--json', default=None, help='write machine-readable results here')
     args = ap.parse_args()
 
