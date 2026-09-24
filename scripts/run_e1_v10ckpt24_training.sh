@@ -9,12 +9,10 @@
 # base checkpoints are byte-identical in size and every prior run has loaded
 # 1006/1008 parameters regardless of which one was used, so this should load
 # cleanly; if it doesn't, that itself is new information.
-#
-# Paired with scripts/run_e1_v8ckpt64_training.sh (Control Run B). If this run's
-# storm-count ratio and hourly ACF RMSE land near v10's (~1.00, ~0.049), context
-# length is confirmed as the cause of v10's improvement. If they land near v8's
-# (~1.21, ~0.086) instead, the improvement tracks the checkpoint, not the window,
-# and the headline claim must be withdrawn.
+# If this run's storm-count ratio and hourly ACF RMSE land near v10's
+# (~1.00, ~0.049), context length is confirmed as the cause of v10's
+# improvement over v8. If they land near v8's (~1.21, ~0.086) instead,
+# the improvement tracks the checkpoint, not the window.
 #
 # Usage:
 #   chmod +x scripts/run_e1_v10ckpt24_training.sh
