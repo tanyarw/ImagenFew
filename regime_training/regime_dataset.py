@@ -50,32 +50,30 @@ class RegimeDataset(Dataset):
 
         df = pd.read_csv(csv_path)
 
-        # Validate required columns
-        if regime_col not in df.columns:
-            raise ValueError(
-                f"Regime column '{regime_col}' not found. "
-                f"Available: {df.columns.tolist()}"
-            )
+        # Validate data column
         if data_col not in df.columns:
             raise ValueError(
                 f"Data column '{data_col}' not found. "
                 f"Available: {df.columns.tolist()}"
             )
 
+        # Validate regime column (optional for unconditional mode)
+        has_regimes = regime_col is not None and regime_col in df.columns
+
         # Collect per-block arrays and regime labels
         blocks = []
-        if block_col in df.columns:
+        if block_col in df.columns and has_regimes:
             # Grouped by explicit block_id
             for _, group in df.groupby(block_col, sort=True):
                 values = group[data_col].values.astype(np.float32).reshape(-1, 1)
                 regime = int(group[regime_col].iloc[0])
                 blocks.append((values, regime))
         else:
-            # No block_id → treat entire dataset as one continuous block
+            # No block_id or unconditional → treat entire dataset as one continuous block
             # and create sliding windows directly with per-window regime
             # assignment (majority state in each window)
             values = df[data_col].values.astype(np.float32).reshape(-1, 1)
-            regimes = df[regime_col].values.astype(int)
+            regimes = df[regime_col].values.astype(int) if has_regimes else np.zeros(len(df), dtype=int)
 
             # --- Scaler ---
             if scale:

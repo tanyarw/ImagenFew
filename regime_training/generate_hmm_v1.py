@@ -87,9 +87,17 @@ def parse_args():
                         "state transitions (default: 1, 0 to disable)")
 
     p.add_argument("--assembly_mode", type=str, default="markov",
-                   choices=["markov", "calendar"],
-                   help="Sequence assembly mode: 'markov' (legacy stochastic random walk) "
-                        "or 'calendar' (deterministic annual seasonal calendar progression)")
+                   choices=["markov", "calendar", "unconditional"],
+                   help="Sequence assembly mode: 'markov' (legacy stochastic random walk), "
+                        "'calendar' (deterministic annual seasonal calendar progression), "
+                        "or 'unconditional' (ablation: generate without 4-class conditioning)")
+    p.add_argument("--uncond_method", type=str, default="zeros",
+                   choices=["zeros", "uniform", "marginal", "random"],
+                   help="Conditioning method for unconditional ablation mode: "
+                        "'zeros' (null class embedding: class vector is all 0s), "
+                        "'uniform' (equal soft-label weighting [0.25, 0.25, 0.25, 0.25]), "
+                        "'marginal' (empirical stationary distribution weights), "
+                        "'random' (i.i.d. sampling from marginal distribution per block)")
     p.add_argument("--output_name", type=str, default=None,
                    help="Explicit output CSV filename (e.g., 'rainfall_synthetic_10y_v6.csv')")
     p.add_argument("--device", type=str, default=None,
@@ -295,7 +303,10 @@ def batch_generate_blocks(model, process, label_weights_list, args,
     for i in range(0, n, batch_size):
         b = min(batch_size, n - i)
         batch_labels = np.stack(label_weights_list[i:i + b])
-        oh = torch.FloatTensor(batch_labels).to(args.device)  # [b, n_states]
+        if getattr(args, "n_classes", 0) > 0 and batch_labels.shape[-1] > 0:
+            oh = torch.FloatTensor(batch_labels).to(args.device)  # [b, n_states]
+        else:
+            oh = None
 
         x_img = torch.zeros(
             b, channels, args.img_resolution, args.img_resolution,
@@ -353,9 +364,23 @@ def main():
     model = ImagenFew(args, args.device).to(args.device)
 
     loaded = torch.load(cli.model_ckpt, map_location=args.device, weights_only=False)
-    model.load_state_dict(loaded["model"], strict=True)
+    state_dict = loaded.get("model", loaded)
+    has_map_label = any("map_label" in k for k in state_dict.keys())
+    if not has_map_label and getattr(args, "n_classes", 0) > 0:
+        logging.info("Checkpoint does not contain map_label — switching args.n_classes = 0")
+        args.n_classes = 0
+        model = ImagenFew(args, args.device).to(args.device)
+
+    cur_state = model.state_dict()
+    filtered = {k: v for k, v in state_dict.items() if k in cur_state and v.shape == cur_state[k].shape}
+    model.load_state_dict(filtered, strict=False)
+    logging.info("Loaded %d/%d parameters from %s", len(filtered), len(cur_state), cli.model_ckpt)
+
     if "ema_model" in loaded and args.ema:
-        model.model_ema.load_state_dict(loaded["ema_model"], strict=True)
+        ema_state = loaded["ema_model"]
+        cur_ema = model.model_ema.state_dict()
+        filtered_ema = {k: v for k, v in ema_state.items() if k in cur_ema and v.shape == cur_ema[k].shape}
+        model.model_ema.load_state_dict(filtered_ema, strict=False)
     model.eval()
     logging.info("Model loaded from %s", cli.model_ckpt)
 
@@ -382,6 +407,87 @@ def main():
         state_sequence = np.full(num_base_blocks, cli.state, dtype=int)
         tag = f"hmm_state{cli.state}"
         logging.info("Single-state mode: locked to HMM State %d", cli.state)
+        plan = build_generation_plan(state_sequence, n_bridge=cli.bridge_blocks)
+    elif cli.assembly_mode == "unconditional":
+        # Unconditional ablation mode (generate without 4-class conditioning)
+        tag = f"unconditional_{cli.uncond_method}"
+        logging.info("═" * 60)
+        logging.info("Unconditional Ablation Mode: method='%s', n_classes=%d",
+                     cli.uncond_method, args.n_classes)
+        logging.info("═" * 60)
+        state_sequence = None
+        n_states = args.n_classes
+
+        if cli.uncond_method == "zeros":
+            # Zero vector: null class conditioning (map_label outputs zeros)
+            oh = np.zeros(n_states, dtype=np.float32) if n_states > 0 else np.zeros(1, dtype=np.float32)
+            plan = [{
+                "type": "normal",
+                "state": None,
+                "label_weights": oh,
+            } for _ in range(num_base_blocks)]
+        elif cli.uncond_method == "uniform":
+            # Equal soft-label weighting across all classes
+            oh = np.full(n_states, 1.0 / max(1, n_states), dtype=np.float32)
+            plan = [{
+                "type": "normal",
+                "state": None,
+                "label_weights": oh,
+            } for _ in range(num_base_blocks)]
+        elif cli.uncond_method == "marginal":
+            # Stationary distribution weights across classes
+            pi_dist = None
+            if cli.transition_matrix_path and os.path.exists(cli.transition_matrix_path):
+                with open(cli.transition_matrix_path, "rb") as f:
+                    t_data = pickle.load(f)
+                if "pi_block" in t_data:
+                    pi_dist = np.array(t_data["pi_block"], dtype=np.float32)
+            if pi_dist is None:
+                props_path = os.path.join(os.path.dirname(cli.model_ckpt), "regime_proportions.pkl")
+                if os.path.exists(props_path):
+                    with open(props_path, "rb") as f:
+                        props = pickle.load(f)
+                    pi_dist = np.array([props.get(s, 1.0 / max(1, n_states)) for s in range(n_states)], dtype=np.float32)
+                    pi_dist = pi_dist / pi_dist.sum()
+            if pi_dist is None or len(pi_dist) != n_states:
+                pi_dist = np.full(n_states, 1.0 / max(1, n_states), dtype=np.float32)
+            logging.info("Marginal distribution weights: %s", np.round(pi_dist, 4))
+            plan = [{
+                "type": "normal",
+                "state": None,
+                "label_weights": pi_dist,
+            } for _ in range(num_base_blocks)]
+        elif cli.uncond_method == "random":
+            # Random i.i.d. sampling per block without Markov memory
+            rng = np.random.default_rng(cli.seed)
+            pi_dist = None
+            if cli.transition_matrix_path and os.path.exists(cli.transition_matrix_path):
+                with open(cli.transition_matrix_path, "rb") as f:
+                    t_data = pickle.load(f)
+                if "pi_block" in t_data:
+                    pi_dist = np.array(t_data["pi_block"], dtype=np.float32)
+            if pi_dist is None:
+                props_path = os.path.join(os.path.dirname(cli.model_ckpt), "regime_proportions.pkl")
+                if os.path.exists(props_path):
+                    with open(props_path, "rb") as f:
+                        props = pickle.load(f)
+                    pi_dist = np.array([props.get(s, 1.0 / max(1, n_states)) for s in range(n_states)], dtype=np.float32)
+                    pi_dist = pi_dist / pi_dist.sum()
+            if pi_dist is None or len(pi_dist) != n_states:
+                p_draw = None
+            else:
+                p_draw = pi_dist
+
+            state_sequence = rng.choice(n_states, size=num_base_blocks, p=p_draw)
+            plan = []
+            for s in state_sequence:
+                oh = np.zeros(n_states, dtype=np.float32)
+                oh[s] = 1.0
+                plan.append({
+                    "type": "normal",
+                    "state": int(s),
+                    "label_weights": oh,
+                })
     elif cli.assembly_mode == "calendar":
         # Calendar-ordered assembly mode (deterministic annual seasonal cycle)
         trans_path = cli.transition_matrix_path
@@ -417,6 +523,7 @@ def main():
         tag = "calendar_v1"
         logging.info("Calendar-Ordered Assembly: %d blocks mapped across %.1f annual seasonal cycles",
                      num_base_blocks, cli.years)
+        plan = build_generation_plan(state_sequence, n_bridge=cli.bridge_blocks)
     else:
         # Load or compute transition matrix (stochastic Markov sampling)
         trans_path = cli.transition_matrix_path
@@ -446,20 +553,21 @@ def main():
             P_mat, pi_dist, num_base_blocks, seed=cli.seed,
         )
         tag = f"hmm_{cli.hmm_variant}_v1"
-
-    # ── Build Generation Plan (with bridge blocks) ────────────────────
-    plan = build_generation_plan(state_sequence, n_bridge=cli.bridge_blocks)
+        plan = build_generation_plan(state_sequence, n_bridge=cli.bridge_blocks)
 
     # Count statistics
     n_normal = sum(1 for p in plan if p["type"] == "normal")
     n_bridge = sum(1 for p in plan if p["type"] == "bridge")
-    n_transitions = sum(
-        1 for i in range(len(state_sequence) - 1)
-        if state_sequence[i] != state_sequence[i + 1]
-    )
-
-    unique_s, counts_s = np.unique(state_sequence, return_counts=True)
-    state_alloc = {int(s): int(c) for s, c in zip(unique_s, counts_s)}
+    if state_sequence is not None:
+        n_transitions = sum(
+            1 for i in range(len(state_sequence) - 1)
+            if state_sequence[i] != state_sequence[i + 1]
+        )
+        unique_s, counts_s = np.unique(state_sequence, return_counts=True)
+        state_alloc = {int(s): int(c) for s, c in zip(unique_s, counts_s)}
+    else:
+        n_transitions = 0
+        state_alloc = {f"unconditional_{cli.uncond_method}": n_normal}
 
     logging.info("═" * 60)
     logging.info("Generating %.1f years (%d steps)", cli.years, total_steps)
@@ -539,35 +647,43 @@ def main():
 
     # Per-state statistics (approximate: assign each output step its
     # source block's majority state)
-    logging.info("\n--- Per-State Summary ---")
-    step_states = []
-    pos = 0
-    for i, p in enumerate(plan):
-        ov_after = 0
-        if i < len(plan) - 1:
-            is_trans = (p["state"] != plan[i + 1]["state"]) or \
-                       p["type"] == "bridge" or plan[i + 1]["type"] == "bridge"
-            ov_after = cli.transition_overlap if is_trans else cli.overlap
-        block_len = args.seq_len
-        effective_len = block_len - (ov_after if i < len(plan) - 1 else 0)
-        state_label = p["state"] if p["state"] is not None else -1
-        step_states.extend([state_label] * effective_len)
-        pos += effective_len
+    if cli.assembly_mode == "unconditional" and cli.uncond_method != "random":
+        logging.info("\n--- Unconditional Generation Summary ---")
+        logging.info("  Ablation Mode  : unconditional (%s)", cli.uncond_method)
+        logging.info("  Total Blocks   : %d (uniform OLA overlap: %d steps)", len(plan), cli.overlap)
+        logging.info("  Zero%%          : %.2f%%", zero_frac * 100)
+        logging.info("  Mean (wet)     : %.4f mm", nz.mean() if len(nz) else 0.0)
+        logging.info("  Max Intensity  : %.4f mm", df["avg_rainfall"].max())
+    elif args.n_classes > 0:
+        logging.info("\n--- Per-State Summary ---")
+        step_states = []
+        pos = 0
+        for i, p in enumerate(plan):
+            ov_after = 0
+            if i < len(plan) - 1:
+                is_trans = (p["state"] != plan[i + 1]["state"]) or \
+                           p["type"] == "bridge" or plan[i + 1]["type"] == "bridge"
+                ov_after = cli.transition_overlap if is_trans else cli.overlap
+            block_len = args.seq_len
+            effective_len = block_len - (ov_after if i < len(plan) - 1 else 0)
+            state_label = p["state"] if p["state"] is not None else -1
+            step_states.extend([state_label] * effective_len)
+            pos += effective_len
 
-    step_states = np.array(step_states[:total_steps])
-    for s in range(args.n_classes):
-        mask = step_states == s
-        if mask.sum() > 0:
-            vals = unscaled[mask, 0]
-            logging.info(
-                "  State %d: n=%d (%.1f%%), mean=%.4f, zero%%=%.1f%%, max=%.4f",
-                s, mask.sum(), mask.mean() * 100,
-                vals.mean(), (vals == 0).mean() * 100, vals.max(),
-            )
-    bridge_mask = step_states == -1
-    if bridge_mask.sum() > 0:
-        logging.info("  Bridge : n=%d (%.1f%%)", bridge_mask.sum(),
-                     bridge_mask.mean() * 100)
+        step_states = np.array(step_states[:total_steps])
+        for s in range(args.n_classes):
+            mask = step_states == s
+            if mask.sum() > 0:
+                vals = unscaled[mask, 0]
+                logging.info(
+                    "  State %d: n=%d (%.1f%%), mean=%.4f, zero%%=%.1f%%, max=%.4f",
+                    s, mask.sum(), mask.mean() * 100,
+                    vals.mean(), (vals == 0).mean() * 100, vals.max(),
+                )
+        bridge_mask = step_states == -1
+        if bridge_mask.sum() > 0:
+            logging.info("  Bridge : n=%d (%.1f%%)", bridge_mask.sum(),
+                         bridge_mask.mean() * 100)
 
     logging.info("═" * 60)
 

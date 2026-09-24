@@ -180,8 +180,11 @@ def evaluate_regime(model, args, regime, n_samples=100, channels=1):
     with model.ema_scope():
         for i in range(0, n_samples, args.batch_size):
             b = min(args.batch_size, n_samples - i)
-            cls = torch.full((b,), regime, device=args.device, dtype=torch.long)
-            oh = nn.functional.one_hot(cls, num_classes=args.n_classes).float()
+            if getattr(args, "n_classes", 0) > 0:
+                cls = torch.full((b,), regime, device=args.device, dtype=torch.long)
+                oh = nn.functional.one_hot(cls, num_classes=args.n_classes).float()
+            else:
+                oh = None
             x_img = torch.zeros(b, channels, args.img_resolution,
                                 args.img_resolution, device=args.device)
             mask = model.ts_to_img(
@@ -248,7 +251,8 @@ def main():
 
     regime_counts = train_ds.get_regime_counts()
     logging.info("Train samples : %d  |  Test samples : %d", len(train_ds), len(test_ds))
-    logging.info("Regime dist   : %s", regime_counts)
+    if getattr(args, "n_classes", 0) > 0:
+        logging.info("Regime dist   : %s", regime_counts)
 
     # ── Model ─────────────────────────────────────────────────────────
     logging.info("Building model (n_classes=%d) …", args.n_classes)
@@ -275,18 +279,25 @@ def main():
     os.makedirs(ckpt_dir, exist_ok=True)
     logging.info("Checkpoints → %s", ckpt_dir)
 
+    # Persist the config so downstream generation always uses matching settings
+    try:
+        OmegaConf.save(OmegaConf.load(cli.config), os.path.join(ckpt_dir, "config.yaml"))
+    except Exception as e:
+        logging.warning("Could not persist config.yaml: %s", e)
+
     # Persist the scaler so generation can inverse-transform later
     scaler_path = os.path.join(ckpt_dir, "scaler.pkl")
     with open(scaler_path, "wb") as f:
         pickle.dump(train_ds.scaler, f)
 
     # Persist regime proportions so the generator doesn't need hardcoded values
-    total = sum(regime_counts.values())
-    regime_proportions = {r: c / total for r, c in regime_counts.items()}
-    props_path = os.path.join(ckpt_dir, "regime_proportions.pkl")
-    with open(props_path, "wb") as f:
-        pickle.dump(regime_proportions, f)
-    logging.info("Regime proportions: %s", regime_proportions)
+    if getattr(args, "n_classes", 0) > 0:
+        total = sum(regime_counts.values())
+        regime_proportions = {r: c / total for r, c in regime_counts.items()}
+        props_path = os.path.join(ckpt_dir, "regime_proportions.pkl")
+        with open(props_path, "wb") as f:
+            pickle.dump(regime_proportions, f)
+        logging.info("Regime proportions: %s", regime_proportions)
 
     # ── Loss / optimisation knobs ─────────────────────────────────────
     # Defaults reproduce the v5–v7 runs exactly (alpha=0 → all weights 1.0,
@@ -330,10 +341,13 @@ def main():
             x_img = model.ts_to_img(x_ts)
             x_img_mask = model.ts_to_img(x_ts_mask, pad_val=1)
 
-            # One-hot regime label → conditioning signal
-            labels = nn.functional.one_hot(
-                regime_labels, num_classes=args.n_classes,
-            ).float()
+            # One-hot regime label → conditioning signal (if n_classes > 0)
+            if getattr(args, "n_classes", 0) > 0:
+                labels = nn.functional.one_hot(
+                    regime_labels, num_classes=args.n_classes,
+                ).float()
+            else:
+                labels = None
 
             # Forward (EDM denoising)
             output, weight = model(x_img, x_img_mask, labels=labels)
@@ -396,20 +410,29 @@ def main():
                 epoch_record["grad_norm"], 100 * epoch_record["clip_frac"],
             )
 
-            # Quick per-regime generation check
-            for r in range(args.n_classes):
-                gen = evaluate_regime(model, args, r, n_samples=50, channels=channels)
+            # Quick per-regime generation check (or unconditional check)
+            if getattr(args, "n_classes", 0) > 0:
+                for r in range(args.n_classes):
+                    gen = evaluate_regime(model, args, r, n_samples=50, channels=channels)
+                    p999 = float(np.percentile(gen, 99.9))
+                    epoch_record[f"regime_{r}_mean"] = float(gen.mean())
+                    epoch_record[f"regime_{r}_std"] = float(gen.std())
+                    epoch_record[f"regime_{r}_max"] = float(gen.max())
+                    epoch_record[f"regime_{r}_p999"] = p999
+                    logging.info(
+                        "  Regime %d  →  mean=%.4f  std=%.4f  min=%.4f  p99.9=%.4f  max=%.4f",
+                        r, gen.mean(), gen.std(), gen.min(), p999, gen.max(),
+                    )
+            else:
+                gen = evaluate_regime(model, args, 0, n_samples=50, channels=channels)
                 p999 = float(np.percentile(gen, 99.9))
-                epoch_record[f"regime_{r}_mean"] = float(gen.mean())
-                epoch_record[f"regime_{r}_std"] = float(gen.std())
-                epoch_record[f"regime_{r}_max"] = float(gen.max())
-                # Tail health: the mean can look right while the tail is dead,
-                # which is exactly how v6 passed epoch-level checks yet capped
-                # out at 1.79 mm against a real maximum of 5.56 mm.
-                epoch_record[f"regime_{r}_p999"] = p999
+                epoch_record["uncond_mean"] = float(gen.mean())
+                epoch_record["uncond_std"] = float(gen.std())
+                epoch_record["uncond_max"] = float(gen.max())
+                epoch_record["uncond_p999"] = p999
                 logging.info(
-                    "  Regime %d  →  mean=%.4f  std=%.4f  min=%.4f  p99.9=%.4f  max=%.4f",
-                    r, gen.mean(), gen.std(), gen.min(), p999, gen.max(),
+                    "  Unconditional  →  mean=%.4f  std=%.4f  min=%.4f  p99.9=%.4f  max=%.4f",
+                    gen.mean(), gen.std(), gen.min(), p999, gen.max(),
                 )
             model.train()
 
