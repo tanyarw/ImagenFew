@@ -15,5 +15,7 @@
     "e1_v10ckpt24": "seq_len=64 (5.33h), base ckpt ImagenFew_24.ckpt (md5 19bfb8f4). E1 control run A decoupling context length from checkpoint initialization. Transition-sampled assembly: `results/generated_data/rainfall_synthetic_10y_e1_v10ckpt24.csv`",
     "e1_v10ckpt24_cal": "seq_len=64 (5.33h), base ckpt ImagenFew_24.ckpt. E1 control run A with calendar-ordered assembly: `results/generated_data/rainfall_synthetic_10y_e1_v10ckpt24_cal.csv`",
     "v11": "seq_len=24 (2.0h), base ckpt ImagenFew_24.ckpt, n_classes=0. Clean unconditional fine-tuning ablation of v8 baseline: `results/generated_data/rainfall_synthetic_10y_v11.csv`",
-    "v12": "seq_len=64 (5.33h), base ckpt ImagenFew_64.ckpt, n_classes=0. Clean unconditional fine-tuning ablation of the headline best model (v10): `results/generated_data/rainfall_synthetic_10y_v12.csv`"
+    "v12": "seq_len=64 (5.33h), base ckpt ImagenFew_64.ckpt, n_classes=0. Clean unconditional fine-tuning ablation of the headline best model (v10): `results/generated_data/rainfall_synthetic_10y_v12.csv`",
+    "arima_len24": "Textbook Vanilla ARIMA(24, 0, 0) baseline matching v8 context length (2.0h / 24 steps): `results/generated_data/rainfall_synthetic_10y_arima_len24.csv`",
+    "arima_len64": "Textbook Vanilla ARIMA(64, 0, 0) baseline matching v10 context length (5.33h / 64 steps): `results/generated_data/rainfall_synthetic_10y_arima_len64.csv`"
 }
