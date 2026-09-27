@@ -593,23 +593,23 @@ def main():
             model, process, label_weights_list, args, channels=channels,
         )
 
-    # ── Stitch with Transition-Aware OLA ──────────────────────────────
-    logging.info("Stitching with transition-aware OLA ...")
+    # ── Inverse Scaling, then Transition-Aware OLA Stitching ──────────
+    # Each block goes back to mm BEFORE stitching, so the crossfade averages
+    # rain in mm whatever the transform. For StandardScaler (linear) this is
+    # the same output as stitching in model space; for log1p / asinh,
+    # averaging in model space would shrink rain in the overlaps.
+    logging.info("Inverse-scaling blocks, then stitching with transition-aware OLA ...")
 
-    # Flatten each block to 1D
-    flat_blocks = [b.squeeze(-1) if b.ndim > 1 else b for b in all_blocks]
+    flat_blocks = [scaler.inverse_transform(b.reshape(-1, channels)).ravel() for b in all_blocks]
 
-    continuous_scaled = stitch_blocks_transition_aware(
+    unscaled = stitch_blocks_transition_aware(
         flat_blocks, plan,
         base_overlap=cli.overlap,
         transition_overlap=cli.transition_overlap,
     )
 
-    # Trim to exact length
-    continuous_scaled = continuous_scaled[:total_steps].reshape(-1, channels)
-
-    # ── Inverse Scaling & Thresholding ────────────────────────────────
-    unscaled = scaler.inverse_transform(continuous_scaled)
+    # Trim to exact length, then threshold
+    unscaled = unscaled[:total_steps].reshape(-1, channels)
     unscaled[unscaled < 0.005] = 0.0
 
     # ── Save Output ───────────────────────────────────────────────────

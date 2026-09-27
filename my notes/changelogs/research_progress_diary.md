@@ -36,6 +36,8 @@ the two effects.
 | `scripts/submit_v13.sh`, `scripts/submit_v14.sh` | One SLURM job each: train as v10 → generate 10 y with both assemblies (`_v13.csv` + `_v13_cal.csv`, same for v14). The diagnostic is no longer in the job; it runs once after both finish. |
 | `scripts/diagnose_denoising_error.py` | **Bug fix** for conditional models (below). |
 | `scripts/gate_a_scorecard.py` | Default versions now include `v13_cal`, `v14`, `v14_cal`. |
+| `regime_training/generate_hmm_v1.py` | **Stitching fix:** each block is converted to mm *before* the crossfade (was: crossfade in model space, then convert). Same output for v10, v11, v12 (below). |
+| `notebooks/bridging_and_stitching_tutorial.ipynb` | **New.** Walkthrough of bridging and stitching on the v10 checkpoint, with the checks below. |
 
 Checked locally: a key-by-key comparison shows the v13/v14 configs differ from v10 only in
 the transform keys and `run_dir`; both scalers invert exactly and survive pickling
@@ -69,6 +71,26 @@ uses. Effect on v10 (held-out years, training-weighted RMSE in mm/5min, CPU run)
 **Verdict:** the old script would have **overstated v10's error about 2× in the dry and
 extreme bands**. Unconditional runs (v11, v12) were never affected. The Sept 24 caveat still
 applies: the held-out years have only 7 extreme steps, so also check `--split train`.
+
+**How blocks are joined (`notebooks/bridging_and_stitching_tutorial.ipynb`).** Every 64-step
+block is generated independently (the sampler is given no known values from neighbours).
+**Bridging happens before generation**: one extra block with a blended label (e.g. half state 1,
+half state 3) is added at each state change. **Stitching happens after generation**: neighbours
+are crossfaded over 4 steps, or 8 at state changes. About **7%** of all steps are such blends.
+
+**Stitching bug for non-linear transforms (fixed before v13/v14 generate).** Stitching used to
+average blocks in model space. That is harmless for StandardScaler, but for log1p/asinh an
+average in the squashed space is less rain once converted back (a 50/50 blend of 0 and 1 mm gives
+0.50 mm standard, 0.41 mm log1p, **0.13 mm asinh**). On shuffled real 64-step blocks this cost
+**−0.19% (log1p) and −1.37% (asinh) of total rain**, a bias against v13/v14 that has nothing to
+do with the models. Each block is now converted to mm before stitching. Old vs new code on the
+v10 checkpoint (0.1 y, calendar and Markov, seed 42): same wet steps, same volume, largest
+difference 1.4e-7 mm. So **v10 (and v11/v12) do not need regenerating**.
+
+**Open issue, not fixed: calendar drift.** In calendar mode each bridge block adds time the
+calendar index does not count, so the seasons fall **4.0 days behind per year, 39 days by year
+10**. This may weaken the Tier 5 seasonality score of every `_cal` version. It is the same for
+v10/v13/v14, so the ablation stays fair.
 
 ### ✅ Next
 1. `sbatch scripts/submit_v13.sh` and `sbatch scripts/submit_v14.sh`
