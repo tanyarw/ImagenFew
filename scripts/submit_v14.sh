@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=v13_log1p
+#SBATCH --job-name=v14_asinh
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 #SBATCH --time=16:00:00
@@ -9,17 +9,17 @@
 #SBATCH --gres=gpu:a100-40:1
 #SBATCH --nodelist=xgpg[0-7]
 # ==============================================================================
-# v13 (log1p transform): train -> generate, in one job.
+# v14 (asinh transform): train -> generate, in one job.
 # Same settings as v10 (run_v10_training.sh + run_v10_generation.sh), but with
-# config_v13.yaml and its own run_id / output files, so nothing from v10 is
+# config_v14.yaml and its own run_id / output files, so nothing from v10 is
 # overwritten. The ONLY difference from v10 is the rainfall transform.
 #
-#   sbatch scripts/submit_v13.sh
+#   sbatch scripts/submit_v14.sh
 # ==============================================================================
 
 set -euo pipefail
 
-RUN_ID="v13"
+RUN_ID="v14"
 CONFIG="regime_training/config_${RUN_ID}.yaml"
 RUN_DIR="logs/ImagenFew/Rainfall_Regime/${RUN_ID}"
 TRANS_MATRIX="data/rainfall/splits/seasonal_transition_matrix_train_len64.pkl"
@@ -39,7 +39,7 @@ python regime_training/train_regime.py \
     --run_id "${RUN_ID}"
 
 # ── 2. Generate 10 years (same flags as run_v10_generation.sh) ───────
-# markov -> rainfall_synthetic_10y_v13.csv, calendar -> ..._v13_cal.csv.
+# markov -> rainfall_synthetic_10y_v14.csv, calendar -> ..._v14_cal.csv.
 # The pickled scaler does the inverse transform — no generation code changes.
 for MODE in markov calendar; do
     if [ "${MODE}" = "calendar" ]; then SUFFIX="_cal"; else SUFFIX=""; fi

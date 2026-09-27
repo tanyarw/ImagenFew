@@ -1,18 +1,18 @@
 # ==============================================================================
-# v13 — v10 with a log1p data transform (single-variable ablation)
+# v14 — v10 with an asinh data transform (single-variable ablation)
 # ==============================================================================
 # IDENTICAL to config_v10.yaml (split, seq_len = 64, 4 HMM-state classes, delay
 # embedding, EDM schedule, loss weights, base checkpoint, epochs) except for ONE
 # thing: how rainfall is mapped into model space before the image is formed.
 #
 #   v10 : z = (x - mean) / std                  (StandardScaler)
-#   v13 : z = (log(1 + x) - mean) / std         (Log1pScaler)
+#   v14 : z = (asinh(x / s) - mean) / std      (AsinhScaler, s = 0.035)
 #
 # All transforms are standardised to mean 0 / std 1, so only the SHAPE of the
 # mapping changes. See regime_training/transforms.py.
 #
 # Usage:
-#   sbatch scripts/submit_v13.sh
+#   sbatch scripts/submit_v14.sh
 # ==============================================================================
 
 # --- Training ---
@@ -40,7 +40,8 @@ regime_col: hmm_state
 data_col: avg_rainfall
 
 # --- Rainfall -> model-space transform (the ONLY change vs v10) ---
-data_transform: log1p    # 'standard' = v10 behaviour
+data_transform: asinh    # 'standard' = v10 behaviour
+asinh_scale: 0.035       # s in mm/5min = median wet step (>= 0.005 mm), 2000-2007 train split
 
 # --- Transform (Delay Embedding) ---
 use_stft: false
@@ -74,4 +75,4 @@ dropout: 0.0
 # --- Logging & Monitoring ---
 logging_iter: 25       # Log metrics, evaluate regimes, and update plots every 25 epochs
 run_id: null           # auto-generated if null
-run_dir: ImagenFew/Rainfall_v13/
+run_dir: ImagenFew/Rainfall_v14/

@@ -10,7 +10,9 @@ denoiser's error the fair way:
   1. take held-out windows (test_csv from the config, non-overlapping),
   2. add noise at a FIXED grid of noise levels sigma (the same noise draws for
      every run),
-  3. denoise once with each trained model (EMA weights),
+  3. denoise once with each trained model (EMA weights); conditional models
+     (n_classes > 0) get each window's majority HMM state as the label, the
+     same rule RegimeDataset uses in training,
   4. map the prediction back to mm with that run's own scaler (negative
      values clipped to 0, as generation does),
   5. group every 5-min step by its TRUE rain band and report, per band and sigma:
@@ -27,9 +29,10 @@ Needs torch + a GPU node (same env as training).  Outputs in --out_dir:
   denoise_error_by_band.png, denoise_error_summary.png
 
     python scripts/diagnose_denoising_error.py \
-        --run v12=logs/ImagenFew/Rainfall_Regime/v12 \
-        --run v12_asinh=logs/ImagenFew/Rainfall_Regime/v12_asinh \
-        --config regime_training/config_v12_asinh.yaml
+        --run v10=logs/ImagenFew/Rainfall_Regime/aebe363f \
+        --run v13=logs/ImagenFew/Rainfall_Regime/v13 \
+        --run v14=logs/ImagenFew/Rainfall_Regime/v14 \
+        --config regime_training/config_v14.yaml
 """
 import argparse
 import os
@@ -94,11 +97,16 @@ def load_model(args, ckpt_path):
 
 
 @torch.no_grad()
-def denoise_all(model, scaler, windows_mm, args, seed):
-    """Return {sigma: predicted mm, shape [n_windows, seq_len]} for one run."""
+def denoise_all(model, scaler, windows_mm, labels, args, seed):
+    """Return {sigma: predicted mm, shape [n_windows, seq_len]} for one run.
+
+    labels: [n_windows] int states, or None for an unconditional model.
+    """
     n, L = windows_mm.shape
     z = scaler.transform(windows_mm.reshape(-1, 1)).reshape(n, L, 1)
     x_all = torch.as_tensor(z, dtype=torch.float32)
+    oh_all = (None if labels is None else
+              torch.nn.functional.one_hot(torch.as_tensor(labels), args.n_classes).float())
     preds = {}
     with model.ema_scope():
         for k, sigma in enumerate(SIGMAS):
@@ -112,7 +120,8 @@ def denoise_all(model, scaler, windows_mm, args, seed):
                 eps = torch.randn(x_img.shape, generator=g).to(args.device)
                 noisy = x_img + float(sigma) * eps * signal
                 s = torch.full((b,), float(sigma), device=args.device)
-                D = model.net(noisy, s, None)
+                oh = None if oh_all is None else oh_all[i:i + args.batch].to(args.device)
+                D = model.net(noisy, s, oh)
                 out.append(model.img_to_ts(D)[:, :, 0].cpu().numpy())
             pz = np.concatenate(out, axis=0).astype(np.float64)
             mm = scaler.inverse_transform(pz.reshape(-1, 1)).reshape(n, L)
@@ -217,10 +226,21 @@ def main():
 
     # Held-out rainfall in mm, cut into non-overlapping windows (every step used once)
     csv = args.test_csv if cli.split == "test" else args.train_csv
-    x = pd.read_csv(os.path.join(ROOT, csv))[args.data_col].values.astype(np.float64)
+    df = pd.read_csv(os.path.join(ROOT, csv))
+    x = df[args.data_col].values.astype(np.float64)
     n = len(x) // args.seq_len
     windows = x[: n * args.seq_len].reshape(n, args.seq_len)
     print(f"{cli.split} split: {csv}  →  {n} windows × {args.seq_len} steps")
+
+    # Conditional models: label each window with its majority state, as
+    # RegimeDataset does. Without this the network silently gets an all-zero
+    # label it never saw in training (networks.py fills None with zeros).
+    labels = None
+    if getattr(args, "n_classes", 0) > 0:
+        states = df[args.regime_col].values[: n * args.seq_len].reshape(n, args.seq_len).astype(int)
+        labels = np.array([np.bincount(w, minlength=args.n_classes).argmax() for w in states])
+        print(f"conditioning on {args.regime_col}: windows per state = "
+              f"{np.bincount(labels, minlength=args.n_classes).tolist()}")
 
     rows, runs = [], []
     for item in cli.run:
@@ -231,7 +251,7 @@ def main():
             scaler = pickle.load(f)
         model = load_model(args, os.path.join(run_dir, cli.ckpt_name))
         print(f"{name}: {scaler!r} from {run_dir}")
-        preds = denoise_all(model, scaler, windows, args, cli.seed)
+        preds = denoise_all(model, scaler, windows, labels, args, cli.seed)
         for sigma, pred in preds.items():
             for r in band_metrics(windows, pred):
                 rows.append(dict(run=name, sigma=sigma, **r))

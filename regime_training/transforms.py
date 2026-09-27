@@ -8,7 +8,8 @@ pickled to `scaler.pkl` and used by the generation scripts unchanged.
 
   standard : sklearn StandardScaler — (x - mean) / std.  The original
              behaviour (v1–v12).
-  asinh    : AsinhScaler — z = (asinh(x / s) - mean) / std.
+  log1p    : Log1pScaler — z = (log(1 + x) - mean) / std.  (v13)
+  asinh    : AsinhScaler — z = (asinh(x / s) - mean) / std.  (v14)
 
 Why asinh
 ---------
@@ -55,10 +56,41 @@ class AsinhScaler:
         return f"AsinhScaler(scale={self.scale})"
 
 
+class Log1pScaler:
+    """z = (log(1 + x) - mean) / std, with mean / std fitted on log(1 + x).
+
+    Unlike asinh there is no scale parameter, so with x in mm per 5 min the
+    map is ~linear up to ~1 mm and only compresses the storm peaks.
+    """
+
+    def __init__(self):
+        self._std = StandardScaler()
+
+    def fit(self, x):
+        self._std.fit(np.log1p(np.asarray(x, dtype=np.float64)))
+        return self
+
+    def transform(self, x):
+        a = np.log1p(np.asarray(x, dtype=np.float64))
+        return self._std.transform(a).astype(np.float32)
+
+    def fit_transform(self, x):
+        return self.fit(x).transform(x)
+
+    def inverse_transform(self, z):
+        a = self._std.inverse_transform(np.asarray(z, dtype=np.float64))
+        return np.expm1(a).astype(np.float32)
+
+    def __repr__(self):
+        return "Log1pScaler()"
+
+
 def make_scaler(name="standard", asinh_scale=0.035):
     """Build an unfitted scaler from the config's `data_transform` value."""
     if name == "standard":
         return StandardScaler()
+    if name == "log1p":
+        return Log1pScaler()
     if name == "asinh":
         return AsinhScaler(scale=asinh_scale)
-    raise ValueError(f"Unknown data_transform '{name}' (use 'standard' or 'asinh')")
+    raise ValueError(f"Unknown data_transform '{name}' (use 'standard', 'log1p' or 'asinh')")

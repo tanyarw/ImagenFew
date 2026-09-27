@@ -3,6 +3,147 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## September 27, 2026 — Transform Ablation Re-based on v10: v13 (log1p) vs v14 (asinh) (results pending)
+
+### 🔍 Overview
+The transform ablation now starts from **v10**, the best model so far (Gate A 11/18), instead
+of the unconditional v12. Two runs, each **identical to v10** (seq_len 64, 4 HMM-state classes,
+`ImagenFew_64.ckpt`, 500 epochs, same loss, same generation settings). The only change is the
+elementwise map from rainfall to model space, applied before the delay-embedding image is
+formed:
+
+| Run | Mapping | Largest value on 2000–2007 |
+| :--- | :--- | :---: |
+| **v10** (baseline) | $z = (x - \mu)/\sigma$ (StandardScaler) | $z \approx 120$ |
+| **v13** | $z = (\log(1 + x) - \mu)/\sigma$ | $z \approx 54$ |
+| **v14** | $z = (\operatorname{asinh}(x/s) - \mu)/\sigma$, $s = 0.035$ mm/5min | $z \approx 14$ |
+
+All three are standardised to mean 0 / std 1, so the EDM settings ($\sigma_\text{data} = 0.5$)
+see the same overall scale.
+
+**Question:** does squeezing the storm peaks alone help (v13), or do the gains also need
+light rain to get more of the model's value range (v14)? With $x$ in mm/5min,
+$\log(1+x)$ is nearly linear below ~1 mm, so v13 compresses the tail but leaves light rain
+almost as cramped as v10. asinh with $s = 0.035$ does both. The pair therefore separates
+the two effects.
+
+### 🛠️ What Changed
+| File | Change |
+| :--- | :--- |
+| `regime_training/transforms.py` | New `Log1pScaler`, selected with `data_transform: log1p`. |
+| `regime_training/config_v13.yaml` | **Rewritten.** Now `config_v10.yaml` + `data_transform: log1p` (was v12 + asinh, see the Sept 24 note). |
+| `regime_training/config_v14.yaml` | **New.** `config_v10.yaml` + `data_transform: asinh`, `asinh_scale: 0.035`. |
+| `scripts/submit_v13.sh`, `scripts/submit_v14.sh` | One SLURM job each: train as v10 → generate 10 y with both assemblies (`_v13.csv` + `_v13_cal.csv`, same for v14). The diagnostic is no longer in the job; it runs once after both finish. |
+| `scripts/diagnose_denoising_error.py` | **Bug fix** for conditional models (below). |
+| `scripts/gate_a_scorecard.py` | Default versions now include `v13_cal`, `v14`, `v14_cal`. |
+
+Checked locally: a key-by-key comparison shows the v13/v14 configs differ from v10 only in
+the transform keys and `run_dir`; both scalers invert exactly and survive pickling
+(`scaler.pkl`).
+
+### 📊 Findings So Far (data only, no training yet)
+Share of the model's value range each rain band gets on 2000–2007 (same method as
+`transform_range_shares.csv`):
+
+| Band (mm/5min) | v10 standard | v13 log1p | v14 asinh |
+| :--- | :---: | :---: | :---: |
+| light (0.005–0.1) | **1.7%** | 4.8% | 28.3% |
+| moderate (0.1–0.5) | 7.2% | 16.5% | 27.5% |
+| heavy (0.5–2) | 27.0% | 36.9% | 24.0% |
+| extreme (> 2) | **64.0%** | 41.6% | 17.7% |
+
+**Diagnostic bug (found while re-basing on v10).** `diagnose_denoising_error.py` called the
+network with no class label. For a conditional model this does not raise an error:
+`networks.py` quietly substitutes an **all-zero label**, which the model never saw in
+training. The fix gives each window its majority HMM state, the same rule `RegimeDataset`
+uses. Effect on v10 (held-out years, training-weighted RMSE in mm/5min, CPU run):
+
+| Band | blank label (old) | true label (fixed) | old / fixed |
+| :--- | :---: | :---: | :---: |
+| dry | 0.0048 | 0.0023 | **2.1×** |
+| light | 0.0166 | 0.0163 | 1.0× |
+| moderate | 0.0358 | 0.0339 | 1.1× |
+| heavy | 0.0717 | 0.0588 | 1.2× |
+| extreme | 0.1587 | 0.0830 | **1.9×** |
+
+**Verdict:** the old script would have **overstated v10's error about 2× in the dry and
+extreme bands**. Unconditional runs (v11, v12) were never affected. The Sept 24 caveat still
+applies: the held-out years have only 7 extreme steps, so also check `--split train`.
+
+### ✅ Next
+1. `sbatch scripts/submit_v13.sh` and `sbatch scripts/submit_v14.sh`
+2. Once both finish (add `--device cpu` to run locally, ~2 min per model):
+   `python scripts/diagnose_denoising_error.py --run v10=logs/ImagenFew/Rainfall_Regime/aebe363f --run v13=logs/ImagenFew/Rainfall_Regime/v13 --run v14=logs/ImagenFew/Rainfall_Regime/v14 --config regime_training/config_v14.yaml`, then again with `--split train`
+3. `python scripts/gate_a_scorecard.py --reference train --versions v10 v10_cal v13 v13_cal v14 v14_cal`
+4. `python scripts/visualize_transform.py --generated v10=results/generated_data/rainfall_synthetic_10y_v10.csv v13=results/generated_data/rainfall_synthetic_10y_v13.csv v14=results/generated_data/rainfall_synthetic_10y_v14.csv`
+5. Add a results entry with the verdict.
+
+---
+
+## September 24, 2026 — asinh Data Transform: Setup for the v12 vs v13 Ablation (results pending)
+
+> **Superseded (2026-09-27):** the v12-based v13 run planned below was replaced before any
+> results were recorded. The ablation was re-based on v10 (the best model): **v13 is now
+> log1p and asinh moved to v14**, both on v10's config. See the Sept 27 entry. The
+> transform code added here (`transforms.py`, dataset and training changes) is unchanged
+> and still used.
+
+### 🔍 Overview
+First step of the transform work: an **opt-in asinh transform** for mapping rainfall into model
+space, set up as a single-variable ablation of v12. The only difference between the runs is
+how rainfall becomes pixels:
+
+| Run | Mapping | Largest value on 2000–2007 |
+| :--- | :--- | :---: |
+| **v12** (before) | $z = (x - \mu)/\sigma$ (StandardScaler) | $z \approx 120$ |
+| **v13** (after) | $z = (\operatorname{asinh}(x/s) - \mu)/\sigma$, $s = 0.035$ mm/5min | $z \approx 14$ |
+
+Both are standardised to mean 0 / std 1, so the EDM settings see the same overall scale.
+$s = 0.035$ is the median wet step (≥ 0.005 mm) of the 2000–2007 training split.
+
+**Hypothesis:** asinh gives more realistic heavy rain (wet P99 / P99.9, storm peaks)
+without hurting dry/wet structure. **Expected:** partial success. The tail and light rain
+improve, but the dry/wet problem is unchanged (91% of steps are still one value under both
+transforms).
+
+### 🛠️ What Changed
+| File | Change |
+| :--- | :--- |
+| `regime_training/transforms.py` | **New.** `AsinhScaler` (sklearn-style fit / transform / inverse_transform) and `make_scaler()`. No torch. |
+| `regime_training/regime_dataset.py` | New args `transform` (default `"standard"`) and `asinh_scale`. Default behaviour identical to before. |
+| `regime_training/train_regime.py` | Reads `data_transform` / `asinh_scale` from the config (default `standard`), logs them. |
+| `regime_training/config_v13.yaml` | **New.** Exact copy of `config_v12.yaml` + `data_transform: asinh`, `asinh_scale: 0.035`. |
+| `scripts/submit_v13.sh` | **New.** One SLURM job: train → generate 10 y → denoising diagnostic. Own run_id, so v12 is not overwritten. |
+| `scripts/visualize_transform.py` | **New.** Local. What the model sees under each transform + generated-vs-real tail plots. |
+| `scripts/diagnose_denoising_error.py` | **New.** Cluster. Denoising error by true rain band, measured in mm, before vs after. |
+
+Generation needs **no code change**: the pickled `AsinhScaler` does the inverse transform.
+
+### 📊 Findings So Far (data only, no training yet)
+Share of the model's value range each rain band gets (`results/transform_diagnostics/transform_range_shares.csv`):
+
+| Band (mm/5min) | standard | asinh |
+| :--- | :---: | :---: |
+| light (0.005–0.1) | **2%** | 28% |
+| moderate (0.1–0.5) | 7% | 27% |
+| heavy (0.5–2) | 27% | 24% |
+| extreme (> 2) | **64%** | 18% |
+
+Under StandardScaler, light rain, which is most of the wet steps, gets only 2% of the range.
+See `results/transform_diagnostics/transform_pixels.png`.
+
+**Caveat for the diagnostic:** the held-out years contain only **7 extreme** and 157 heavy
+steps, too few to judge the extreme band. The job also runs the diagnostic on 2000–2007
+(40 extreme steps, in-sample) as a secondary check.
+
+### ✅ Next
+1. `sbatch scripts/submit_v13.sh`
+2. `python scripts/gate_a_scorecard.py --reference train --versions v12 v13`
+3. `python scripts/visualize_transform.py --generated v12=results/generated_data/rainfall_synthetic_10y_v12.csv v13=results/generated_data/rainfall_synthetic_10y_v13.csv`
+4. Add a results entry with the verdict.
+
+---
+
 ## September 22, 2026 — Comprehensive Evaluation Suite, Scorecard, and Fine-Tuning Analysis (v8–v10)
 
 > **Correction (2026-09-22, later same day):** An independent audit

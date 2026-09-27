@@ -42,8 +42,9 @@ class RegimeDataset(Dataset):
             block_col  : Column name for block grouping.
                         If not present, uses contiguous runs of the same
                         regime as implicit blocks.
-            transform  : 'standard' (StandardScaler, default) or 'asinh'
-                        (AsinhScaler, see regime_training/transforms.py).
+            transform  : 'standard' (StandardScaler, default), 'log1p'
+                        (Log1pScaler) or 'asinh' (AsinhScaler), see
+                        regime_training/transforms.py.
                         Ignored when a pre-fitted `scaler` is passed.
             asinh_scale: s in asinh(x / s), mm per 5 min (asinh only).
         """
