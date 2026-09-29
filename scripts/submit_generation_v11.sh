@@ -7,7 +7,7 @@
 #SBATCH --mem=32G
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:a100-40:1
-#SBATCH --nodelist=xgpg[0-7]
+
 
 RUN_ID="${1:-v11}"
 YEARS="${2:-10}"
