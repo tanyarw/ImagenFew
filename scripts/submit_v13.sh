@@ -7,7 +7,7 @@
 #SBATCH --mem=32G
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:a100-40:1
-#SBATCH --nodelist=xgpg[0-7]
+
 # ==============================================================================
 # v13 (log1p transform): train -> generate, in one job.
 # Same settings as v10 (run_v10_training.sh + run_v10_generation.sh), but with
