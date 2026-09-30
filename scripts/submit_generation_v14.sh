@@ -15,6 +15,12 @@
 #
 #   sbatch scripts/submit_generation_v14.sh          # seed 42 (the main run)
 #   sbatch scripts/submit_generation_v14.sh 7        # extra seed -> ..._v14_seed7.csv
+#
+# Optional environment settings (defaults reproduce the main run):
+#   MODES="markov calendar"   which assemblies to generate
+#   BRIDGE_BLOCKS=1           0 = no bridge blocks (removes the calendar drift) -> ..._v14_nobridge*.csv
+#   e.g.  MODES=calendar BRIDGE_BLOCKS=0 sbatch scripts/submit_generation_v14.sh
+#         -> results/generated_data/rainfall_synthetic_10y_v14_nobridge_cal.csv
 # ==============================================================================
 
 set -euo pipefail
@@ -26,6 +32,9 @@ RUN_DIR="logs/ImagenFew/Rainfall_Regime/${RUN_ID}"
 TRANS_MATRIX="data/rainfall/splits/seasonal_transition_matrix_train_len64.pkl"
 OUTPUT_DIR="results/generated_data"
 TAG="${RUN_ID}"; [ "${SEED}" = "42" ] || TAG="${RUN_ID}_seed${SEED}"
+MODES="${MODES:-markov calendar}"
+BRIDGE_BLOCKS="${BRIDGE_BLOCKS:-1}"
+[ "${BRIDGE_BLOCKS}" = "1" ] || TAG="${TAG}_nobridge"
 
 mkdir -p logs "${OUTPUT_DIR}"
 source /home/t/tanyawar/thesis/ImagenFew/.venv/bin/activate
@@ -40,7 +49,7 @@ done
 grep -q "Inverse-scaling blocks" regime_training/generate_hmm_v1.py \
     || { echo "ERROR: generate_hmm_v1.py lacks the stitch-in-mm fix, run git pull"; exit 1; }
 
-for MODE in markov calendar; do
+for MODE in ${MODES}; do
     if [ "${MODE}" = "calendar" ]; then SUFFIX="_cal"; else SUFFIX=""; fi
     python regime_training/generate_hmm_v1.py \
         --model_ckpt "${RUN_DIR}/best_regime_model.pt" \
@@ -49,7 +58,7 @@ for MODE in markov calendar; do
         --transition_matrix_path "${TRANS_MATRIX}" \
         --assembly_mode "${MODE}" \
         --years 10 --freq "5min" --overlap 4 \
-        --transition_overlap 8 --bridge_blocks 1 \
+        --transition_overlap 8 --bridge_blocks "${BRIDGE_BLOCKS}" \
         --seed "${SEED}" \
         --output_dir "${OUTPUT_DIR}" \
         --output_name "rainfall_synthetic_10y_${TAG}${SUFFIX}.csv"
