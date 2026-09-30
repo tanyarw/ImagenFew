@@ -35,6 +35,21 @@ partition (`my notes/memo/day_1.md` §3.1).
    1006/1008 parameters regardless of target `seq_len` — nothing in the fine-tuning
    procedure required this, and it means the L=24→64 comparison also changed the
    initialisation. See §3 for the evidence and the two-run experiment that would settle it.
+
+   > **Reinterpretation (2026-09-28).** The confound above still stands, but the *meaning*
+   > of the context-window result has changed, and this item should now be read alongside
+   > [`docs/ATTENTION_AND_RECEPTIVE_FIELD_AUDIT.md`](ATTENTION_AND_RECEPTIVE_FIELD_AUDIT.md)
+   > §3.3. Decomposing storm duration into its full survival curve — rather than the mean and
+   > count quoted above — shows that **every version reproduces the observed curve to within a
+   > few percent up to roughly three-quarters of its block length, then collapses by ~10× at
+   > exactly $k = \texttt{seq\_len}$**: v7/v8 at 120 min, v9 at 180 min, v10 at 320 min. So
+   > raising `seq_len` **did not teach the model longer-range structure — it moved the wall.**
+   > Everything below the cliff was already near-perfect at L = 24. The aggregate storm-count
+   > (1.004) and mean-duration (0.875) figures quoted above are correct but conceal this
+   > entirely: v10 still generates **13× too few storms longer than one block**, and those
+   > storms carry **21.4% of real rainfall volume against 1.6% generated**. The cause is block
+   > independence at generation time (an all-zero known-pixel mask), not context length, and
+   > the fix does not require a longer context.
 2. **Methodological and governance corrections.** Retiring the invalid "stochastic Hidden
    Markov Model (HMM)" framing in favor of calendar-ordered / transition-sampled
    seasonal-phase conditioning, and establishing a strict chronological holdout split
