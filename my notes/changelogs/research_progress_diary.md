@@ -3,7 +3,402 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## September 30, 2026 — Next-Step Jobs Built: E1 (v15 + control), E2 (context chaining), Loose Ends (results pending)
+
+### 🔍 Overview
+Code and SLURM jobs for the next steps in `code_plan/NEXT_STEPS_AFTER_v14.md` (§5 steps 0
+and 2), all built on the new v14 baseline and checked locally before submitting. The exact
+commands and the predictions written before any results are at the top of that plan
+("What to run now").
+
+### 🛠️ What Changed
+| File | Change |
+| :--- | :--- |
+| `models/ImagenFew/networks.py`, `models/ImagenFew/ImagenFew.py` | New opt-in `attn_min_heads` (default off: every existing config builds the same network). With 1, a requested attention layer gets at least 1 head instead of being silently dropped. |
+| `regime_training/config_v15.yaml`, `config_v15_ctrl.yaml` | **E1** and its control: v14 fine-tuned for 200 more epochs from the v14 checkpoint, with / without `attn_min_heads: 1`. |
+| `scripts/submit_job_v15.sh`, `submit_job_v15_ctrl.sh` | Fine-tune, then generate both assemblies with the production flags. |
+| `regime_training/generate_context.py` | **E2**: each block generated with the previous block's last 16 steps as known context (RePaint with re-noised known pixels, 10 passes for σ ≥ 0.1, history noise 0.05). Labels by time on the production timeline; 4 chains per job; saves progress and resumes. |
+| `scripts/submit_generation_v14_ctx.sh` | E2 job (`markov` or `calendar`); `K`, `RESAMPLE`, `MEMBERS`, `YEARS` settable. |
+| `scripts/score_context_generation.py` | Scores E2 against the pre-registered §3 rules, including the year-by-year drift test against v14 (same plan seed). |
+| `scripts/submit_generation_v14.sh` | Optional `MODES` and `BRIDGE_BLOCKS` (defaults unchanged); `BRIDGE_BLOCKS=0` writes `..._v14_nobridge*.csv`. |
+| `scripts/submit_denoise_diagnostic.sh`, `scripts/submit_assembly_ablation.sh` | GPU versions of the two checks that were too slow for the laptop. |
+
+### 📊 Findings (local checks)
+**E1 starts exactly at v14.** Built through the training loader on the real v14 checkpoint,
+the attention-enabled network gives **bit-identical** outputs to v14's generation weights at
+σ = 0.01, 0.3, 2 and 80. Only the seven 8×8 blocks change (0 → 1 head, 30,016 new parameters);
+the existing 4×4, 2×2 and bottleneck attention layers are untouched. The new output projection
+receives gradients on the first training step.
+
+**E2 does what it is for, with one risk.** CPU pilot, v14 checkpoint, 4 chains × 11 days,
+same days and labels for both settings:
+
+| | wet steps | P(wet \| wet before), inside a block | P(wet \| wet before), **across a join** |
+| :--- | :---: | :---: | :---: |
+| K = 0 (no context, same code) | 10.5% | 0.85 | **0.11** (19 cases) |
+| K = 2 (E2 as registered) | 6.7% | 0.85 | **0.86** (14 cases) |
+| v14, same 11 days | 10.7% | — | — |
+
+Without context a join breaks the storm almost every time; with context rain continues across
+the join as often as inside a block. **Risk:** the context chains were drier, and far more
+variable from chain to chain (111–976 mm/yr). That is about 2 standard errors on this little
+data, so it is flagged, not concluded. The §3 checks on the full run decide it.
+
+**Also found (not changed): dropout.** `ImagenFew.py` never passes `dropout` to the network,
+so every version so far trained with the network's default **0.10**, not the configs' `0.0`.
+Left as is so E1 differs from v14 only in attention.
+
+**Plumbing checked:** every job script passes a syntax check and a dry run with a stand-in
+`python` (right configs, checkpoints, flags and output names). Resume was tested by
+interrupting a context run (it restarted at block 4 and finished).
+
+### ✅ Next
+Run the seven jobs in "What to run now" (plan, top), sync, then score with
+`gate_a_scorecard.py` and `score_context_generation.py`. Add one results entry per experiment.
+
+---
+
+## September 30, 2026 — Block-Assembly Ablation: Bridging × Crossfade (v14, paired)
+
+### 🔍 Overview
+Do the two hand-made joining rules matter? **Bridging** inserts one block with a 50/50
+blended label (e.g. `[0, .5, 0, .5]`) at every state change; the model never saw blended
+labels in training. **Crossfade** overlaps neighbouring blocks by 4 steps (8 at state
+changes) and averages them. Because every block is generated independently, both rules can be
+ablated **without retraining and without regenerating**: generate one set of blocks, then
+join the *same* blocks four ways. Variants differ only in the joining, so small differences
+are measurable.
+
+New script: `scripts/ablate_block_assembly.py` (generation stage needs torch; the joining and
+scoring stage is numpy, reusing the Gate A definitions). Run on CPU:
+`python scripts/ablate_block_assembly.py --run v14 --years 2 --device cpu` → 3,566 blocks
+(52 bridges), Markov plan seed 42 as in production. Outputs in `results/assembly_ablation/`.
+
+### 📊 Findings
+**1. Where the joins sit in the real 10-year outputs.** Rebuilding the exact block layout of
+the v10/v12/v13/v14 CSVs from the plan code (same seed) shows a clear signature, which also
+confirms the layout: **seams are 7% of steps**, and there the rain is **~37% more often wet
+but ~30% weaker** than in block interiors (v14: wet 0.121 vs 0.088, mean wet 0.053 vs
+0.078 mm). The crossfade turns "storm next to dry" into drizzle. **Storm ends fall inside
+seams 2.5× more often than chance** (18% of ends in 7% of steps). v12, with no labels and no
+bridges, shows the same signature.
+
+**2. Paired ablation** (same blocks, 2 years):
+
+| Metric | real | **A** bridge + xfade (production) | **B** no bridge + xfade | **C** bridge + hard join | **D** no bridge + hard join |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Zero fraction % | 90.80 | 91.37 | 91.41 | 91.60 | 91.62 |
+| Wet spell (min) | 32.0 | 28.5 | 28.5 | 27.8 | 27.8 |
+| Storms / yr | 697 | 731 | 730 | 716 | 712 |
+| Storm duration (min) | 61.8 | 54.6 | 54.5 | 54.0 | 54.2 |
+| Storms > 320 min / yr | 14.25 | 1.0 | 1.0 | 1.0 | 1.0 |
+| Rain in storms > 320 min | 21.4% | 2.4% | 2.4% | 1.7% | 1.7% |
+| P99 wet (mm) | 0.588 | 0.629 | 0.627 | 0.646 | 0.640 |
+| P99.9 wet (mm) | 1.598 | 1.546 | 1.543 | 1.583 | 1.559 |
+| Lag-1 ACF | 0.852 | 0.847 | 0.848 | 0.844 | 0.844 |
+| Hourly ACF RMSE 1–24 h | — | 0.059 | 0.059 | 0.058 | 0.061 |
+
+* **Bridging: no measurable effect** (A vs B, C vs D). The blended label, although never seen
+  in training, does no visible harm at 1.5% of blocks.
+* **Crossfade: small, two-sided effects** (A vs C). It adds a little drizzle (+0.2 pp wet),
+  lengthens spells (+3%), lets a few storms survive the seam (rain in long storms 1.7% →
+  2.4%), and softens peaks (P99 −3%). Every effect is 1–3%, far smaller than the gaps to the
+  real record.
+* **Neither touches the cliff:** 1.0 storm per year longer than 320 min under every variant
+  (real 14.25).
+
+**3. Bridges are also what makes the calendar drift.** Calendar-mode seasons fall
+**39 days behind by year 10 with `--bridge_blocks 1`**, and **3 days ahead with
+`--bridge_blocks 0`** (the flag already exists; no code change).
+
+### ✅ Decision
+1. **No cluster ablation of bridging or crossfade is needed.** Both are second-order
+   heuristics at the seams; the cliff comes from the blocks being independent, which only a
+   change to generation (E2) can address. This paired result is the thesis's robustness check
+   that the conclusions do not depend on the joining rules. For tighter numbers, the same
+   script runs 10 years on a GPU in minutes (`--years 10`).
+2. **Drop bridges from new calendar runs** (`--bridge_blocks 0`): no measurable cost, and it
+   removes the calendar drift. Cheap test with a prediction written in advance: regenerate
+   v14_cal with `--bridge_blocks 0`; if drift was hurting seasonality, monthly Pearson r
+   (0.597 now) should rise.
+3. **Use variants A and D as E2's baselines.** E2 replaces the crossfade with real context,
+   so it should beat both the production join (A) and the naive join (D) on the cliff.
+
+---
+
+## September 30, 2026 — v13 / v14 Transform Ablation: Results
+
+### 🔍 Overview
+Results for the Sept 27 setup. Three models, identical except for the elementwise map from
+rainfall into model space: **v10** StandardScaler, **v13** $\log(1+x)$, **v14**
+$\operatorname{asinh}(x/0.035)$, each standardised afterwards. Scored with
+`python scripts/gate_a_scorecard.py --reference train --versions v8 v8_cal v10 v10_cal v11 v12 v13 v13_cal v14 v14_cal --json results/reference/gate_a_train_v8_v14.json`.
+v13/v14 were generated with blocks converted to mm before stitching (`136f723`); for v10 that
+change is a no-op (verified on the checkpoint, Sept 27).
+
+### 📊 Findings
+**Gate A tally:** v10 **11/18** → v13 **14/18** → v14 **14/18** (calendar assembly: 8 → 12 → 13).
+
+| Metric (band) | v10 | v13 | v14 |
+| :--- | :---: | :---: | :---: |
+| Volume ratio (0.95–1.05) | 0.915 ✗ | 0.952 | **1.009** |
+| Zero-fraction gap, pp (≤ 1.0) | 0.96 | 0.50 | **0.21** |
+| Wet-spell ratio (0.90–1.10) | 0.866 ✗ | 0.925 | **0.953** |
+| Storm duration ratio (0.90–1.10) | 0.875 ✗ | 0.919 | **0.927** |
+| Storm volume ratio (0.90–1.10) | 0.908 | 0.931 | **0.959** |
+| P99.9 wet ratio (0.85–1.15) | 0.900 | 0.958 | 0.956 |
+| Max 5-min ratio (0.80–1.25) | 0.830 | 1.122 | 1.144 |
+| Daily max ratio (0.85–1.15) | 0.720 ✗ | 0.862 | **0.920** |
+| IDF cells in band (15/15) | 7 | 9 | **12** |
+| Hourly ACF RMSE 1–24 h (≤ 0.05) | **0.049** | 0.054 ✗ | 0.050 ✗ (at the edge) |
+| Storm count ratio (0.90–1.10) | 1.004 | 1.021 | 1.052 |
+| Annual volume, z vs real years | −3.3 | −1.8 | **+0.4** |
+
+The calendar versions move the same way (a second, independently sampled realisation of each
+model), so the direction is not a single-draw accident.
+
+**Mechanism: the transform brings back drizzle.** The intensity mix *within* wet steps barely
+changes (share of wet steps below 0.1 mm: real 79.7%, v10 79.3%, v13 79.5%, v14 78.8%). What
+changes is how many very light steps exist at all. Steps of 0.005–0.02 mm are **3.14%** of real
+steps, **2.76%** in v10, 3.00% in v13 and **3.07%** in v14. These are the first and last steps
+of storms. Under StandardScaler light rain gets only 1.7% of the model's value range, so the
+model cannot place storm edges above the 0.005 mm threshold, and storms come out short and
+dry. That one effect accounts for the wet fraction, wet-spell length, storm duration and
+volume improvements together.
+
+**Pre-registered expectation (Sept 28, item 5): half right.**
+
+| Survival ratio P(dur > k), generated / real | 180 min | 240 min | **320 min (block)** | storms > 320 min /yr | rain in them |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| real | — | — | — | 14.25 | 21.4% |
+| v10 | 0.74 | 0.63 | **0.08** | 1.10 | 1.6% |
+| v13 | 0.84 | 0.73 | **0.12** | 1.70 | 2.2% |
+| v14 | 0.89 | 0.77 | **0.13** | 1.90 | 2.2% |
+
+The cliff at the block boundary did **not** move, as predicted. But the prediction placed the
+movement in the intensity marginal; the largest movement is actually in **timing below the
+wall** (the drizzle edges above).
+
+**Denoising diagnostic** (`results/transform_diagnostics/denoise_test/`, held-out years, CPU):
+light rain improves (bias −0.0042 → −0.0015 mm, volume error −13% → **−5%**). Heavy rain looks
+much worse for v14 (RMSE 0.059 → 0.211 mm, volume error −1% → −11%). **This is the price of the
+transform, not a worse model.** mm of rain per 0.01 model units:
+
+| Rain rate | 0.01 mm | 0.2 mm | 1 mm | 3 mm |
+| :--- | :---: | :---: | :---: | :---: |
+| v10 standard | 0.00046 | 0.00046 | 0.00046 | 0.00046 |
+| v13 log1p | 0.00035 | 0.00042 | 0.00069 | 0.00138 |
+| v14 asinh | **0.00015** | 0.00081 | **0.00401** | **0.01204** |
+
+At the lowest noise level the heavy-band error ratio v14/v10 is 7.1×, close to the 8.7× slope
+ratio at 1 mm, so in its own space v14 is about as accurate as v10: it has moved its
+precision from heavy rain to light rain. The generated tails still pass (P99.9, max, 12/15
+IDF cells), but each heavy value is **~9× coarser at 1 mm and ~26× at 3 mm**. The σ-averaged
+summary also overstates v14's heavy-rain bias: at high noise the denoiser's mean is taken in
+compressed space and reads low once expanded, which does not happen to final samples.
+The held-out years contain only 7 extreme steps. The training-years check (`--split train`,
+40 extreme steps) was stopped by a local time limit before finishing and **still needs running
+on the cluster**.
+
+**Still failing for v14:** hourly ACF RMSE (0.050, at the edge), 24-h IDF (0.62–0.78; this is
+the cliff), monthly seasonality (assembly), diurnal cycle (no version passes).
+
+**Caveats:** one training run per transform (no training-seed spread). Every run's best epoch
+is 460–500 of 500, so none has converged. One generation seed per assembly mode.
+
+### ✅ Decision
+1. **v14 is the new baseline.** It ties v13 on the tally but is better on volume, spells,
+   daily max and IDF (12 vs 9 cells). E1/E2 build on v14.
+2. **Keep v13 as the tail-precision reference.** If the downstream flood test turns out to
+   need precise peak intensities, the next transform step is an asinh scale sweep between the
+   two (s ≈ 0.1–0.3), not a new transform family.
+3. **Stop transform work here.** The remaining failures are dominated by the block-boundary
+   cliff, which no transform can fix.
+
+---
+
+## September 30, 2026 — v11 / v12 Conditioning Ablation: Results
+
+### 🔍 Overview
+v11 is v8 without the 4-state seasonal-phase label (seq_len 24); v12 is v10 without it
+(seq_len 64). Both were generated with `--assembly_mode unconditional`: no labels, so no bridge
+blocks, 4-step crossfade everywhere. Question: what does the label actually buy?
+
+### 📊 Findings
+| Metric | v8 (label, L=24) | v11 (no label) | v10 (label, L=64) | v12 (no label) |
+| :--- | :---: | :---: | :---: | :---: |
+| Gate A tally | 5/18 | 4/18 | **11/18** | 8/18 |
+| Survival ratio at k = L | 0.12 | 0.12 | 0.08 | 0.08 |
+| Storms > 320 min /yr (real 14.25) | 0.10 | 0.00 | 1.10 | 1.10 |
+| IDF cells in band | 6 | **0** | 7 | **12** |
+| Max 5-min ratio | 0.79 | **0.37** | 0.83 | 0.98 |
+| Storm count ratio | 1.21 | 1.26 | 1.00 | 1.00 |
+| Monthly Pearson r (Markov / uncond.) | 0.44 | −0.23 | −0.11 | 0.24 |
+
+1. **Pre-registered prediction (Sept 28, item 4): confirmed.** Removing the label leaves the
+   cliff in the same place and at the same depth (0.12 at L = 24, 0.08 at L = 64; v12's
+   long-storm numbers are identical to v10's). The label carries no "storm in progress"
+   information.
+2. **At L = 64 the label buys nothing measurable.** v12's three extra failures are all at a
+   band edge (zero-fraction gap 1.01 vs ≤ 1.0, hourly JSD 0.051 vs ≤ 0.05, ACF RMSE 0.052 vs
+   ≤ 0.05), and v12 passes *more* IDF cells (12 vs 7) with a heavier tail. The IDF gain has
+   no identified mechanism (the Markov plan's state mix matches training) and is one
+   realisation.
+3. **At L = 24 dropping the label hurts badly.** v11 caps out at 1.86 ± 0.15 mm per 5 min in
+   every year (real 3.24 ± 1.12) and fails every IDF cell. With only 2 hours of context the
+   block cannot tell a heavy regime from a light one; the label was supplying that.
+4. **The label does not produce seasonality under Markov assembly** (v10 r = −0.11). Only
+   calendar assembly does (v10_cal 0.65).
+
+**Verdict:** the seasonal-phase label is **not a lever for long-range structure**, and at the
+current block length it does little else.
+
+### ✅ Decision
+Keep conditioning in the v14 line: calendar seasonality needs it, and E2 will need an
+external signal that is re-imposed every block to resist drift. Do not claim the v12 IDF
+advantage without a second seed.
+
+---
+
+## September 28, 2026 — Architecture Audit: Does the UNet Attend? And Why Long Storms Vanish
+
+### 🔍 Overview
+Two questions, one of which turned out to answer the other. **(1) Does this fork's UNet
+actually use self-attention, and over what?** Nobody had checked. **(2) Why does the model
+reproduce short-range rain structure so well and long-range structure so badly?**
+
+Full write-up with every derivation: [`docs/ATTENTION_AND_RECEPTIVE_FIELD_AUDIT.md`](../../docs/ATTENTION_AND_RECEPTIVE_FIELD_AUDIT.md).
+Figure: `results/transform_diagnostics/storm_duration_cliff.png`
+(regenerate with `python scripts/diagnose_storm_duration_cliff.py`).
+
+### 📊 Findings — Part 1: the attention is mostly not there
+
+The backbone is **`DhariwalUNet`**, not `SongUNet` — `EDMPrecond` defaults to it and
+`ImagenFew.py` never overrides `model_type`. Verified against the v10 checkpoint
+(`aebe363f`) by listing which blocks actually own `qkv`/`proj` tensors:
+
+| Level | Resolution | Channels | In `attn_resolution: [8,4,2]`? | Heads | Attention runs? |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| 0 | 8×8 (64 tokens) | 32 | **yes** | `32 // 64 =` **0** | **No — silently dropped** |
+| 1 | 4×4 (16 tokens) | 64 | yes | 1 | Yes |
+| 2 | 2×2 (4 tokens) | 64 | yes | 1 | Yes |
+| 3 | 1×1 (1 token) | 128 | no (bottleneck hardcodes it) | 2 | Instantiated, **no-op** |
+
+Two defects, both invisible without looking in the checkpoint:
+
+* **The res-8 request is silently dropped.** `num_heads = out_channels // channels_per_head`.
+  `channels_per_head = 64` is inherited from Dhariwal & Nichol's 192-channel ImageNet config;
+  with `unet_channels: 32` it truncates to **0**, which is falsy, so the attention modules are
+  never constructed. **`attn_resolution: [8,4,2]` and `[4,2]` produce a bit-identical model**,
+  and have done since v8.
+* **The 1×1 bottleneck attention is a no-op.** Softmax over a single key gives weights of
+  exactly `1.0`; confirmed numerically that `max|a − v| = 0.0`. It is a channel mixer, not
+  attention.
+
+**Verdict:** the model **never attends across a block at full resolution**. Its only real
+attention is over 16 and 4 pooled tokens, and those tokens are not even contiguous in time.
+
+Related representation finding: because `delay == embedding == 8`, the delay embedding is a
+pure reshape, and one 3×3 conv at full resolution reaches time lags **{0, ±1, ±7, ±8, ±9}** —
+it **cannot reach lags 2–6 (10–30 min)**, and three stacked blocks still leave holes at lags
+4, 12, 20. The failing Gate A metrics (mean wet spell 30.4 min, storm duration 61.0 min) sit
+in that band. Suggestive, not yet proven causal.
+
+### 📊 Findings — Part 2: the storm-duration cliff (this is the big one)
+
+Measured on the released CSVs with the **canonical** storm definition (contiguous wet runs
+≥ 3 steps, as in `gate_a_scorecard.py`). Sanity check passed: this reproduces the storm
+figures already in `docs/FINETUNING_ANALYSIS.md` §1 exactly (v10 storm-count ratio 1.004,
+duration ratio 0.875).
+
+Survival ratio $P(\text{dur} > k)_\text{gen} / P(\text{dur} > k)_\text{real}$:
+
+| $k$ (min) | 15 | 30 | 60 | 90 | 120 | 150 | 180 | 240 | 320 | 400 |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| real, absolute | 81.1% | 50.8% | 25.8% | 15.7% | 11.3% | 8.5% | 6.2% | 3.8% | 2.0% | 1.4% |
+| **v8** (L=24) | 1.01 | 0.97 | 0.97 | 0.92 | **0.12** | 0.07 | 0.05 | 0.01 | 0.01 | 0.01 |
+| **v9** (L=36) | 0.92 | 0.81 | 0.82 | 0.81 | 0.75 | 0.63 | **0.09** | 0.05 | 0.01 | 0.00 |
+| **v10** (L=64) | 1.00 | 0.96 | 0.96 | 0.98 | 0.92 | 0.83 | 0.74 | 0.63 | **0.08** | 0.03 |
+
+**Every version tracks the real curve to within a few percent up to ~¾ of its own block
+length, then falls off a cliff by ~10× at exactly $k = L$.** Three different block lengths,
+three cliffs, each in its own place. v7 (L=24) behaves like v8, as expected.
+
+This rules out the alternatives by construction: capacity, loss, transform, conditioning and
+checkpoint are all constant across pairs that straddle a cliff, and none of them predicts a
+discontinuity that *moves with `seq_len`*.
+
+**Cause:** block independence. `generate_hmm_v1.py` passes an **all-zero known-pixel mask**,
+so every block is drawn with no knowledge of its neighbours. The only inter-block channel is
+the 4-level seasonal-phase label, which changes on a multi-day scale and says nothing about
+whether a storm is in progress. A storm outlasting one block needs two consecutive blocks to
+be heavy *by coincidence*.
+
+I tested and **rejected** the obvious rival explanation: seam truncation by the crossfade.
+Forcing a hard dry step every 320 steps on the *real* record changes storm count by 0.0% and
+mean duration by −0.4%. The 2026-09-27 stitching fix was correct and is not implicated.
+
+**Cost of this:** storms > 320 min run **14.25/yr real vs 1.10/yr in v10** (ratio 0.077), and
+they carry **21.4% of real rainfall volume vs 1.6% generated**. A fifth of the water is
+missing from the events that matter most for flooding — while storm *count* (1.004) and
+*mean* duration (0.875) both look healthy. The failure hides entirely in the tail.
+
+**The fix is already built and switched off.** `ImagenFew.forward(x, mask, …)` implements
+masked denoising and `DiffusionProcess.impute()` already re-imposes known pixels every solver
+step — the RePaint rule, correctly written. But `train_regime.py` sets
+`x_ts_mask = torch.zeros_like(x_ts)` on every batch and at 8×8 there is no padding, so across
+v1–v14 **the model has never once seen a known pixel.**
+
+### 📚 Literature (survey in the audit doc §4, non-weather included)
+* **Diffusion Forcing** (NeurIPS 2024) — per-token noise levels; roll out past training length
+  by conditioning on *slightly noisy* history. The key reference for this failure mode.
+* **RePaint** (CVPR 2022) — condition an *unconditionally trained* model on known pixels with
+  no retraining, via ~10 forward/backward resamplings. Our `impute()` is RePaint minus the
+  resampling loop.
+* **Lazy Diffusion** (2512.09572) — the counterweight: autoregressive diffusion rollout
+  suffers **spectral collapse**. A 10-year rollout is ~16,400 blocks. Must be measured.
+* **MIDiff** (Allerton 2026, mobile app usage) — closest non-weather analogue: sparse,
+  imbalanced traces → images → UNet with **Triple Attention factorised along the imaging
+  transform's own axes**. Best external argument that our attention placement is wrong.
+  Its baseline **ZITS** splits zero-inflated generation into Bernoulli occurrence + magnitude.
+* **t-EDM** (ICLR 2025) — Student-t prior for heavy tails, one scalar, validated on weather.
+  Orthogonal to v13/v14: transform changes the *data map*, t-EDM changes the *noise prior*.
+* **simple diffusion** (ICML 2023) — attention belongs at low resolution, but their stage has
+  **256 tokens**; ours has 16. "Attention at low resolution" vs "attention at no resolution".
+
+### ✅ Decision
+
+> **Action plan:** [`code_plan/NEXT_STEPS_AFTER_v14.md`](../../code_plan/NEXT_STEPS_AFTER_v14.md)
+> — written in plain terms, to be picked up **after v13/v14 finish**. It carries the gate,
+> the exact file/line changes, and the pass/fail bands below.
+
+1. **Reinterpret the context-window result.** v8 → v9 → v10 did **not** teach the model
+   longer-range structure; it **moved the wall**. Everything below the cliff was already
+   near-perfect at L = 24. Noted in `docs/FINETUNING_ANALYSIS.md` §3.
+2. **Next experiments, in order** (audit §5): **E1** turn on res-8 attention — free, and
+   `proj` is zero-initialised so the fine-tune starts bit-identical to v10; **E2** condition
+   each block on the previous block's columns via the existing `impute()` path — inference
+   only, no retraining, plus RePaint resampling and noisy history; **E3** train the masked
+   path (one-line change to `x_ts_mask`); **E4** occurrence/intensity two-field split;
+   **E5** t-EDM.
+3. **Pre-registered targets for E2:** storms > 320 min from **1.10 → 14.25/yr**, volume share
+   **1.6% → 21.4%**, with no loss in the wet-run histogram or zero fraction. Failure signal:
+   annual volume or hourly ACF drifting monotonically across the 10 generated years.
+4. **v11/v12 generation is now a decisive test, not just an ablation.** Prediction: the
+   seasonal label never carried "storm in progress" information, so removing it should leave
+   the cliff *in the same place and at similar depth* — v12 at k=64 ≈ 0.08, v11 at k=24 ≈ 0.12.
+   Markedly deeper cliffs would falsify the stated mechanism.
+5. **Expectation registered for v13/v14 before results arrive:** a transform reallocates value
+   range across wet intensities and **cannot move a wall at the block boundary**. Expect
+   movement in the intensity marginal and extreme quantiles, and the storm-duration cliff to
+   stay exactly where it is. The ablation should not be credited or blamed for that.
+
+---
+
 ## September 27, 2026 — Transform Ablation Re-based on v10: v13 (log1p) vs v14 (asinh) (results pending)
+
+> **Results (2026-09-30):** see the Sept 30 entry "v13 / v14 Transform Ablation: Results".
+> v13 and v14 both reach 14/18 (v10: 11/18); v14 becomes the new baseline.
 
 ### 🔍 Overview
 The transform ablation now starts from **v10**, the best model so far (Gate A 11/18), instead
