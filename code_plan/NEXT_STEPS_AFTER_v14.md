@@ -31,7 +31,8 @@ v14: 9.0%, 716). If a job hits its 16 h limit, submitting the same command resum
 **Scoring after syncing the CSVs:**
 - `python scripts/gate_a_scorecard.py --reference train --versions v14 v14_cal v14_nobridge_cal v15 v15_cal v15_ctrl v15_ctrl_cal v14_ctx v14_ctx_cal`
 - `python scripts/score_context_generation.py --versions v14_ctx v14_ctx_m1 v14_ctx_m2 v14_ctx_m3` (E2 against §3)
-- `python scripts/score_context_generation.py --versions v14_ctx_cal --baseline v14_cal`
+- `python scripts/score_context_generation.py --versions v14_ctx_cal v14_ctx_cal_m1 v14_ctx_cal_m2 v14_ctx_cal_m3 --baseline v14_nobridge_cal`
+  (baseline without bridges: its calendar is drift-free like E2's, so the years line up)
 
 **Predictions, written before the results:**
 1. **No bridges:** v14_nobridge_cal's monthly Pearson r rises above v14_cal's 0.597; other
