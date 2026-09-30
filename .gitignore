@@ -174,3 +174,7 @@ logs/
 *.csv
 
 .DS_Store
+# Regenerable intermediate arrays: saved blocks of the assembly ablation and
+# progress files of context-chained generation (resume state)
+results/assembly_ablation/*.npz
+results/generated_data/*.ctx_state.npz
