@@ -28,9 +28,13 @@ class ImagenFew(nn.Module):
         self.num_classes = args.n_classes
         if not args.ft_method == 'lora':
             args.lora_dim = None
+        # attn_min_heads is only passed when the config sets it, so every existing config builds
+        # exactly the same network as before (see DhariwalUNet / UNetBlock.min_heads).
+        extra = {'attn_min_heads': args.attn_min_heads} if getattr(args, 'attn_min_heads', 0) else {}
         self.net = EDMPrecond(args.img_resolution, args.input_channels, channel_mult=args.ch_mult,
                               model_channels=args.unet_channels, attn_resolutions=args.attn_resolution,
-                              label_dim=self.num_classes, lora_rank = args.lora_dim, dynamic_size=args.dynamic_size)
+                              label_dim=self.num_classes, lora_rank = args.lora_dim, dynamic_size=args.dynamic_size,
+                              **extra)
 
 
         # delay embedding is used

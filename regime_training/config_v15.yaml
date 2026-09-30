@@ -1,0 +1,86 @@
+# ==============================================================================
+# v15 (E1) — v14 + self-attention at the 8x8 level
+# ==============================================================================
+#
+# Fine-tuned FROM THE v14 CHECKPOINT (logs/ImagenFew/Rainfall_Regime/v14/best_regime_model.pt),
+# not from ImagenFew_64.ckpt. Loading copies v14's EMA weights into the model, so training
+# starts from exactly the weights v14 generates with. Everything else (data, asinh transform,
+# loss, optimiser, 4 HMM-state classes) is identical to config_v14.yaml.
+#
+# E1 and its control get the SAME extra training (200 epochs). v14 was still improving at
+# epoch 500, so extra training alone could help; compare v15 against v15_ctrl, not v14.
+# Plan: code_plan/NEXT_STEPS_AFTER_v14.md, section E1.
+#
+#   v15      : attn_min_heads = 1   -> 1 attention head over the 64 full-resolution tokens
+#   v15_ctrl : same fine-tune, no architecture change
+#
+# The new attention layers' output projection starts at exactly zero, so the network starts
+# bit-identical to v14 and can only add capability (checked locally before submitting).
+#
+# Usage:
+#   sbatch scripts/submit_job_v15.sh
+# ==============================================================================
+
+# --- Training ---
+epochs: 200     # fine-tune length (from the v14 checkpoint)
+batch_size: 2048
+learning_rate: 0.0001    # 1e-4
+weight_decay: 0.00001    # 1e-5
+
+# --- Loss: matching v7/v8 exact baseline ---
+# alpha = 0.0 reproduces v7/v8 unweighted loss baseline
+intensity_weight_alpha: 0.0
+intensity_weight_gamma: 0.5
+intensity_weight_normalize: true
+fft_weight: 1.0
+grad_clip: 1.0
+
+# --- Data: Clean Chronological Holdout Datasets ---
+train_csv: data/rainfall/splits/train_years_labelled.csv
+test_csv: data/rainfall/splits/val_years_labelled.csv
+seq_len: 64
+n_classes: 4   # 4 seasonal phases (0: Dry Baseline -> 3: Peak Cloudburst)
+
+# --- Column names ---
+regime_col: hmm_state
+data_col: avg_rainfall
+
+# --- Rainfall -> model-space transform (the ONLY change vs v10) ---
+data_transform: asinh    # 'standard' = v10 behaviour
+asinh_scale: 0.035       # s in mm/5min = median wet step (>= 0.005 mm), 2000-2007 train split
+
+# --- Transform (Delay Embedding) ---
+use_stft: false
+delay: 8
+embedding: 8
+
+# --- Model Architecture (must match base checkpoint) ---
+handler: models.ImagenFew.handler
+img_resolution: 8
+input_channels: 1
+unet_channels: 32
+ch_mult: [1, 2, 2, 4]
+attn_resolution: [8, 4, 2]
+attn_min_heads: 1    # E1: without this, 32 channels // 64 per head = 0 heads and the
+                     # 8x8 attention is silently dropped (all versions up to v14)
+diffusion_steps: 36
+dynamic_size: [128, 128]
+
+# --- Diffusion Sampler ---
+beta1: 0.00001      # 1e-5
+betaT: 0.01         # 1e-2
+deterministic: false
+
+# --- Fine-tuning ---
+finetune: true
+pretrain: false
+ema: true
+ema_warmup: 100
+ft_method: all       # fine-tune all parameters
+lora_dim: 4          # ignored when ft_method != 'lora'
+dropout: 0.0
+
+# --- Logging & Monitoring ---
+logging_iter: 25       # Log metrics, evaluate regimes, and update plots every 25 epochs
+run_id: null           # auto-generated if null
+run_dir: ImagenFew/Rainfall_v15/

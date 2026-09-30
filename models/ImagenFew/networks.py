@@ -197,13 +197,15 @@ class UNetBlock(torch.nn.Module):
         in_channels, out_channels, emb_channels, up=False, down=False, attention=False,
         num_heads=None, channels_per_head=64, dropout=0, skip_scale=1, eps=1e-5,
         resample_filter=[1,1], resample_proj=False, adaptive_scale=True,
-        init=dict(), init_zero=dict(init_weight=0), init_attn=None, r = None
+        init=dict(), init_zero=dict(init_weight=0), init_attn=None, r = None, min_heads=0
     ):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.emb_channels = emb_channels
-        self.num_heads = 0 if not attention else num_heads if num_heads is not None else out_channels // channels_per_head
+        # min_heads: out_channels // channels_per_head is 0 when out_channels < channels_per_head,
+        # which silently drops a requested attention layer. min_heads=1 keeps it (default 0 = off).
+        self.num_heads = 0 if not attention else num_heads if num_heads is not None else max(out_channels // channels_per_head, min_heads)
         self.dropout = dropout
         self.skip_scale = skip_scale
         self.adaptive_scale = adaptive_scale
@@ -451,6 +453,7 @@ class DhariwalUNet(torch.nn.Module):
         label_dropout       = 0,            # Dropout probability of class labels for classifier-free guidance.
         lora_rank           = None,
         dynamic_size        = [128, 128],
+        attn_min_heads      = 0,            # Minimum heads where attention is requested (0 = original behaviour).
 
     ):
         super().__init__()
@@ -458,7 +461,7 @@ class DhariwalUNet(torch.nn.Module):
         emb_channels = model_channels * channel_mult_emb
         init = dict(init_mode='kaiming_uniform', init_weight=np.sqrt(1/3), init_bias=np.sqrt(1/3))
         init_zero = dict(init_mode='kaiming_uniform', init_weight=0, init_bias=0)
-        block_kwargs = dict(emb_channels=emb_channels, channels_per_head=64, dropout=dropout, init=init, init_zero=init_zero,r = lora_rank)
+        block_kwargs = dict(emb_channels=emb_channels, channels_per_head=64, dropout=dropout, init=init, init_zero=init_zero,r = lora_rank, min_heads=attn_min_heads)
         self.dynamic_size = dynamic_size
 
         # Mapping.
