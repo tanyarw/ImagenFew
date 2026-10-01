@@ -178,3 +178,7 @@ logs/
 # progress files of context-chained generation (resume state)
 results/assembly_ablation/*.npz
 results/generated_data/*.ctx_state.npz
+# Evaluation cache: keyed to local file times, recomputed by scripts/eval_suite.py
+results/evaluation/eval_cache.pkl
+# Downloaded third-party data (e.g. KOSTRA-DWD-2020 grids), re-fetched by the scripts
+data/external/
