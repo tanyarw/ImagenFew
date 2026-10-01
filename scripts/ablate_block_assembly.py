@@ -157,7 +157,8 @@ def main():
     # Markov plan exactly as the production jobs build it (same seed, same transition matrix)
     L = 64
     total = int(cli.years * STEPS_PER_YEAR)
-    n_base = int(np.ceil(total / (L - cli.overlap))) + 10
+    # Enough blocks for the shortest variant: every join can be a wide (transition) overlap
+    n_base = int(np.ceil(total / (L - cli.transition_overlap))) + 10
     with open(os.path.join(ROOT, 'data/rainfall/splits/seasonal_transition_matrix_train_len64.pkl'), 'rb') as f:
         tm = pickle.load(f)
     states = gen.sample_markov_state_sequence(tm['P_block'], tm['pi_block'], n_base, seed=cli.seed)
@@ -169,6 +170,11 @@ def main():
     if os.path.exists(npz):
         blocks = np.load(npz)['blocks_mm']
         print(f'loaded {len(blocks)} blocks from {os.path.relpath(npz, ROOT)}')
+        if len(blocks) < len(plan):
+            # Saved by an earlier, shorter plan. Same seed, so its blocks are this plan's first
+            # blocks: keep them and generate only the rest.
+            np.savez_compressed(npz.replace('.npz', '.partial.npz'), blocks_mm=blocks)
+            blocks = generate_blocks(cli, plan, npz)
     else:
         blocks = generate_blocks(cli, plan, npz)
     assert len(blocks) == len(plan)
