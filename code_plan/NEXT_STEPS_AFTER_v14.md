@@ -47,6 +47,37 @@ v14: 9.0%, 716). If a job hits its 16 h limit, submitting the same command resum
    §3 checks (zero fraction within 1 pp, volume 0.95–1.05) decide it. A dry bias with no drift
    points to the RePaint settings (`RESAMPLE`, `K`) or to E3; drift points to E3.
 
+**Results (2026-10-01; `notebooks/research_evaluation.ipynb`, diary Oct 1 entries):**
+1. **No bridges: confirmed.** Monthly r 0.62 → **0.97** (Gate A 13 → 14/18). Use
+   `--bridge_blocks 0` for every calendar run from now on.
+2. **E1: refuted in its first half.** Attention made storms *shorter* (−3.5 min, 10/10 paired
+   years) with identical training loss; the cliff did not move. Dropped.
+3. **E2: cliff removed, rain halved.** Survival at 5h20 0.13 → 0.73–0.79 (inside the real range),
+   but volume ratio 0.49. A CPU pilot showed the dry bias comes from RePaint resampling
+   (no resampling: 10.1% wet vs 4.8%; storms still continue across joins, 0.62 vs 0.11).
+
+**▶ Next (the one idea from the evaluation):** E2 without resampling.
+`RESAMPLE=1 sbatch scripts/submit_generation_v14_ctx.sh markov` (and `calendar`), ~10–12 h
+each, then
+`python scripts/score_context_generation.py --versions v14_ctx_u1 v14_ctx_u1_m1 v14_ctx_u1_m2 v14_ctx_u1_m3`
+against §3. If it drifts or still runs dry → E3 (§4).
+
+**Done 2026-10-01 (from the literature review, `docs/LITERATURE_RAINFALL_GENERATORS.md`):**
+* **Stronger classical baseline**: storm-and-cell (randomised Bartlett-Lewis) model,
+  `scripts/baselines/run_bartlett_lewis.py`. It fails where diffusion succeeds and vice versa:
+  realistic long storms (13.8/yr), daily totals, persistence and seasons, but wrong 5-minute
+  texture and weak short bursts; Gate A 2/18.
+* **Official heavy-rain table** (KOSTRA-DWD-2020, Erft cells), `scripts/kostra_compare.py`: the
+  real gauges match it within ~5% from 15 minutes up; the 4-gauge average used for training has
+  5-minute peaks ~40% below a single gauge.
+
+**New items these raised:**
+* **Four gauges for the sewer test.** SWMM-Astlingen reads four separate gauges; the generator
+  makes one average series. Before the agent-in-the-loop test, generate the four gauges (jointly,
+  e.g. as 4 channels, or by spreading the average back out), or 5-minute peaks will be ~40% weak.
+* **Two-level generator (later).** A storm-scale model decides when and for how long it rains; the
+  diffusion model fills in the 5-minute detail. Motivated by the complementary failures above.
+
 **Also found while building E1 (not changed):** `ImagenFew.py` never passes `dropout` to the
 network, so every version so far trained with the network's default **dropout = 0.10**, not the
 configs' `dropout: 0.0`. Left as is so E1 differs from v14 only in attention.

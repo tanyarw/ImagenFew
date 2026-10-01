@@ -3,6 +3,186 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 1, 2026 — Heavy Rain Against the Official German Table (KOSTRA-DWD-2020)
+
+### 🔍 Overview
+KOSTRA is the German Weather Service's design-rainfall table (5 km grid; 5 minutes to 7 days;
+1- to 100-year return periods; fitted to 1951–2020), the standard for sewer design. The Astlingen
+rain is four 5-minute Erftverband gauge series (Astlingen benchmark; confirmed in
+`flood-control/data/SWMM-Astlingen/*Astlingen_Erft*.txt`), and **this project's real series is
+their exact average** (checked to 4e-16 mm). Script: `scripts/kostra_compare.py` (downloads cached
+in `data/external/kostra/`, git-ignored; ETRS89-LAEA projection checked against the EPSG worked
+example). Cells: those under the 36 Erftverband KOSTRA stations (exact gauge sites unpublished).
+Return levels for our series: Gumbel on annual maxima, as in Gate A.
+
+### 📊 Findings
+| Duration | gauges / KOSTRA | 4-gauge average / single gauge | v14 / real average | storm-and-cell / real average |
+| :--- | :---: | :---: | :---: | :---: |
+| 5 min | 0.81–0.83 | **0.57–0.59** | 0.87–0.97 | 0.55–0.57 |
+| 15 min | 0.95–1.05 | 0.67–0.68 | 0.93–0.96 | 0.61–0.66 |
+| 1 h | 0.94–0.97 | 0.75–0.80 | 0.90–0.95 | 0.89–0.94 |
+| 6 h | 0.94–0.98 | 0.79–0.89 | 0.85–0.86 | 0.88–0.92 |
+| 24 h | 0.95–0.96 | 0.93–0.94 | **0.73–0.78** | 0.72–0.86 |
+
+(ranges over the 2- and 10-year return periods)
+
+* The real gauges match KOSTRA within about 5% from 15 minutes up: the record is consistent with
+  German design practice.
+* **Averaging four gauges removes about 40% of the 5-minute peak.** The models learn the average,
+  so they are judged against it; v14 is within ~10% of it up to 1 hour and ~25% short at a day.
+* **Consequence for the sewer test:** SWMM-Astlingen reads the four gauges separately. One
+  generated average fed to all four gauges would have 5-minute peaks ~40% weaker than any real
+  gauge. The generator needs to produce four gauges (jointly, or by spreading the average back out)
+  before the agent-in-the-loop test.
+
+**Verdict:** **data validated against the official table; a multi-site gap identified.**
+
+---
+
+## October 1, 2026 — Storm-and-Cell (Bartlett-Lewis) Baseline
+
+### 🔍 Overview
+The literature review (`docs/LITERATURE_RAINFALL_GENERATORS.md`) named the randomised
+Bartlett-Lewis rectangular-pulse model as the standard competitor for 5-minute point rain. Built
+from scratch on numpy/scipy (`scripts/baselines/run_bartlett_lewis.py`; no rainfall package):
+storms arrive at random, each sets off rain cells; the variant used (Kaczmarska, Isham & Onof 2014)
+makes short cells more intense. Fitted per calendar month to the 2000–2007 training years by
+simulated method of moments (differential evolution, 100 simulated years per step; mean, CV, lag-1
+autocorrelation, dry fraction at 5 min / 1 h / 6 h / 24 h, skewness at 5 min / 1 h), then each
+month's long-run mean matched exactly. A first "classic" fit (fixed cell intensity, 30 simulated
+years per step) over-fitted the random seed and is kept as `bartlett_lewis_classic`.
+
+### 📊 Findings
+| | real | v14 (diffusion) | storm-and-cell |
+| :--- | :---: | :---: | :---: |
+| Storms > 5h20 per year | 14.25 | 1.9 | **13.8** |
+| Single-step showers | 38% | **38%** | 7% |
+| Mean wet spell (min) | 32 | **30** | 67 |
+| Strongest 5-min burst (mm) | 5.6 | **6.4** | 2.8 |
+| Daily totals (Wasserstein; real 2-year floor 0.15–0.25) | — | 0.50 | **0.26** |
+| Hourly ACF RMSE (real floor 0.02–0.04) | — | 0.05 | **0.034** |
+| Monthly cycle r | — | −0.11 (Markov) / 0.97 (calendar, no bridges) | **0.88** |
+| Classifier AUC, 5-h windows (real 0.48) | — | **0.78** | 0.83 |
+| Gate A | 10/18 (held-out years) | **14/18** | 2/18 |
+
+The seed-42 draw (635 mm/yr) is the driest of 22 seeds (others 676–754; the fitted monthly means
+match the real ones exactly), so its volume result is pessimistic.
+
+**Verdict:** **complementary failures.** Diffusion wins the 5-minute texture and short extremes;
+the storm-and-cell model wins long storms, daily totals, persistence and seasons. Neither reaches
+the real 24-hour extremes. This motivates a two-level design (storm-scale model for *when and how
+long*, diffusion for the 5-minute detail), noted in `notebooks/research_evaluation.ipynb` §7.
+
+---
+
+## October 1, 2026 — Full Evaluation of Every Version (`notebooks/research_evaluation.ipynb`)
+
+### 🔍 Overview
+One notebook scores every series generated so far: v1–v15, the checkpoint control, the
+no-bridge calendar run, the partial E2 runs and eight classical baselines (36 series). It uses
+hydrology metrics (water balance, occurrence, intensity, storms, IDF, structure across scales,
+seasons) and generative-model metrics (noise floor, precision / recall / density / coverage,
+classifier two-sample tests, memorisation, train-on-synthetic-test-on-real, conditioning
+fidelity, denoising error). Metrics live in `scripts/eval_suite.py` (reuses the Gate A
+definitions; `python scripts/eval_suite.py --refresh`, ~4 min); the notebook reads its cache.
+Versions sharing the seed-42 plan are compared year by year (10 paired years).
+
+### 📊 Findings
+| | Result | Evidence |
+| :--- | :--- | :--- |
+| Best model | **v14** (asinh): Gate A 14/18; vs v10 +9.4% volume, +2.8 min wet spells (10/10 years), +3.2 min storms (9/10); heavy-state rain −34% → −8% | paired years, conditioning table |
+| Seasons | no-bridge calendar: monthly r **0.62 → 0.97** | §3.6 |
+| vs classical baselines | diffusion wins storms (57 vs 20 min; real 62), extremes (12/15 vs 0/15 IDF cells), window coverage (0.86 vs 0.60), realism (classifier AUC 0.78 vs 0.94); copulas win hourly persistence (ACF RMSE 0.024–0.029 vs 0.051) and hourly forecasting utility | §5.4 |
+| Noise floor | v14 inside real 2-year spread on intensity, dry fraction, volume; 2–3× outside on daily totals; far outside on long storms (0.13 vs 0.58–1.53) | §4.1 |
+| Realism | coverage metrics saturate (v14 = real); a classifier still detects 5-h windows (AUC 0.78 vs 0.48 real): rain in 42% of windows vs 33% | §4.2 |
+| Memorisation | none (nearest-training-window distance ratio 0.94–1.06; 0% too close) | §4.3 |
+| Utility (TSTR) | v14 trains a forecaster to 97% (1 h) / 95% (6 h) of real data | §4.4 |
+| Calibration | **two real held-out years pass only 10/18 Gate A checks**; the diurnal check fails for real rain | §2 |
+
+**Verdict:** reportable improvements exist (transform, seasons, diffusion vs baselines,
+methodology). The dominant failure is still the block-boundary cliff, which only E2 has moved.
+
+### ✅ Decision
+**One good idea (notebook §7): E2 without RePaint resampling**:
+`RESAMPLE=1 sbatch scripts/submit_generation_v14_ctx.sh markov`, scored with
+`scripts/score_context_generation.py --versions v14_ctx_u1 v14_ctx_u1_m1 v14_ctx_u1_m2 v14_ctx_u1_m3`
+against the rules written in advance in `code_plan/NEXT_STEPS_AFTER_v14.md` §3. If it drifts or
+runs dry: E3 (train the masked path).
+
+---
+
+## October 1, 2026 — E2 Context Chaining: Partial Results and Why It Ran Dry
+
+### 🔍 Overview
+E2 (`regime_training/generate_context.py`, K = 2 known columns, 10 RePaint passes, history noise
+0.05) ran too slowly to finish (6–8 s/block on GPU, 28–40 h left) and was stopped. The progress
+files hold 4 chains × 2.05 years (Markov) and 4 × 2.74 years (exact calendar). A CPU pilot (v14
+checkpoint, same 11 days) then separated context from resampling
+(`results/e2_pilot/e2_mechanism_pilot_11days.npz`).
+
+### 📊 Findings
+| | Wet steps | P(rain continues across a join) | Survival ratio at 5h20 | Volume ratio |
+| :--- | :---: | :---: | :---: | :---: |
+| v14 (independent blocks) | 9.0% | 0.11 (no-context pilot) | 0.13 | 1.01 |
+| E2 full runs (K=2, U=10) | 4.8% | 0.63 | **0.73 / 0.79** | **0.49** |
+| Pilot: context, no resampling (K=2, U=1), 8 chains | **10.1% ± 1.3** | **0.62** | — | — |
+| Pilot: no context (K=0), 8 chains | 9.6% ± 1.1 | 0.11 | — | — |
+
+* **Context removes the cliff**: storms continue across joins (0.62–0.63 vs 0.11; inside a block
+  0.83–0.85), long storms 1.9 → 5.3 per year, 2.2% → 10.9% of rain, survival at 5h20 inside the
+  real range (0.58–1.53). The pre-registered success targets (≥ 10/yr, ≥ 15%) are not met, and
+  the must-not-break checks fail on volume and zero fraction.
+* **The dry bias comes from resampling, not context.** Every chain-year of both runs is at
+  0.40–0.66 of real volume; without resampling the pilot is as wet as v14. On 91%-zero data, each
+  RePaint pass nudges the in-filled part towards the dry mode: resampling is mode-seeking.
+
+**Verdict:** **mechanism confirmed, configuration wrong.** Next: the same run with `RESAMPLE=1`.
+
+---
+
+## October 1, 2026 — E1 Attention at 8×8: Result (negative)
+
+### 🔍 Overview
+v15 = v14 fine-tuned 200 more epochs with `attn_min_heads: 1`; v15_ctrl = the same fine-tune
+without it. Same seed-42 plan, so the 10 generated years are paired.
+
+### 📊 Findings
+| v15 − v15_ctrl (10 paired years) | Mean [95% CI] | Years in that direction |
+| :--- | :---: | :---: |
+| Storm duration (min) | **−3.48 [−4.30, −2.67]** | shorter in 10/10 |
+| Wet spell (min) | −1.70 [−2.60, −0.80] | shorter in 9/10 |
+| Volume ratio | −0.035 [−0.057, −0.013] | lower in 8/10 |
+| Storms > 5h20 per year | −0.7 [−1.6, +0.2] | n.s. |
+| Best training loss | 0.2100 vs 0.2099 | identical |
+
+Gate A: v15 11/18, v15_ctrl 14/18 (= v14). Heavy-state rain moves (state 2 −15%, state 3 +5%).
+The control itself barely differs from v14 (volume −2%, hourly ACF RMSE +0.003).
+
+**Verdict:** **negative.** The registered prediction ("better sub-block structure, cliff
+unchanged") was wrong in its first half: full-resolution attention shortened storms in every
+year without improving the fit. Do not carry attn_min_heads forward.
+
+---
+
+## October 1, 2026 — No-Bridge Calendar Run: Seasonal Cycle Restored
+
+### 🔍 Overview
+`MODES=calendar BRIDGE_BLOCKS=0 sbatch scripts/submit_generation_v14.sh` → v14_nobridge_cal,
+testing the prediction written before the run: monthly correlation rises once the 39-day drift
+from bridge blocks is gone.
+
+### 📊 Findings
+| | Monthly cycle r | Gate A | Storms > 5h20 /yr |
+| :--- | :---: | :---: | :---: |
+| v14_cal (bridges) | 0.62 | 13/18 | 1.7 |
+| **v14_nobridge_cal** | **0.97** | **14/18** | 1.4 |
+| seasonal copula AR(64), calendar | 0.94 | 7/18 | 0 |
+
+**Verdict:** **prediction confirmed.** First diffusion version to pass the monthly-cycle check
+(≥ 0.90). Use `--bridge_blocks 0` for all calendar runs from now on.
+
+---
+
 ## September 30, 2026 — Next-Step Jobs Built: E1 (v15 + control), E2 (context chaining), Loose Ends (results pending)
 
 ### 🔍 Overview
