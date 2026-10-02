@@ -3,6 +3,101 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 2, 2026 — Chapter Closed: Single-Site Diffusion Generator (v1–v15, E1, E2)
+
+### 🔍 Overview
+Experiments stopped here by decision. This entry summarises what the chapter established and what
+is left open. Nothing is running on the cluster; no further jobs are queued.
+**Final model: v14** (`regime_training/config_v14.yaml`, asinh transform, s = 0.035), generated
+with no bridge blocks on the calendar timeline (`v14_nobridge_cal`) for seasonal use.
+
+### 📊 Findings: what the chapter established
+| # | Claim | Evidence (diary entry) |
+| :--- | :--- | :--- |
+| 1 | A variance-stabilising transform (asinh) is the single largest gain: Gate A 11 → 14/18, +9.4% volume, longer wet spells and storms in 10/10 and 9/10 paired years, heavy-state rain bias −34% → −8% | Sept 30 transform ablation; Oct 1 full evaluation |
+| 2 | Conditioning on a smoothed seasonal-phase label sets the calendar, not long-range storm structure | Sept 30 conditioning ablation; Sept 4 renaming |
+| 3 | Bridging blocks cause a 39-day calendar drift; dropping them restores the monthly cycle (r 0.62 → 0.97). Crossfade and bridges change nothing else (within ~1%, 2 and 10 years) | Oct 1 no-bridge run; Sept 30 / Oct 2 assembly ablations |
+| 4 | Long storms (> 5h20) are missing (1.9/yr vs 14.25) because blocks are generated independently; the network never attends across a block at full resolution | Sept 28 architecture audit |
+| 5 | Turning attention on at 8×8 makes storms shorter (−3.5 min, 10/10 years): negative | Oct 1 E1 |
+| 6 | Inference-only context chaining cannot fix it: with resampling it carries storms but halves rain (mode-seeking on zero-inflated data); without, it keeps rain but storms fade (2.3–2.9/yr) | Oct 1 / Oct 2 E2 |
+| 7 | Against a classical storm-and-cell model the failures are complementary: diffusion wins 5-min texture and short extremes, storm-and-cell wins long storms, daily totals, persistence and seasons | Oct 1 Bartlett-Lewis |
+| 8 | Real gauges match the official German design table (KOSTRA-DWD-2020) within ~5% from 15 min; the 4-gauge average used for training removes ~40% of the 5-min peak | Oct 1 KOSTRA |
+| 9 | No memorisation; synthetic v14 trains a forecaster to 95–97% of real-data skill; Gate A is stricter than real year-to-year variation (real held-out years 10/18) | Oct 1 full evaluation |
+
+### ✅ Decision: open questions handed to the next chapter
+* **E3, trained continuation:** train with random known-prefix masks so the model learns to
+  continue a storm (Flexible Diffusion / MCVD / CSDI). The evidence-backed fix for claim 4;
+  not written.
+* **Two-level generator:** storm-scale model for *when and how long*, diffusion for 5-minute
+  detail (claim 7).
+* **Four gauges:** generate the four Erft gauges (jointly or by disaggregating the average) before
+  the agent-in-the-loop test, since SWMM reads them separately (claim 8).
+* **Agent-in-the-loop test** (staged milestone): train the flood-control agents on v14 rain and
+  test on the real held-out years.
+
+**Verdict:** **chapter closed. v14 is the deliverable; long storms are the documented limitation.**
+
+---
+
+## October 2, 2026 — Block-Assembly Ablation at 10 Years (v14, paired)
+
+### 🔍 Overview
+The thesis-length repeat of the Sept 30 two-year test: one set of v14 blocks joined four ways
+(`scripts/ablate_block_assembly.py --run v14 --years 10`; `results/assembly_ablation/assembly_v14_10y_seed42.csv`).
+
+### 📊 Findings
+| | real | bridge + xfade | no bridge + xfade | bridge + hard join | no bridge + hard join |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Volume (mm/yr) | 710 | 716 | 713 | 710 | 706 |
+| Zero fraction | 90.80% | 91.01% | 91.05% | 91.22% | 91.24% |
+| Wet spell (min) | 32.0 | 30.5 | 30.5 | 29.9 | 30.0 |
+| Storm duration (min) | 61.8 | 57.3 | 57.3 | 57.1 | 57.1 |
+| Storms > 320 min / yr | 14.25 | 1.9 | 1.9 | 2.1 | 2.1 |
+| Hourly ACF RMSE | 0 | 0.051 | 0.052 | 0.049 | 0.050 |
+
+**Verdict:** **confirms the two-year result.** All four joins agree within ~1%; none moves the
+long-storm gap. Bridges are dropped only for the calendar reason (Oct 1 no-bridge entry).
+
+---
+
+## October 2, 2026 — E2 Without Resampling: Rain Amount Fixed, Long Storms Not
+
+### 🔍 Overview
+The "one good idea" from the Oct 1 evaluation: context chaining (each block sees the previous
+block's last 80 minutes) with RePaint resampling switched off.
+`RESAMPLE=1 sbatch scripts/submit_generation_v14_ctx.sh markov` → 4 independent 10-year chains
+(`v14_ctx_u1`, `_m1`–`_m3`). Scored with `scripts/score_context_generation.py`
+(`results/reference/e2_u1_score.json`).
+
+### 📊 Findings
+| | wet steps | rain continues across a join | survival ratio 4 h | survival ratio 5h20 | storms > 5h20 /yr | volume ratio |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| v14 (no context) | 9.0% | — | 0.77 | 0.13 | 1.9 | 1.01 |
+| **E2, no resampling** | 8.3–8.7% | **0.58–0.61** | 0.47–0.56 | **0.16–0.19** | **2.3–2.9** | **0.91–0.98** |
+| E2, 10 resampling passes | 4.8% | 0.76 | 1.01 | 0.73 | 5.3 | 0.49 |
+| real | 9.2% | — | 1 | 1 | 14.25 | 1 |
+
+All rows measured the same way on the full 10-year runs; the Oct 1 entry's 0.63 for the
+resampling run used the pilot's measurement, so compare within this table only.
+
+* **Rain amount: fixed**, as the pilot predicted. Dry fraction within 1 pp in all four chains,
+  volume 0.91–0.98, and no year-on-year drift against v14 (all slopes inside 2 SE).
+* **Long storms: not fixed.** Rain carries on across a join more than half the time, but the
+  storm then winds down within the next block: survival at 4 hours is *worse* than v14 and
+  barely better at 5h20. Long-storm count 2.3–2.9 vs 1.9 (real 14.25). Pre-registered success
+  targets (≥ 10/yr, ≥ 15% of rain): **fail**.
+* Reading: without resampling the model treats the known start as a weak hint and drifts back to
+  its usual behaviour; with resampling it follows the start but is pulled towards dry. Either
+  way the untrained shortcut cannot sustain storms. This matches the literature
+  (`docs/LITERATURE_CONTINUING_SEQUENCES.md`: pasting known parts into an untrained model gives
+  incoherent continuations).
+
+**Verdict:** **shortcut exhausted.** Both settings of the inference-only fix fail on long storms.
+Next: train the model to continue from known starts (E3, random known-prefix masks), the standard
+fix in the literature.
+
+---
+
 ## October 1, 2026 — Heavy Rain Against the Official German Table (KOSTRA-DWD-2020)
 
 ### 🔍 Overview

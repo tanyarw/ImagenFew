@@ -1,5 +1,9 @@
 # Next Steps — after v10–v14 are finished
 
+> **CLOSED 2026-10-02.** Experiments stopped by decision. E1 negative; E2 run both ways (with and
+> without resampling), neither restores long storms. E3 and the other open items are handed to the
+> next chapter: see the diary entry "Chapter Closed: Single-Site Diffusion Generator".
+
 **Written:** 2026-09-28 · **Do not start until:** v13 and v14 have trained and been scored.
 **Updated 2026-09-30:** the gate (§1) is done; results in the gate status below and in the
 research diary (Sept 30 entries). **v14 is now the baseline: wherever this plan says v10, use

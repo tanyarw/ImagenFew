@@ -111,8 +111,11 @@ def load_real():
     return a[:8 * Y], a[8 * Y:]
 
 
+PARTIAL = ('v14_ctx', 'v14_ctx_cal')      # E2 runs stopped early: only their progress files exist
+
+
 def data_path(name):
-    if name.startswith('v14_ctx'):
+    if name in PARTIAL:
         return os.path.join(GEN, f'rainfall_synthetic_10y_{name}.ctx_state.npz')
     return os.path.join(GEN, f'rainfall_synthetic_10y_{name}.csv')
 
