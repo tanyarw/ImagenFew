@@ -23,18 +23,28 @@ and coefficient of variation, lag-1 autocorrelation and dry fraction at 5 min, 1
 (log scale); a fixed random seed per evaluation keeps the objective repeatable. Only numpy /
 scipy (no rainfall package needed).
 
+The default search keeps alpha (shape of the per-storm time-scale distribution) above 2.05, the
+limit used before Onof & Wang (2020). They showed the limit was a mistake: the moments stay
+finite for any alpha > 0, and their Bochum fits put alpha at 0.44-1.05. --alpha_min below 2.05
+relaxes it ("relaxed" fit): alpha is then searched on a log scale down to --alpha_min, the lower
+edge for nu drops to 0.001 (small alpha needs small nu), and the warm-up before each fitting
+simulation grows to 30 days (small alpha gives some very long storms). Like pyBL, eta is not
+truncated. Everything else is unchanged, so old and relaxed fits differ only in alpha's range.
+
 Generation: 10 years on a 365-day calendar; storms start with the parameters of the month
 they start in, and cells may run on into the next month. 5-min depths are exact integrals of
 the pulses over each interval; values below the 0.005 mm wet threshold are set to 0.
 
-Outputs:
-  results/generated_data/rainfall_synthetic_10y_bartlett_lewis.csv
-  results/reference/bartlett_lewis_model_card.json   (parameters and fit quality per month)
+Outputs (tag '', '_classic' or '_relaxed'; '_m<k>' for --member k):
+  results/generated_data/rainfall_synthetic_10y_bartlett_lewis<tag>.csv
+  results/reference/bartlett_lewis<tag>_model_card.json   (parameters and fit quality per month)
 
 Usage:
     python scripts/baselines/run_bartlett_lewis.py                 # fit + generate (~15 min, 8 cores)
     python scripts/baselines/run_bartlett_lewis.py --variant rbl   # classic variant, for comparison
     python scripts/baselines/run_bartlett_lewis.py --generate_only  # reuse the model card
+    python scripts/baselines/run_bartlett_lewis.py --alpha_min 0.2  # relaxed alpha (Onof & Wang 2020)
+    python scripts/baselines/run_bartlett_lewis.py --alpha_min 0.2 --generate_only --member 3  # seed 42+3
 """
 
 import argparse
@@ -62,13 +72,27 @@ BOUNDS = {'rblx': [(np.log10(0.002), np.log10(0.3)), (np.log10(0.005), np.log10(
                    (np.log10(0.02), np.log10(40.0)), (np.log10(0.01), np.log10(10.0)), (np.log10(0.002), np.log10(1.0))],
           'rbl': [(np.log10(0.002), np.log10(0.3)), (np.log10(0.2), np.log10(80.0)), (2.05, 40.0),
                   (np.log10(0.02), np.log10(40.0)), (np.log10(0.01), np.log10(10.0)), (np.log10(0.002), np.log10(1.0))]}
+ALPHA_OLD_MIN = 2.05             # alpha floor before Onof & Wang (2020); --alpha_min below it relaxes it
+NU_RELAXED_MIN = 0.001
+WARM_H = {False: 48.0, True: 720.0}   # warm-up before each fitting simulation, by relaxed (h)
 FIT_YEARS = 100                  # years of a month simulated per objective evaluation (30 overfits the seed)
 MAX_CELLS_PER_STORM = 300        # mean cells per storm 1 + kappa/phi is capped (guards runaway sims)
 
 
-def unpack(v, variant):
-    return dict(lam=10 ** v[0], mu=10 ** v[1], alpha=v[2], nu=10 ** v[3], kappa=10 ** v[4], phi=10 ** v[5],
-                dependent=(variant == 'rblx'))
+def unpack(v, variant, log_alpha=False):
+    """Parameters from a search vector; alpha is on a log10 scale in relaxed fits."""
+    return dict(lam=10 ** v[0], mu=10 ** v[1], alpha=10 ** v[2] if log_alpha else v[2], nu=10 ** v[3],
+                kappa=10 ** v[4], phi=10 ** v[5], dependent=(variant == 'rblx'))
+
+
+def search_box(variant, alpha_min):
+    """(bounds, log_alpha): the default box, or the relaxed one when alpha_min < ALPHA_OLD_MIN."""
+    if alpha_min >= ALPHA_OLD_MIN:
+        return BOUNDS[variant], False
+    b = list(BOUNDS[variant])
+    b[2] = (np.log10(alpha_min), np.log10(40.0))
+    b[3] = (np.log10(NU_RELAXED_MIN), b[3][1])
+    return b, True
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -110,14 +134,14 @@ def to_steps(start, end, inten, n_steps):
     return x
 
 
-def simulate_month(v, days, years, seed, variant):
+def simulate_month(v, days, years, seed, variant, log_alpha=False):
     """`years` copies of one month, back to back, with one parameter set (used for fitting)."""
-    p = unpack(v, variant)
+    p = unpack(v, variant, log_alpha)
     if 1 + p['kappa'] / p['phi'] > MAX_CELLS_PER_STORM:
         return None
     rng = np.random.default_rng(seed)
     H = days * 24 * years
-    warm = 48.0
+    warm = WARM_H[log_alpha]
     s, e, x = storm_cells(rng, -warm, H, p)
     if len(s) == 0:
         return np.zeros(int(round(H / DT)))
@@ -154,8 +178,8 @@ def stats(x):
 WEIGHTS = {'mean_1h': 5.0, 'skew_5min': 0.5, 'skew_1h': 0.5, 'ac1_24h': 0.5}
 
 
-def objective(v, target, days, seed, variant):
-    x = simulate_month(v, days, FIT_YEARS, seed, variant)
+def objective(v, target, days, seed, variant, log_alpha=False):
+    x = simulate_month(v, days, FIT_YEARS, seed, variant, log_alpha)
     if x is None or x.sum() == 0:
         return 1e6
     s = stats(x)
@@ -163,17 +187,19 @@ def objective(v, target, days, seed, variant):
 
 
 def fit_month(args):
-    month, target, seed, variant = args
+    month, target, seed, variant, alpha_min = args
     days = MONTH_DAYS[month - 1]
+    bounds, log_alpha = search_box(variant, alpha_min)
     t0 = time.time()
-    res = differential_evolution(objective, BOUNDS[variant], args=(target, days, seed + month, variant), popsize=12,
+    res = differential_evolution(objective, bounds, args=(target, days, seed + month, variant, log_alpha), popsize=12,
                                  maxiter=60, tol=1e-3, seed=seed + month, polish=False, updating='immediate')
     fresh = seed + 1000 + month                                                    # fresh seed: honest check
-    fitted = stats(simulate_month(res.x, days, FIT_YEARS, fresh, variant))
-    return dict(month=month, params=dict(zip(PARAMS[variant], map(float, [10 ** res.x[0], 10 ** res.x[1], res.x[2],
-                                                                          10 ** res.x[3], 10 ** res.x[4], 10 ** res.x[5]]))),
+    fitted = stats(simulate_month(res.x, days, FIT_YEARS, fresh, variant, log_alpha))
+    p = unpack(res.x, variant, log_alpha)
+    return dict(month=month, params=dict(zip(PARAMS[variant], map(float, [p['lam'], p['mu'], p['alpha'], p['nu'],
+                                                                          p['kappa'], p['phi']]))),
                 vector=list(map(float, res.x)), objective=float(res.fun),
-                objective_fresh_seed=objective(res.x, target, days, fresh, variant), evaluations=int(res.nfev),
+                objective_fresh_seed=objective(res.x, target, days, fresh, variant, log_alpha), evaluations=int(res.nfev),
                 seconds=round(time.time() - t0, 1), target=target, fitted=fitted)
 
 
@@ -196,7 +222,8 @@ def match_means(card, seed, years=300):
         if 'mean_factor' in m:
             continue
         days = MONTH_DAYS[m['month'] - 1]
-        sim = stats(simulate_month(np.array(m['vector']), days, years, seed + 5000 + m['month'], card['variant']))
+        sim = stats(simulate_month(np.array(m['vector']), days, years, seed + 5000 + m['month'], card['variant'],
+                                   card.get('alpha_log10', False)))
         f = m['target']['mean_1h'] / sim['mean_1h']
         m['vector'][1] += float(np.log10(f))
         key = 'iota' if card['variant'] == 'rblx' else 'mu_x'
@@ -205,7 +232,7 @@ def match_means(card, seed, years=300):
     return card
 
 
-def generate(vectors, years, seed, variant):
+def generate(vectors, years, seed, variant, log_alpha=False):
     """Continuous record: storms take the parameters of the month they start in."""
     rng = np.random.default_rng(seed)
     starts, ends, intens = [], [], []
@@ -213,7 +240,7 @@ def generate(vectors, years, seed, variant):
     for _ in range(years):
         for m in range(12):
             h = MONTH_DAYS[m] * 24.0
-            s, e, x = storm_cells(rng, t, t + h, unpack(vectors[m], variant))
+            s, e, x = storm_cells(rng, t, t + h, unpack(vectors[m], variant, log_alpha))
             starts.append(s); ends.append(e); intens.append(x)
             t += h
     n_steps = years * 365 * STEPS_PER_DAY
@@ -229,9 +256,18 @@ def main():
     ap.add_argument('--generate_only', action='store_true')
     ap.add_argument('--variant', default='rblx', choices=['rblx', 'rbl'],
                     help='rblx: intensity scales with cell speed (default); rbl: classic')
+    ap.add_argument('--alpha_min', type=float, default=ALPHA_OLD_MIN,
+                    help=f'lower edge of the alpha search; below {ALPHA_OLD_MIN} gives the relaxed fit')
+    ap.add_argument('--member', type=int, default=0,
+                    help='generate with seed + MEMBER and write a _m<MEMBER> file (0: the main series)')
     args = ap.parse_args()
-    tag = '' if args.variant == 'rblx' else '_classic'
-    card_path, out_csv = CARD.format(tag), OUT_CSV.format(tag)
+    relaxed = args.alpha_min < ALPHA_OLD_MIN
+    if relaxed and args.variant != 'rblx':
+        ap.error('--alpha_min is only set up for the rblx variant')
+    tag = '_relaxed' if relaxed else ('' if args.variant == 'rblx' else '_classic')
+    card_path = CARD.format(tag)
+    out_csv = OUT_CSV.format(tag + (f'_m{args.member}' if args.member else ''))
+    partial = card_path + '.partial.jsonl'           # one fitted month per line, so a killed run resumes
 
     if args.generate_only:
         card = json.load(open(card_path))
@@ -241,34 +277,42 @@ def main():
         train[train < WET_THR] = 0.0
         assert len(train) == 8 * 365 * STEPS_PER_DAY, 'expected the 2000-2007 training years'
         targets = observed_targets(train)
-        print(f'fitting 12 months on {args.workers} workers ...', flush=True)
+        fits = [json.loads(line) for line in open(partial)] if os.path.exists(partial) else []
+        todo = [m for m in range(1, 13) if m not in {f['month'] for f in fits}]
+        print(f'fitting {len(todo)} months on {args.workers} workers ({12 - len(todo)} resumed) ...', flush=True)
         t0 = time.time()
         with Pool(args.workers) as pool:
-            fits = []
-            for f in pool.imap_unordered(fit_month, [(m, targets[m], args.seed, args.variant) for m in range(1, 13)]):
+            for f in pool.imap_unordered(fit_month, [(m, targets[m], args.seed, args.variant, args.alpha_min)
+                                                     for m in todo]):
                 print(f"  month {f['month']:2d}: objective {f['objective']:.3f} (fresh seed {f['objective_fresh_seed']:.3f}), "
-                      f"{f['evaluations']} sims, {f['seconds']} s; mean 1h obs {f['target']['mean_1h']:.3f} "
-                      f"fit {f['fitted']['mean_1h']:.3f}", flush=True)
+                      f"alpha {f['params']['alpha']:.3f}, {f['evaluations']} sims, {f['seconds']} s; "
+                      f"mean 1h obs {f['target']['mean_1h']:.3f} fit {f['fitted']['mean_1h']:.3f}", flush=True)
                 fits.append(f)
+                with open(partial, 'a') as fh:
+                    fh.write(json.dumps(f) + '\n')
         fits.sort(key=lambda f: f['month'])
         card = dict(model='randomised Bartlett-Lewis rectangular pulse, ' +
                     ('intensity mean iota*eta (Kaczmarska et al. 2014)' if args.variant == 'rblx'
                      else 'fixed mean intensity mu_x (classic)'), variant=args.variant,
                     fitted_on='data/rainfall/splits/train_years_labelled.csv (2000-2007, avg_rainfall)',
                     method='simulated method of moments, differential evolution, one parameter set per month',
-                    units={'lambda': 'storms per hour', 'mu_x': 'mm/h', 'alpha': '-', 'nu': 'hours',
-                           'kappa': '-', 'phi': '-'},
+                    units={'lambda': 'storms per hour', **({'iota': 'mm'} if args.variant == 'rblx' else {'mu_x': 'mm/h'}),
+                           'alpha': '-', 'nu': 'hours', 'kappa': '-', 'phi': '-'},
+                    alpha_min=args.alpha_min, alpha_log10=relaxed, search_box=search_box(args.variant, args.alpha_min)[0],
                     fit_years_per_evaluation=FIT_YEARS, weights=WEIGHTS, seed=args.seed,
                     fit_seconds=round(time.time() - t0, 1), months=fits)
         os.makedirs(os.path.dirname(card_path), exist_ok=True)
         json.dump(card, open(card_path, 'w'), indent=2)
+        os.remove(partial)
         print(f'model card -> {os.path.relpath(card_path, ROOT)}')
 
     card.setdefault('variant', args.variant)
-    card = match_means(card, args.seed)
-    json.dump(card, open(card_path, 'w'), indent=2)
+    if any('mean_factor' not in m for m in card['months']):      # write only when it changes (parallel members)
+        card = match_means(card, args.seed)
+        json.dump(card, open(card_path, 'w'), indent=2)
     print('mean correction factors:', [round(m['mean_factor'], 3) for m in card['months']])
-    x = generate([m['vector'] for m in card['months']], args.years, args.seed, card['variant'])
+    x = generate([m['vector'] for m in card['months']], args.years, args.seed + args.member, card['variant'],
+                 card.get('alpha_log10', False))
     dates = pd.date_range('2026-01-01', periods=len(x), freq='5min')
     pd.DataFrame({'date': dates, 'avg_rainfall': np.round(x, 6)}).to_csv(out_csv, index=False)
     print(f'{os.path.relpath(out_csv, ROOT)}: {len(x)} steps | {x.sum() / args.years:.1f} mm/yr | '

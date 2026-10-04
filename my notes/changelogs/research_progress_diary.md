@@ -3,6 +3,74 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 5, 2026 — Storm-and-Cell Baseline Refit with α Relaxed (Onof & Wang 2020)
+
+### 🔍 Overview
+A check of the Oct 1 storm-and-cell baseline against its sources (Rodriguez-Iturbe, Cox & Isham
+1987/1988; Onof & Wang 2020; pyBL, Wei et al. 2025) found the simulator faithful but the fit
+restricted. Its search kept α (the shape of the per-storm time-scale distribution) above 2.05,
+the limit Onof & Wang showed was a mistake (their Bochum fits: α 0.44–1.05), and 5-min skewness
+came out too low in all 12 months (fitted/observed 0.47–0.92).
+* **One change:** `run_bartlett_lewis.py --alpha_min 0.2` searches α on a log scale down to 0.2,
+  lowers the floor for ν to 0.001 and lengthens the fitting warm-up to 30 days. Statistics,
+  weights, seed 42 and 100 simulated years per step are unchanged. pyBL samples η the same way
+  (no truncation) and allows α down to 0.0001.
+* **Checks before fitting:** at Onof & Wang's July parameters (α = 0.614) the simulator matches
+  their eqs. A9/A10: 1-h mean 0.1117 vs 0.1120, 1-h variance 0.490 ± 0.015 vs 0.494, 24-h variance
+  28.8 ± 0.7 vs 29.0 (5 × 1,000 years). The default path still reproduces the old fit errors and
+  series exactly.
+* **Ten seeds per model** (42–51; `_m1`–`_m9`), scored with `scripts/baselines/compare_bartlett_lewis.py`
+  (eval_suite's metrics; `results/reference/bartlett_lewis_relaxed_comparison.json`).
+
+### 📊 Findings
+| Fit | old (α ≥ 2.05) | relaxed (α ≥ 0.2) |
+| :--- | :---: | :---: |
+| α by month | 2.65–38.4 | 0.33–2.90 (below 2 in 11/12; 4 in 0.44–1.05) |
+| 5-min skewness, fitted/observed (median) | 0.67 | **1.01** |
+| Fit error, tuned seed (sum of months) | 1.76 | 1.28 |
+| Fit error, 10 fresh seeds: median [range] | **3.27 [2.99–3.84]** | 4.29 [3.10–5.76] |
+
+| Median [range] over 10 seeds | real 2000–07 | v14 | old | relaxed |
+| :--- | :---: | :---: | :---: | :---: |
+| Strongest 5-min burst (mm) | 5.55 | 6.4 | 3.1 [2.2–3.6] | **5.0 [4.0–7.6]** |
+| IDF cells in band (/15) | 15 | 12 | 10 [5–12] | **12 [9–15]** |
+| Storms ≥ 10 mm / yr (2-h gap) | 15.8 | 7.6 | 11.3 [9.2–13.1] | **13.9 [12.7–15.5]** |
+| Rain in storms > 320 min | 64.7% | 24.6% | 32.9% | **48.6%** |
+| Hourly ACF RMSE | 0 | 0.05 | 0.031 | **0.017** |
+| Dry 5-min steps | 90.8% | — | 92.5% | 87.2% |
+| Mean wet spell (min) | 32 | **30** | 71 | 125 |
+| Unbroken wet runs > 5h20 / yr | 14.2 | 1.9 | **15.3** | 46 |
+| Single-step showers | 38% | **38%** | 7.4% | 8.5% |
+| Monthly cycle r | 1 | 0.97 (no bridges) | **0.88** | 0.79 |
+| Gate A (/18) | 10 (held-out years) | **14** | 3.5 [2–5] | 4 [3–7] |
+| Tier 6 (/3) | — | 0 | 1 [0–1] | **2 [1–2]** |
+
+1. **The 2020 fix works on our data for short extremes.** Given the room, the fit leaves the old
+   range in 11 of 12 months; 5-min skewness, the strongest burst, IDF cells and storm-scale depth
+   all move to or near the real values.
+2. **It costs drizzle.** Small α gives many storms with long, weak cells. The dry fraction is fitted
+   as a relative error, so being 4% short on dry steps (0.96 × 90.8%) costs almost nothing, yet it
+   means 39% too many wet steps. Wet spells nearly quadruple and unbroken runs over 5h20 triple.
+3. **The fit generalises worse.** The tuned error drops, but on fresh seeds it rises (median 3.27 →
+   4.29; October 0.68–1.87). Heavy-tailed storms make 100 simulated years a noisier target, so part
+   of the tuned gain is fitting the seed.
+
+### ✅ Decision
+* **Claim revised:** "diffusion wins the 5-minute texture *and short extremes*" (Oct 1) no longer
+  holds. Against the relaxed baseline, short extremes and IDF are a tie (5.0 vs 6.4 mm vs real 5.55;
+  12/15 each). Diffusion still clearly wins the texture: shower structure (38% vs 8.5%) and wet-spell
+  length (30 vs 125 min).
+* **Both fits are kept and reported:** `bartlett_lewis` (realistic long unbroken runs, smoother
+  texture) and `bartlett_lewis_relaxed` (extremes and storm depth, too much drizzle).
+* **Not done, next if needed:** fit the wet fraction rather than the dry fraction, or use the
+  inverse-variance weights of Onof & Wang and pyBL, and simulate more years per step to cut seed
+  fitting. Change one at a time.
+
+**Verdict:** **relaxing α is right in principle and fixes short extremes on our data, but it trades
+them for drizzle; it is a different baseline, not a strictly better one.**
+
+---
+
 ## October 4, 2026 — v16: Two-Level Generator (Storm Model + v14 Texture)
 
 ### 🔍 Overview
