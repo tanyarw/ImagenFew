@@ -3,6 +3,151 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 4, 2026 — v16: Two-Level Generator (Storm Model + v14 Texture)
+
+### 🔍 Overview
+The two-level design proposed in the Oct 1 storm-and-cell entry, built to meet the new storm-scale
+targets (entry below). `regime_training/generate_two_level.py`; no training, about 10 s per
+10 years on a laptop.
+* **Level 1 (when, how long, how much):** an alternating renewal process, dry gap → storm → dry
+  gap, fitted to the 2000–2007 storms. Each draw is a smoothed bootstrap: a real storm (or gap)
+  that started within ±15 days of the current day of the year and ±2 h of the time of day, perturbed
+  by a log-normal kernel (width 0.15, mean 1). A storm is summarised by its duration, depth, wet
+  steps, wet runs and 5-min peak.
+* **Level 2 (5-minute detail):** v14's own rain (`v14_nobridge_cal`, same calendar). v14's storms
+  are chained in generated order (start within ±30 days), the ≥ 2 h gaps between them closed either
+  to nothing or to a real within-storm dry run. Of 600 chains, the one closest to the target in
+  duration, wet steps, wet runs and peak is kept and scaled to the target depth.
+* **Seeds:** v16 is seed 0, the default fixed before any result. Members `v16_m1`–`v16_m4`
+  (seeds 1–4) give the spread. Output format and calendar are identical to `v14_nobridge_cal`.
+
+How the design got there (each step scored on Gate A and the storm metrics):
+| Step | Gate A | What it fixed / what was wrong |
+| :--- | :---: | :--- |
+| Match duration and depth only (200 chains) | 9/18 (seed 0) | Storm targets met, but long storms built from showers: P99 ×1.20, 5-min max ×1.54, wet spells 25 min |
+| + match wet steps and peak, allow direct joins | 12/18 (seed 0) | Real storms > 12 h are steady rain (wet runs 66–76 min, wet fraction 0.70–0.74, P99 ~0.4–0.56 mm) |
+| + match wet runs; mean-1 kernel (volume bias +2%) | 13–16 (5 seeds) | |
+| + time of day in level 1 | 12–16 | Diurnal r −0.04–0.35 → 0.34–0.54 |
+| + level-2 window ±30 days, 600 chains (final) | **14–17** | Heavy-storm peaks 0.88 → 0.93 of target; p99 scale factor 3.3 → 2.3 |
+
+### 📊 Findings
+| | real 2000–07 | v14 (`nobridge_cal`) | **v16 (seed 0)** | v16, 5 seeds |
+| :--- | :---: | :---: | :---: | :---: |
+| **Tier 6** | — | 0/3 | **3/3** | 2–3/3 |
+| Storms ≥ 10 mm /yr | 15.75 | 7.6 | **15.9** | 13.2–17.1 |
+| % of rain in storms > 320 min | 64.7 | 24.6 | **61.6** | 61.6–65.0 |
+| Top-10 storm depth (mm) | 37.5 | 24.8 | **45.5** | 29.6–45.5 |
+| Storms > 320 min /yr | 74.8 | 35.0 | 66.4 | 66.4–73.9 |
+| Largest storm (mm) | 55.5 | 42.8 | 84.0 | 41.9–84.0 |
+| **Gate A** | — | 14/18 | **16/18** | 14–17/18 |
+| Volume (mm/yr) | 710 | 698 | 693 | 641–754 |
+| Wet spell (min) / single-step showers | 32.0 / 38% | 30.8 / 38% | 31.0 / 37% | 30.7–31.5 / 37–38% |
+| Unbroken wet runs > 5h20 /yr | 14.25 | 1.4 | 6.6 | 6.3–8.4 |
+| Hourly ACF RMSE (real floor 0.02–0.04) | — | 0.054 | **0.018** | 0.012–0.023 |
+| Daily totals, Wasserstein (floor 0.15–0.25) | — | 0.49 | **0.12** | 0.07–0.25 |
+| Variance-scaling error (held-out real 0.054) | — | 0.171 | **0.035** | 0.017–0.060 |
+| IDF cells in band (of 15) | — | 12 | 5 | 5–15 |
+| Classifier AUC, 1-day windows (real 0.52) | — | 0.56 | 0.53 | 0.46–0.55 |
+| Classifier AUC, 5-h windows (real 0.48) | — | 0.79 | 0.77 | 0.74–0.77 |
+| Forecaster trained on it: ≥ 2 mm in next 6 h (trained on real 0.769) | — | 0.714 | **0.759** | 0.759–0.771 |
+| Windows too close to training data | — | 0% | 0% | 0% |
+
+Sewer check (flood-control's protocol: SWMM-Astlingen, four gauges split with seed 0, each year
+from empty tanks; real = 2000–2008 and v14 from flood-control's saved run;
+`scripts/gate_b_sewer.py` → `results/reference/gate_b_sewer.json`):
+| | rain (mm/yr) | storms ≥ 10 mm | **BC overflow (m³/yr)** | ratio | creek (m³/yr) | overflow events /yr | events ≥ 1000 m³ | EFD gain |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| real | 714 | 15.7 | 292k | 1.00 | 79.9k | 67.5 | 36.0 | 3.8% |
+| v14 | 698 | 7.6 | 182k | **0.62** | 55.0k | 62.5 | 29.5 | 6.1% |
+| **v16 (seed 0)** | 693 | 15.9 | **292k** | **1.00** | 75.9k | 62.8 | 33.0 | 2.9% |
+| v16 seeds 1–4 | 641–754 | 13.2–17.1 | 251k–316k | 0.86–1.08 | 64.0k–85.8k | 57.9–69.6 | 29.1–36.8 | — |
+| all 5 seeds pooled (50 years) | 694 | 15.5 | 277k | **0.95** | | | | |
+
+* **The storm deficit is gone and so is the overflow deficit.** Every seed passes Gate B's
+  volume band (0.85–1.15); v14 fails it. Overflow follows each seed's 10-year rain total (641 mm
+  → 252k, 754 mm → 316k), so seed 0's exact match is partly luck; the pooled ratio is 0.95 with
+  pooled rain at 0.97 of real. Real years alone vary by about ±10% (standard error of 9 years).
+* **v14 overstated what control can do:** EFD saves 6.1% on v14 rain against 3.8% on real rain;
+  v16 gives 2.9%. Storm structure changes the agent's opportunity, not only the overflow total.
+* **5-minute texture kept:** Gate A 14–17 vs v14's 14, wet spells and showers on target, 5-h
+  windows as hard to tell from real as v14's. Everything from an hour to a week improves
+  (hourly ACF, daily totals, variance scaling, 1-day classifier at the real level), and the
+  forecaster trained on v16 matches the one trained on real data.
+* **Still short:** unbroken wet runs > 5h20 are half of real (v14's material has few long
+  continuous runs). Years vary more than the 8 real years (interannual CV 0.08–0.18, mean 0.14,
+  vs 0.085; independent storm draws imply about 0.14). Extremes vary by seed: seed 0 is heavy
+  (IDF 1.2–1.37 at 1–24 h, from 84, 74 and 66 mm storms), seed 4 light; v14's systematic 24-h
+  deficit (0.71) is gone (seeds 0.78–1.14 at 24 h, T = 10).
+* **Novelty caveat:** level 1 resamples real storm summaries with kernel noise, so the largest
+  synthetic storms are perturbed copies of the largest real ones (55 mm → up to 84 mm). Storms far
+  beyond the record need a parametric tail. The 5-minute rain is v14's: no real 5-minute data is
+  copied.
+
+### ✅ Decision
+* **v16 is the drop-in replacement for v14** for the sewer check and agent training: same CSV
+  format, ~10 years (1,050,924 steps from 2026-01-01), season = step of a 365-day year.
+  flood-control's `vendor_v14.py` takes it by changing the CSV name. Members `_m1`–`_m4` extend it
+  to 50 years.
+* Open: E3 (trained continuation) is still the diffusion-native fix for long unbroken rain;
+  a parametric (copula + generalised Pareto tail) level 1 for storms beyond the record; four
+  gauges are handled by flood-control's split.
+
+**Verdict:** **v16 restores the storms the sewer sees (Tier 6 3/3, BC overflow 1.00 of real; 0.95
+over five seeds) without losing v14's 5-minute texture (Gate A 16/18).**
+
+---
+
+## October 4, 2026 — Storm-Scale Targets for the Sewer (Gate A Tier 6)
+
+### 🔍 Overview
+The flood-control sewer check (`flood-control/analysis/synthetic_rain/bc_efd_check.py`) found that
+v14 (`v14_nobridge_cal`) gives **38% less overflow than real rain** under the passive base case
+(BC: 182k vs 292k m³/yr), although its annual rain is right (698 vs 710 mm). The cause is the
+storms as the sewer counts them: wet steps separated by less than 2 h dry, because the tanks take
+about 45 h to drain and the network smooths 5-minute detail. Storm depth and duration at that
+scale become targets alongside Gate A. This reopens the chapter closed on Oct 2 for one question.
+
+### 📊 Findings
+| Storms (≥ 2 h dry ends one) | real 2000–07 | v14 | storm-and-cell |
+| :--- | :---: | :---: | :---: |
+| Storms ≥ 10 mm /yr | 15.75 | 7.6 | 10.0 |
+| Storms > 320 min /yr | 74.8 | 35.0 | 33.1 |
+| % of rain in those | 64.7 | 24.6 | 32.4 |
+| Largest storm (mm) | 55.5 | 42.8 | 39.1 |
+
+* The request's numbers reproduce exactly (`v14_nobridge_cal` vs 2000–2007, a gap of ≥ 24 dry steps).
+* **At a given storm length v14 is right; the lengths are wrong.** Storms of 325–720 min:
+  depth 4.52 vs 4.53 mm, P90 9.5 vs 10.1, wet fraction 0.64 vs 0.62. But v14 makes too many 1–5 h
+  storms and almost no storms longer than 12 h (1.7/yr vs 19.7).
+* **Real storms have almost no memory:** successive gaps r = 0.05, successive depths r = 0.06,
+  duration and the following gap r = −0.09. An alternating renewal model fits that.
+* **No existing version passes S1 or S2.** Only S3, the noisiest check, is passed, near its lower
+  edge: by the two storm-and-cell models (0.74, 0.81) and one diffusion run (v10 initialised from
+  the 24-step checkpoint, calendar: 0.71). Every other version scores 0/3. The storm-and-cell
+  model's long storms are unbroken wet runs, while real long storms are showers with short breaks,
+  so at the sewer's scale it has too few.
+* **Bands from real-vs-real spread:** 95% range of a 10-year resample of real years against an
+  8-year resample (20,000 draws): S1 0.87–1.15, S2 0.92–1.08, S3 0.73–1.45. The held-out years
+  pass S1 and S2 and fail S3 (two years hold only two top storms, one of them 102 mm).
+* **Tier 5 is mostly noise for realistic rain:** the same resampling passes the monthly check only
+  19% of the time (median r 0.79) and the diurnal check 37% (median r 0.75). October's 100 mm/yr
+  in the reference comes from a few storms.
+
+### ✅ Decision
+* **Gate A Tier 6** (`code_plan/ACCEPTANCE_CRITERIA.md`), scored separately as "Tier 6: n/3" so the
+  18-check tallies stay comparable: **S1** storms ≥ 10 mm /yr (ratio 0.85–1.15), **S2** share of rain
+  in storms > 320 min (0.90–1.10), **S3** mean of the largest 1.25 storms per year, the top 10 of the
+  8 reference years (0.70–1.45). `tier6()` in `scripts/eval_suite.py`; cache refreshed;
+  notebook §2.1. Tier 5 calibration note added.
+* **Gate B runner:** `scripts/gate_b_sewer.py` runs flood-control's sewer check on any version
+  without changing that repository (reproduces its v14 2026 BC result exactly, 188,327 m³).
+* Two candidate fixes: E3 (trained continuation, needs the cluster) or the two-level generator
+  (local). Two-level first (entry above).
+
+**Verdict:** **storm scale is now a scored target; v14 fails all three checks.**
+
+---
+
 ## October 2, 2026 — Chapter Closed: Single-Site Diffusion Generator (v1–v15, E1, E2)
 
 ### 🔍 Overview

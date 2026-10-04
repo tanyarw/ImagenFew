@@ -7,7 +7,8 @@ the real record with two families of metrics:
 
   hydrology  water balance, occurrence (wet / dry), intensity, storms (including the
              block-boundary cliff), extremes (annual maxima, IDF), temporal structure across
-             time scales, seasonality and year-to-year variability
+             time scales, seasonality and year-to-year variability; storms at the sewer's
+             scale (wet steps separated by < 2 h dry), scored as Gate A Tier 6
   ML         distribution distances against a real-vs-real noise floor; precision, recall,
              density and coverage of 5-hour windows; classifier two-sample tests on 5-hour and
              1-day windows; memorisation; train-on-synthetic-test-on-real forecasting utility;
@@ -47,6 +48,8 @@ Y = 105120                      # 5-min steps per (365-day) year
 DOY_MONTH = np.repeat(np.arange(1, 13), [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31])
 SURV_K = [12, 24, 36, 48, 64, 96]          # storm-duration thresholds in steps (1 h ... 8 h)
 SCALES = [1, 3, 6, 12, 36, 72, 144, 288, 864, 2016]   # aggregation scales, 5 min ... 1 week
+STORM_GAP = 24                  # Tier 6 storms: a dry run of 2 h ends one (flood-control's src/rain/split.py)
+TOP_RATE = 1.25                 # Tier 6 "top-10": the largest 1.25 storms per year (10 in the 8 reference years)
 RNG = np.random.default_rng(0)
 
 # name, group, short label, what changed, block length (steps), plan key, clean 2000-2007 split
@@ -89,6 +92,11 @@ REGISTRY = [
     ('arima_copula_seas_cal_len64', 'classical baseline', 'seas. copula AR(64) cal', 'copula AR(64), 4 states, calendar', 64, None, True),
     ('bartlett_lewis_classic', 'classical baseline', 'storm-and-cell (classic)', 'randomised Bartlett-Lewis pulses, fixed cell intensity, per month', None, None, True),
     ('bartlett_lewis', 'classical baseline', 'storm-and-cell', 'randomised Bartlett-Lewis pulses, intensity scales with cell speed (Kaczmarska 2014), per month', None, None, True),
+    ('v16', 'two-level', 'v16 two-level', 'storm renewal model (2-h gap, 2000-2007) + v14 5-min texture', None, None, True),
+    ('v16_m1', 'two-level', 'v16 seed 1', 'v16, generator seed 1', None, None, True),
+    ('v16_m2', 'two-level', 'v16 seed 2', 'v16, generator seed 2', None, None, True),
+    ('v16_m3', 'two-level', 'v16 seed 3', 'v16, generator seed 3', None, None, True),
+    ('v16_m4', 'two-level', 'v16 seed 4', 'v16, generator seed 4', None, None, True),
 ]
 META = pd.DataFrame(REGISTRY, columns=['name', 'group', 'label', 'change', 'L', 'plan', 'clean']).set_index('name')
 
@@ -165,7 +173,32 @@ def reference(train):
         idf={d: [sc.gumbel_quantile(sc.ams(train, w, 8), t) for t in sc.RETURN_PERIODS]
              for d, w in sc.DURATIONS.items()},
         annual=np.array([train[y * Y:(y + 1) * Y].sum() for y in range(len(train) // Y)]),
+        sewer_storms=sewer_storm_stats(train),
     )
+
+
+def sewer_storms(a):
+    """Duration (steps) and depth (mm) of every storm at the sewer's scale: wet steps with no dry
+    run of STORM_GAP steps or more between them."""
+    wet = np.flatnonzero(a > 0)
+    if not len(wet):
+        return np.zeros(0, int), np.zeros(0)
+    br = np.flatnonzero(np.diff(wet) > STORM_GAP)
+    s, e = np.r_[wet[0], wet[br + 1]], np.r_[wet[br], wet[-1]]
+    c = np.r_[0.0, np.cumsum(a)]
+    return e - s + 1, c[e + 1] - c[s]
+
+
+def sewer_storm_stats(a):
+    """Tier 6 quantities. top10_mm: mean depth of the largest TOP_RATE storms per year, so records
+    of different lengths are compared at the same frequency (10 storms in 8 years)."""
+    ny = len(a) / Y
+    dur, dep = sewer_storms(a)
+    top = np.sort(dep)[::-1][:max(1, int(round(TOP_RATE * ny)))]
+    return dict(storms_2h_yr=len(dep) / ny, storms_ge10mm_yr=(dep >= 10).sum() / ny,
+                storms_320min_yr=(dur > 64).sum() / ny,
+                rain_in_320min_pct=100 * dep[dur > 64].sum() / a.sum(),
+                top10_storm_mm=float(top.mean()), max_storm_mm=float(dep.max()))
 
 
 def var_scaling(a):
@@ -254,6 +287,7 @@ def hydro(a, R, res=5):
         w1_wet_5min=float(stats.wasserstein_distance(R['wet'], wet)),
         w1_daily=float(stats.wasserstein_distance(R['daily'], sc.daily(a))),
         var_scaling_rmse=float(np.sqrt(np.mean(np.log10(var_scaling(a) / R['var_scale']) ** 2))),
+        **sewer_storm_stats(a),
     )
     for k, sr in zip(SURV_K, R['surv']):
         m[f'surv_ratio_{k * 5}min'] = float((dur > k).mean() / sr)
@@ -298,6 +332,21 @@ def gate_a(m, R):
     return {k: bool(v) for k, v in checks.items()}
 
 
+def tier6(m, R):
+    """Gate A Tier 6, storm scale (code_plan/ACCEPTANCE_CRITERIA.md): kept apart from the 18 checks
+    above so earlier tallies stay comparable. Bands: the 95% range of a 10-year resample of real
+    years against the 8-year reference, rounded out. None if not computable."""
+    if 'storms_ge10mm_yr' not in m:
+        return None
+    S = R['sewer_storms']
+    checks = {
+        'S1 storms >= 10 mm': 0.85 <= m['storms_ge10mm_yr'] / S['storms_ge10mm_yr'] <= 1.15,
+        'S2 rain in storms > 320 min': 0.90 <= m['rain_in_320min_pct'] / S['rain_in_320min_pct'] <= 1.10,
+        'S3 top-10 storm depths': 0.70 <= m['top10_storm_mm'] / S['top10_storm_mm'] <= 1.45,
+    }
+    return {k: bool(v) for k, v in checks.items()}
+
+
 # ──────────────────────────────────────────────────────────────────────
 # Noise floor: 2-year samples, generated vs real
 # ──────────────────────────────────────────────────────────────────────
@@ -307,6 +356,7 @@ def chunk_metrics(c, ref):
     hc, hr = to_hourly(c), to_hourly(ref)
     dc = np.array([len(r) for r in sc.storms(c)])
     dr = np.array([len(r) for r in sc.storms(ref)])
+    st_c, st_r = sewer_storm_stats(c), sewer_storm_stats(ref)
     return dict(
         w1_wet_5min=stats.wasserstein_distance(ref[ref > 0], c[c > 0]),
         w1_wet_hours=stats.wasserstein_distance(hr[hr > 0], hc[hc > 0]),
@@ -316,6 +366,8 @@ def chunk_metrics(c, ref):
         volume_ratio=c.sum() / len(c) / (ref.sum() / len(ref)),
         surv_ratio_320min=(dc > 64).mean() / (dr > 64).mean(),
         long_storms_yr=(dc > 64).sum() / (len(c) / Y),
+        storms_ge10mm_ratio=st_c['storms_ge10mm_yr'] / st_r['storms_ge10mm_yr'],
+        rain_in_320min_ratio=st_c['rain_in_320min_pct'] / st_r['rain_in_320min_pct'],
     )
 
 
@@ -469,6 +521,7 @@ def per_year(a, R):
         ws, _ = sc.spells(c)
         runs = sc.storms(c)
         h = to_hourly(c)
+        dur2, dep2 = sewer_storms(c)
         rows.append(dict(
             year=y + 1,
             volume_ratio=c.sum() / R['stats']['volume'],
@@ -479,6 +532,8 @@ def per_year(a, R):
             p99_wet=np.percentile(c[c > 0], 99),
             max_1h=h.max(),
             hourly_acf_rmse=float(np.sqrt(np.mean((sc.acf(h, 24)[1:] - R['acf_h'][1:25]) ** 2))),
+            storms_ge10mm=int((dep2 >= 10).sum()),
+            rain_in_320min_pct=100 * dep2[dur2 > 64].sum() / c.sum() if c.sum() else np.nan,
         ))
     return pd.DataFrame(rows).set_index('year')
 
@@ -515,7 +570,7 @@ def compute(refresh=False):
     real_states = pd.read_csv(os.path.join(ROOT, 'data/rainfall/splits/train_years_labelled.csv'),
                               usecols=['hmm_state'])['hmm_state'].to_numpy()
 
-    out = dict(stamp=stamp, hydro={}, idf={}, curves={}, gate={}, windows={}, tstr={}, floor_gen={},
+    out = dict(stamp=stamp, hydro={}, idf={}, curves={}, gate={}, tier6={}, windows={}, tstr={}, floor_gen={},
                per_year={}, states={}, years={})
     # real rows: training years scored against themselves are not informative, so the real
     # comparisons use the held-out years (an honest "fresh real data" score)
@@ -523,6 +578,7 @@ def compute(refresh=False):
         m, idf, cur = hydro(a, R)
         out['hydro'][nm], out['idf'][nm], out['curves'][nm] = m, idf, cur
     out['gate']['real 2008-2009'] = gate_a(out['hydro']['real 2008-2009'], R)
+    out['tier6']['real 2008-2009'] = tier6(out['hydro']['real 2008-2009'], R)
     out['windows']['real 2008-2009'] = wref.score(held)
     out['tstr']['real 2000-2007'] = tstr(to_hourly(train), test_xy)
     out['per_year']['real 2000-2007'] = per_year(train, R)
@@ -539,6 +595,7 @@ def compute(refresh=False):
         out['tstr'][nm] = tstr(to_hourly(a, res), test_xy)
         if res == 5:
             out['gate'][nm] = gate_a(m, R)
+            out['tier6'][nm] = tier6(m, R)
             out['windows'][nm] = wref.score(a)
             out['floor_gen'][nm] = chunked(a, train)
             out['per_year'][nm] = per_year(a, R)

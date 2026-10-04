@@ -88,6 +88,38 @@ while failing the 24-hour total.
 | Per-month volume ratio | 0.75 – 1.25 for all 12 |
 | Diurnal profile, Pearson r vs real | >= 0.80 |
 
+> **Calibration note (added 2026-10-04):** both correlations are noisy for any generator whose
+> monthly totals are driven by a few large storms, as real rain is. A 10-year resample of real
+> years scored against the 8-year reference passes the monthly check only 19% of the time
+> (median r 0.79) and the diurnal check 37% of the time (median r 0.75). A miss here is
+> evidence only when r falls well below those medians.
+
+### Tier 6 — Storm scale (added 2026-10-04)
+*Does the sewer see the right storms? Astlingen's tanks take about 45 h to drain and the network
+smooths 5-minute detail, so what fills the tanks is how deep and how long each storm is.*
+
+**Storm** here is the sewer's unit: wet steps (>= 0.005 mm) with no dry run of 24 steps (2 h) or
+more between them, the definition used by flood-control's `src/rain/split.py`. This is not the
+Tier 3 storm (one unbroken wet run of >= 15 min): a real 10-hour storm is typically many showers
+with short breaks.
+
+| Metric | Real 2000–2007 | Pass band | v14 (`v14_nobridge_cal`) | |
+|---|---|---|---|---|
+| S1 Storms >= 10 mm per year | 15.75 | ratio 0.85 – 1.15 | 7.6 (0.48) | **FAIL** |
+| S2 Share of rain falling in storms > 320 min | 64.7% | ratio 0.90 – 1.10 | 24.6% (0.38) | **FAIL** |
+| S3 Top-10 storm depths: mean of the largest 1.25 storms per year (the top 10 of 8 years; the top 12–13 of a 10-year run) | 37.5 mm | ratio 0.70 – 1.45 | 24.8 mm (0.66) | **FAIL** |
+
+Reported alongside but not scored: storms > 320 min per year (real 74.75, v14 35.0) and the
+largest storm (real 55.5 mm in 2000–2007, 101.9 mm in the held-out years 2008–2009; v14 42.8 mm).
+
+**Bands** are the 95% range of the ratio between a 10-year resample of real years and an 8-year
+resample (both drawn from 2000–2007, 20,000 draws), rounded out: S1 0.87–1.15, S2 0.92–1.08,
+S3 0.73–1.45. S3 is wide because it rests on a dozen storms. The two held-out years pass S1 and S2
+and fail S3 (1.91), because two years have only two top storms, one of them 102 mm.
+
+Tier 6 is scored separately ("Tier 6: n/3") so the 18-check Gate A tallies reported since
+September stay comparable. Computed by `tier6()` in `scripts/eval_suite.py`.
+
 ### Current verdict on v7
 
 > **v7 delivers the right amount of water, in the right sized drops, arriving in the
@@ -138,6 +170,13 @@ Expect Gate B to fail for v7 on CSO counts specifically, since 30% too many stor
 the correct duration should produce too many small spills and too few large ones. If it
 does, that is a clean, physically interpretable confirmation of the Tier 3 failure and a
 much stronger result to report than the statistics alone.
+
+**Status (2026-10-04).** Implemented with flood-control's own sewer check (BC and EFD, each
+calendar year from empty tanks, four gauges split from the mean; `scripts/gate_b_sewer.py`,
+results in `results/reference/gate_b_sewer.json`). Total overflow per year under BC, ratio to
+real (2000–2008): **v14 0.62 (FAIL)**: right annual rain, too few deep storms, which is what Tier 6
+now catches. **v16 1.00**, 0.86–1.08 over five generator seeds (pooled 0.95): PASS. CSO event
+count: v14 0.93, v16 0.86–1.03. The other KPIs in the table are not computed yet.
 
 ---
 
