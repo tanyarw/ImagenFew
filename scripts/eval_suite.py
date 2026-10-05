@@ -93,6 +93,8 @@ REGISTRY = [
     ('bartlett_lewis_classic', 'classical baseline', 'storm-and-cell (classic)', 'randomised Bartlett-Lewis pulses, fixed cell intensity, per month', None, None, True),
     ('bartlett_lewis', 'classical baseline', 'storm-and-cell', 'randomised Bartlett-Lewis pulses, intensity scales with cell speed (Kaczmarska 2014), per month', None, None, True),
     ('bartlett_lewis_relaxed', 'classical baseline', 'storm-and-cell (alpha relaxed)', 'as storm-and-cell, alpha allowed down to 0.2 (Onof & Wang 2020)', None, None, True),
+    ('bartlett_lewis_relaxed_wet', 'classical baseline', 'storm-and-cell (relaxed, wet fraction)', 'relaxed alpha, objective scores the wet fraction', None, None, True),
+    ('bartlett_lewis_relaxed_ivw', 'classical baseline', 'storm-and-cell (relaxed, inverse variance)', 'relaxed alpha, inverse-variance weights (pyBL)', None, None, True),
     ('v16', 'two-level', 'v16 two-level', 'storm renewal model (2-h gap, 2000-2007) + v14 5-min texture', None, None, True),
     ('v16_m1', 'two-level', 'v16 seed 1', 'v16, generator seed 1', None, None, True),
     ('v16_m2', 'two-level', 'v16 seed 2', 'v16, generator seed 2', None, None, True),

@@ -3,6 +3,79 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 5, 2026 — Storm-and-Cell Objective Test: Wet Fraction (A) and Inverse-Variance Weights (B)
+
+### 🔍 Overview
+The relaxed-α fit (entry below) added drizzle because its objective scores the dry fraction as a
+relative error: near 0.9, being 4% short on dry steps costs almost nothing, yet means 39% too many
+wet steps. Two refits on the relaxed setup, each changing only how the 15 statistics are scored
+(`run_bartlett_lewis.py --alpha_min 0.2 --objective {wet,ivw}`):
+* **A, `--objective wet`:** relative errors as before, but on the wet fraction (1 − dry) at all four
+  scales. Weights unchanged.
+* **B, `--objective ivw`:** pyBL's weighting (Kaczmarska et al. 2014; Onof & Wang 2020): each
+  statistic weighted by 1 / its variance across the 8 training years (each calendar month computed
+  per year, population variance), squared absolute errors, fixed weights dropped. With absolute
+  errors the dry and wet fractions score identically, so B does not depend on A.
+* **Selection rule, fixed before running:** more Gate A checks (median of 10 seeds), then Tier 6,
+  then mean wet spell closer to 32 min. A beat the relaxed fit (6.5 vs 4), so B ran on the relaxed
+  setup, which would have been the same run either way.
+* The default objective still reproduces every stored fit error exactly. Ten seeds per fit (42–51),
+  scored by `compare_bartlett_lewis.py --models … --out results/reference/bartlett_lewis_objective_comparison.json`.
+
+### 📊 Findings
+| Median [range] over 10 seeds | real 2000–07 | relaxed | A: wet fraction | B: inverse variance |
+| :--- | :---: | :---: | :---: | :---: |
+| Gate A (/18) | 10 (held-out years) | 4 [3–7] | **6.5 [5–9]** | 6 [4–9] |
+| Tier 6 (/3) | — | **2 [1–2]** | 1 [0–1] | 1 [0–2] |
+| Dry 5-min steps | 90.8% | 87.2% | **90.2%** | 89.8% |
+| Mean wet spell (min) | 32 | 125 | **95** | 96 |
+| Unbroken wet runs > 5h20 / yr | 14.2 | 46 | 32 | **31** |
+| Single-step showers | 38% | **8.5%** | 8.1% | 7.3% |
+| P99 / P99.9 wet 5-min (mm) | 0.588 / 1.60 | 0.498 / 1.32 | 0.556 / 1.32 | **0.558 / 1.50** |
+| Strongest 5-min burst (mm) | 5.55 | **5.0** | 4.65 | 4.18 |
+| Storms ≥ 10 mm / yr (2-h gap) | 15.8 | **13.9** | 10.9 | 11.8 |
+| Rain in storms > 320 min | 64.7% | **48.6%** | 39.9% | 44.1% |
+| IDF cells in band (/15) | 15 | **12** | 10 | 10.5 |
+| Monthly cycle r | 1 | 0.79 | **0.90** | 0.77 |
+| 5-min skewness, fitted/observed | 1 | **1.01** | 0.82 | 0.94 |
+| α by month | — | 0.33–2.90 | 0.91–8.54 | 1.13–2.57 |
+| Fit error fresh / tuned seed | — | 2.8 | 1.6 | 2.3 |
+| Mean correction factors | — | 0.88–1.21 | 0.89–1.14 | 0.72–1.24 |
+
+1. **Scoring the wet fraction fixes the dry fraction and lifts Gate A from 4 to 6.5.** The new passes
+   are the zero fraction (9 of 10 seeds, 0 before), P99 (10 of 10, 2 before) and the monthly cycle
+   (4 of 10, 0 before).
+2. **The drizzle is only partly fixed.** With the right number of wet steps, they still come in runs
+   three times too long (95 vs 32 min). None of the 15 fitted statistics pins spell length, and
+   5-min lag-1 autocorrelation is matched in all three fits (fitted/observed 1.02–1.04). The rest is
+   structural: rectangles make continuous runs. Real rain is 38% single-step showers; every fit
+   gives 7–8.5%.
+3. **A trades storm scale for occurrence.** 5-min skewness drops back (1.01 → 0.82), and so do the
+   strongest burst, storm depths and Tier 6 (2 → 1).
+4. **B ties A within the seed spread.** It has the best P99.9 (7 of 10 seeds pass) and lag-1 ACF
+   (7 of 10). Its weights favour the most stable statistics (in July the 5-min dry fraction weighs
+   about 70× the 5-min skewness) and give the mean little weight, hence mean corrections of 0.72–1.24.
+5. **The mean correction is not exact under the wet threshold.** A factor of 0.72 moves the 5-min
+   dry fraction by +0.8 pp (a factor of 1.04 moves it 0.05 pp). The code comment that claimed
+   "nothing else moves" is corrected.
+6. **Every scheme fits the seed.** Fresh-seed error is 1.6–2.8 times the tuned error.
+
+### ✅ Decision
+* **Main classical baseline for comparisons: `bartlett_lewis_relaxed_wet`** (best Gate A under the
+  fixed rule). Report B as a tie, `bartlett_lewis` for long unbroken runs and `bartlett_lewis_relaxed`
+  for storm scale.
+* **Objective tuning is exhausted as a fix for 5-min texture.** The remaining gap is the rectangular
+  pulse. The next step, if ever needed, is structural: multiplicative jitter (Rodriguez-Iturbe et al.
+  1987 §5) or non-rectangular cells. Not attempted.
+* **Defence claim:** against every storm-and-cell fit, diffusion wins the texture (single-step
+  showers 38% vs ≤ 8.5%; wet spells 31 vs ≥ 95 min). No storm-and-cell fit reaches v16 (Gate A 16,
+  Tier 6 3/3).
+
+**Verdict:** **better scoring raises the storm-and-cell baseline from 4 to 6–6.5 Gate A checks, but
+cannot fix its 5-minute texture: the limit is the rectangle, not the fit.**
+
+---
+
 ## October 5, 2026 — Storm-and-Cell Baseline Refit with α Relaxed (Onof & Wang 2020)
 
 ### 🔍 Overview

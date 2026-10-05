@@ -31,11 +31,18 @@ edge for nu drops to 0.001 (small alpha needs small nu), and the warm-up before 
 simulation grows to 30 days (small alpha gives some very long storms). Like pyBL, eta is not
 truncated. Everything else is unchanged, so old and relaxed fits differ only in alpha's range.
 
+--objective changes only how the 15 statistics are scored (default 'relative', as above):
+  wet  relative errors as before, but on the wet fraction (1 - dry fraction) at each scale. Near a
+       dry fraction of 0.9 a relative error on the dry fraction barely notices 40% too many wet steps.
+  ivw  squared absolute errors weighted by 1 / variance of each statistic across the training years
+       (each calendar month computed per year), as pyBL does (Kaczmarska et al. 2014; Onof & Wang
+       2020). The fixed weights are not used. Dry and wet fractions score identically here.
+
 Generation: 10 years on a 365-day calendar; storms start with the parameters of the month
 they start in, and cells may run on into the next month. 5-min depths are exact integrals of
 the pulses over each interval; values below the 0.005 mm wet threshold are set to 0.
 
-Outputs (tag '', '_classic' or '_relaxed'; '_m<k>' for --member k):
+Outputs (tag '', '_classic' or '_relaxed', plus '_wet' / '_ivw' for --objective; '_m<k>' for --member k):
   results/generated_data/rainfall_synthetic_10y_bartlett_lewis<tag>.csv
   results/reference/bartlett_lewis<tag>_model_card.json   (parameters and fit quality per month)
 
@@ -178,20 +185,26 @@ def stats(x):
 WEIGHTS = {'mean_1h': 5.0, 'skew_5min': 0.5, 'skew_1h': 0.5, 'ac1_24h': 0.5}
 
 
-def objective(v, target, days, seed, variant, log_alpha=False):
+def objective(v, target, days, seed, variant, log_alpha=False, scheme='relative', ivw=None):
     x = simulate_month(v, days, FIT_YEARS, seed, variant, log_alpha)
     if x is None or x.sum() == 0:
         return 1e6
     s = stats(x)
+    if scheme == 'ivw':
+        return float(sum(w * (s[k] - target[k]) ** 2 for k, w in ivw.items()))
+    if scheme == 'wet':
+        s = {k: 1 - val if k.startswith('pdry') else val for k, val in s.items()}
+        target = {k: 1 - val if k.startswith('pdry') else val for k, val in target.items()}
     return float(sum(WEIGHTS.get(k, 1.0) * ((s[k] - t) / t) ** 2 for k, t in target.items() if t != 0))
 
 
 def fit_month(args):
-    month, target, seed, variant, alpha_min = args
+    month, target, seed, variant, alpha_min, scheme, ivw = args
     days = MONTH_DAYS[month - 1]
     bounds, log_alpha = search_box(variant, alpha_min)
     t0 = time.time()
-    res = differential_evolution(objective, bounds, args=(target, days, seed + month, variant, log_alpha), popsize=12,
+    res = differential_evolution(objective, bounds, args=(target, days, seed + month, variant, log_alpha, scheme, ivw),
+                                 popsize=12,
                                  maxiter=60, tol=1e-3, seed=seed + month, polish=False, updating='immediate')
     fresh = seed + 1000 + month                                                    # fresh seed: honest check
     fitted = stats(simulate_month(res.x, days, FIT_YEARS, fresh, variant, log_alpha))
@@ -199,8 +212,9 @@ def fit_month(args):
     return dict(month=month, params=dict(zip(PARAMS[variant], map(float, [p['lam'], p['mu'], p['alpha'], p['nu'],
                                                                           p['kappa'], p['phi']]))),
                 vector=list(map(float, res.x)), objective=float(res.fun),
-                objective_fresh_seed=objective(res.x, target, days, fresh, variant, log_alpha), evaluations=int(res.nfev),
-                seconds=round(time.time() - t0, 1), target=target, fitted=fitted)
+                objective_fresh_seed=objective(res.x, target, days, fresh, variant, log_alpha, scheme, ivw),
+                evaluations=int(res.nfev), seconds=round(time.time() - t0, 1), target=target, fitted=fitted,
+                **({'ivw_weights': ivw} if scheme == 'ivw' else {}))
 
 
 def observed_targets(train):
@@ -210,14 +224,30 @@ def observed_targets(train):
     return {m: stats(train[month == m]) for m in range(1, 13)}
 
 
+def observed_ivw(train):
+    """Inverse-variance weights per month: 1 / variance across the years of each statistic computed
+    on one year's month (pyBL's construction, population variance)."""
+    doy = (np.arange(len(train)) // STEPS_PER_DAY) % 365
+    month = np.repeat(np.arange(1, 13), MONTH_DAYS)[doy]
+    year = np.arange(len(train)) // (365 * STEPS_PER_DAY)
+    out = {}
+    for m in range(1, 13):
+        per_year = [stats(train[(month == m) & (year == y)]) for y in np.unique(year)]
+        var = {k: np.nanvar([s[k] for s in per_year]) for k in per_year[0]}
+        out[m] = {k: float(1 / v) for k, v in var.items() if np.isfinite(v) and v > 0}
+    return out
+
+
 # ──────────────────────────────────────────────────────────────────────
 # Generation
 # ──────────────────────────────────────────────────────────────────────
 
 def match_means(card, seed, years=300):
     """Final calibration: scale the intensity parameter so each month's long-run mean equals the
-    observed one. Rain depth is proportional to that parameter, so nothing else moves; the
-    simulated fit alone leaves a few-percent seed bias in the mean."""
+    observed one. Rain depth is proportional to that parameter, so before the wet threshold nothing
+    else moves; the threshold shifts dry fractions slightly when the factor is far from 1 (0.72 moves
+    the 5-min dry fraction by +0.8 pp; 1.04 by 0.05 pp). The simulated fit alone leaves a
+    few-percent seed bias in the mean."""
     for m in card['months']:
         if 'mean_factor' in m:
             continue
@@ -258,6 +288,8 @@ def main():
                     help='rblx: intensity scales with cell speed (default); rbl: classic')
     ap.add_argument('--alpha_min', type=float, default=ALPHA_OLD_MIN,
                     help=f'lower edge of the alpha search; below {ALPHA_OLD_MIN} gives the relaxed fit')
+    ap.add_argument('--objective', default='relative', choices=['relative', 'wet', 'ivw'],
+                    help='how the statistics are scored (see the docstring)')
     ap.add_argument('--member', type=int, default=0,
                     help='generate with seed + MEMBER and write a _m<MEMBER> file (0: the main series)')
     args = ap.parse_args()
@@ -265,6 +297,7 @@ def main():
     if relaxed and args.variant != 'rblx':
         ap.error('--alpha_min is only set up for the rblx variant')
     tag = '_relaxed' if relaxed else ('' if args.variant == 'rblx' else '_classic')
+    tag += {'relative': '', 'wet': '_wet', 'ivw': '_ivw'}[args.objective]
     card_path = CARD.format(tag)
     out_csv = OUT_CSV.format(tag + (f'_m{args.member}' if args.member else ''))
     partial = card_path + '.partial.jsonl'           # one fitted month per line, so a killed run resumes
@@ -277,13 +310,14 @@ def main():
         train[train < WET_THR] = 0.0
         assert len(train) == 8 * 365 * STEPS_PER_DAY, 'expected the 2000-2007 training years'
         targets = observed_targets(train)
+        ivw = observed_ivw(train) if args.objective == 'ivw' else {m: None for m in range(1, 13)}
         fits = [json.loads(line) for line in open(partial)] if os.path.exists(partial) else []
         todo = [m for m in range(1, 13) if m not in {f['month'] for f in fits}]
         print(f'fitting {len(todo)} months on {args.workers} workers ({12 - len(todo)} resumed) ...', flush=True)
         t0 = time.time()
         with Pool(args.workers) as pool:
-            for f in pool.imap_unordered(fit_month, [(m, targets[m], args.seed, args.variant, args.alpha_min)
-                                                     for m in todo]):
+            for f in pool.imap_unordered(fit_month, [(m, targets[m], args.seed, args.variant, args.alpha_min,
+                                                      args.objective, ivw[m]) for m in todo]):
                 print(f"  month {f['month']:2d}: objective {f['objective']:.3f} (fresh seed {f['objective_fresh_seed']:.3f}), "
                       f"alpha {f['params']['alpha']:.3f}, {f['evaluations']} sims, {f['seconds']} s; "
                       f"mean 1h obs {f['target']['mean_1h']:.3f} fit {f['fitted']['mean_1h']:.3f}", flush=True)
@@ -299,7 +333,10 @@ def main():
                     units={'lambda': 'storms per hour', **({'iota': 'mm'} if args.variant == 'rblx' else {'mu_x': 'mm/h'}),
                            'alpha': '-', 'nu': 'hours', 'kappa': '-', 'phi': '-'},
                     alpha_min=args.alpha_min, alpha_log10=relaxed, search_box=search_box(args.variant, args.alpha_min)[0],
-                    fit_years_per_evaluation=FIT_YEARS, weights=WEIGHTS, seed=args.seed,
+                    objective=args.objective,
+                    fit_years_per_evaluation=FIT_YEARS,
+                    weights=('1 / variance across training years, per month (months[].ivw_weights)'
+                             if args.objective == 'ivw' else WEIGHTS), seed=args.seed,
                     fit_seconds=round(time.time() - t0, 1), months=fits)
         os.makedirs(os.path.dirname(card_path), exist_ok=True)
         json.dump(card, open(card_path, 'w'), indent=2)
