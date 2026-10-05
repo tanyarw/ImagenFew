@@ -90,6 +90,8 @@ REGISTRY = [
     ('arima_copula_seas_markov_len64', 'classical baseline', 'seas. copula AR(64)', 'copula AR(64), 4 states, Markov assembly', 64, None, True),
     ('arima_copula_seas_cal_len24', 'classical baseline', 'seas. copula AR(24) cal', 'copula AR(24), 4 states, calendar', 24, None, True),
     ('arima_copula_seas_cal_len64', 'classical baseline', 'seas. copula AR(64) cal', 'copula AR(64), 4 states, calendar', 64, None, True),
+    ('arima_copula_occ_len64', 'classical baseline', 'copula AR(64), occurrence-matched', 'copula AR(64), latent correlation solved from joint wet probabilities', 64, None, True),
+    ('arima_copula_occ_cal_len64', 'classical baseline', 'copula AR(64), occurrence-matched cal', 'as above, 4 state quantile tables, calendar', 64, None, True),
     ('bartlett_lewis_classic', 'classical baseline', 'storm-and-cell (classic)', 'randomised Bartlett-Lewis pulses, fixed cell intensity, per month', None, None, True),
     ('bartlett_lewis', 'classical baseline', 'storm-and-cell', 'randomised Bartlett-Lewis pulses, intensity scales with cell speed (Kaczmarska 2014), per month', None, None, True),
     ('bartlett_lewis_relaxed', 'classical baseline', 'storm-and-cell (alpha relaxed)', 'as storm-and-cell, alpha allowed down to 0.2 (Onof & Wang 2020)', None, None, True),

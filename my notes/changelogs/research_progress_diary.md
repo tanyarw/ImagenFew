@@ -3,6 +3,103 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 5, 2026 — Copula AR Refit: Latent Correlation Matched to Rain Occurrence
+
+### 🔍 Overview
+A check of the Gaussian-copula AR baselines (Sept 24, `run_copula_arima.py`) found that their fit
+under-estimates persistence. To reproduce real P(wet, wet) at lag 1, the latent lag-1 correlation
+must be **0.976**; the fit settles at **0.47** (P(wet | wet) 0.30 vs 0.84, 75% single-step showers vs
+38%, storms 19 vs 62 min). Cause: dry steps start from randomly permuted ranks (white noise over 91%
+of the series), and the imputation loop re-draws them around 0.5·φ₁·(neighbours) with the weak φ₁,
+so it keeps the weak correlation it started from.
+
+New script `scripts/baselines/run_copula_arima_occ.py`, version `arima_copula_occ_len64`. Same
+model (latent AR(64), empirical quantile mapping, threshold 1.328); only the fit changes. For each lag
+k = 1..64 the latent correlation ρ_k is solved exactly from the observed joint wet probability
+P(wet_t, wet_{t+k}) (bivariate-normal orthant integral), and Levinson-Durbin on (1, ρ_1..ρ_64) gives
+the AR(64) that reproduces those correlations at every lag up to 5h20. No imputation, no random
+ranks. p stays 64 (BIC is flat from 24 to 64 and both orders pass the same checks). The Sept 24
+baselines are kept unchanged.
+
+### 🔮 Predictions (written before running)
+| | copula AR(64), Sept 24 | real | prediction |
+| :--- | :---: | :---: | :---: |
+| Single-step showers | 75% | 38% | 30–45% |
+| Mean wet spell (min) | 7.1 | 32 | 25–40 |
+| Storm duration (min) | 19 | 62 | 40–70 |
+| Volume, zero fraction, P99, P99.9 | pass | — | still pass (marginal unchanged) |
+| IDF ratios, 15 min – 6 h | ~0.45 | 1 | 0.7–1.0; daily max still short |
+| Unbroken wet runs > 5h20 / yr | 0 | 14.3 | 1–8 (correlation only 0.45 at lag 64) |
+| Tier 6 | 0/3 | — | ≤ 1/3 |
+| Gate A | 5/18 | 10 (held-out real) | 8–11 |
+| 5-min lag-1 ACF of amounts | 0.16 | 0.852 | too high (> 0.87): wet-to-wet amounts correlate 0.85 in latent space, the fit imposes 0.976 |
+| Monthly / diurnal cycle | fail | — | still fail (no calendar) |
+
+If the plain version reaches Gate A ≥ 8, a calendar variant (`--assembly calendar`, per-state
+quantile tables) follows.
+
+### 📊 Findings
+The fit is valid (Toeplitz minimum eigenvalue 0.012) and exact: generated joint wet probabilities
+match the targets within 0.1–1.5% at every lag (lag 1: 0.07764 vs 0.07765). Latent ρ at lags 1 / 6 /
+12 / 36 / 64: 0.976 / 0.882 / 0.804 / 0.610 / 0.454; φ₁ 0.867 (Sept 24 fit: 0.286). Fit plus 10 years:
+2.7 s. Gate A ≥ 8, so the calendar variant `arima_copula_occ_cal_len64` was run as planned.
+
+| | real 2000–07 | copula, Sept 24 | **occurrence-matched** | occ.-matched, calendar | v14 | v16 |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| Gate A (/18) | 10 (held-out years) | 5 | **12** | 12 | 14 | 16 |
+| Tier 6 (/3) | — | 0 | 1 | 1 | 0 | 3 |
+| Single-step showers | 38% | 75% | **39%** | 40% | 38% | 37% |
+| Mean wet spell (min) | 32.0 | 7.1 | **32.6** | 32.6 | 30.5 | 31.0 |
+| Storm duration (min) | 61.8 | 19.5 | **64.2** | 64.3 | 57.3 | 56.8 |
+| Unbroken runs > 5h20 / yr | 14.3 | 0 | **15.8** | 16.0 | 1.9 | 6.6 |
+| 5-min lag-1 ACF | 0.852 | 0.159 | 0.931 | 0.933 | 0.864 | 0.857 |
+| Hourly ACF RMSE | 0 | 0.029 | 0.074 | 0.072 | 0.051 | 0.018 |
+| Wettest hour / day (mm) | 18.2 / 50.9 | 8.1 / 19.1 | **34.7 / 89.5** | 36.9 / 94.1 | 16.2 / 46.9 | 31.2 / 55.9 |
+| IDF cells in band (/15) | 15 | 0 | 3 | 3 | 12 | 5 |
+| Rain in storms > 320 min (2-h gap) | 64.7% | 75.9% | 84.9% | 84.9% | 23.8% | 61.6% |
+| Top-10 storm depth (mm) | 37.5 | 17.5 | 63.2 | 70.5 | 22.5 | 45.5 |
+| Monthly cycle r | 1 | 0.23 | 0.30 | 0.84 | −0.11 | 0.93 |
+| Classifier AUC, 5-h / 1-day windows | 0.48 / 0.52 (held-out) | 0.95 / 0.79 | **0.56 / 0.54** | 0.55 / 0.52 | 0.78 / 0.61 | 0.76 / 0.55 |
+| Coverage | 0.86 (held-out) | 0.57 | 0.84 | 0.85 | 0.86 | 0.84 |
+| TSTR AUC next 1 h / 6 h ≥ 2 mm | 0.907 / 0.769 | 0.899 / 0.772 | 0.902 / 0.766 | 0.903 / 0.744 | 0.882 / 0.730 | 0.903 / 0.759 |
+| **Sewer overflow, BC (vs real)** | 292k m³/yr (1.00) | 48k (0.16) | **430k (1.47)** | 451k (1.54) | 182k (0.62) | 292k (1.00) |
+
+1. **Occurrence is fixed, and better than predicted.** Spells, storm duration and showers sit on the
+   real values, and unbroken runs > 5h20 (15.8 / yr) are inside the real 2-year spread (survival
+   ratio at 5h20 0.88–1.43 per 2-year chunk vs real 0.58–1.53). Prediction was 1–8 / yr. Gate A
+   5 → 12 (predicted 8–11): new passes are wet and dry spell, max burst, hourly JSD and KS, and all
+   three storm checks; it loses hourly ACF.
+2. **Extremes overshoot, opposite to the prediction.** IDF ratios: 15 min 0.82–0.94, 1 h 1.28–1.44,
+   3 h ~1.5, 6 h 1.75–1.91, 24 h 1.62–1.76 (calendar: up to 2.35). Predicted 0.7–1.0. One latent
+   process carries both occurrence and amount: occurrence needs lag-1 ρ = 0.976, but wet-to-wet
+   amounts correlate only 0.85 in latent space, so a heavy step stays heavy for hours. The lag-1
+   ACF failure (0.93) is the same effect at 5 minutes, as predicted. This is a structural limit of a
+   single Gaussian copula, not a fitting error.
+3. **Realism by classifier is the best of any series scored.** 5-h windows 0.56 (v14 0.78, v16 0.76),
+   1-day 0.54. Nearest-training-window distance ratio 0.82 (< 1): quantile mapping reuses
+   training values, but no window is a copy (0% too close).
+4. **The sewer sees the extremes.** BC overflow 1.47× real (calendar 1.54×), with fewer events
+   (45 vs 67 / yr) that are bigger; 7 of 10 years overflow more than the worst real year (v16: 0 of
+   10). Tier 6 S2 and S3 fail high for the same reason (85% of rain in long storms; top storms 63 mm).
+5. **Calendar adds nothing.** Monthly r 0.84 (old seasonal copula 0.94): with real-length storms,
+   monthly totals are lumpy, as already seen for real 10-year resamples (monthly check passed 19%).
+
+### ✅ Decision
+* **Withdraw the Oct 1 claim "diffusion wins storms" against the copula baselines.** It held only
+  against the badly fitted copula. Against the occurrence-matched copula, the copula wins storm
+  timing (long storms 15.8 vs 1.9 / yr), wet/dry texture (ties) and classifier realism (0.56 vs 0.78);
+  diffusion (v14) wins extremes (IDF 12/15 vs 3/15; wettest day 47 vs 90 mm), 5-min and hourly
+  persistence, and the sewer check (0.62× vs 1.47× real, both wrong, in opposite directions).
+* **v16 stays the deliverable**: the only series with real sewer overflow (1.00×) and Tier 6 3/3.
+* **Main copula baseline for comparisons: `arima_copula_occ_len64`.** The Sept 24 copulas are kept as
+  the "fit as first run" record. Single seed (42); spread from the 2-year chunks above.
+* Idea, not started: occurrence from this copula, amounts from a second, weakly correlated process
+  (a two-process copula), would attack finding 2 directly.
+
+**Verdict:** **the copula's weakness was the fit. Fitted properly, it gets rain timing and long
+storms right and passes 12/18, but one latent process cannot keep heavy rain from persisting, so
+extremes and sewer overflow come out ~50% too high.**
+
 ## October 5, 2026 — Storm-and-Cell Objective Test: Wet Fraction (A) and Inverse-Variance Weights (B)
 
 ### 🔍 Overview
