@@ -3,8 +3,10 @@
 Scope: families of classical generators that can produce long, continuous, 5-10 min point rainfall
 for urban hydrology, their state around 2015-2026, and how they are evaluated. Written to compare
 against our diffusion generator (10-year continuous 5-min Astlingen series for RL valve control) and
-our own Gaussian AR / Gaussian-copula AR baselines (which fragment rain: 75% single-step showers,
-no IDF cells in band).
+our own Gaussian AR / Gaussian-copula AR baselines (the first fits fragment rain: 75% single-step
+showers, no IDF cells in band; refitted on 2026-10-05 so the latent correlation matches rain
+occurrence, the copula gets showers and long storms right but over-produces 1-24 h extremes,
+1.3-1.9x real).
 
 Verification note: every bullet below has a link I opened or saw in search results during this
 session. Where a fact comes from a secondary mention (for example a review's reference list) rather
@@ -97,7 +99,7 @@ strongest classical competitor to our model for a single-site 5-min series.
 
 ### Inferences
 - These models build event coherence in by construction (storms → overlapping cells), which is
-  exactly what our Gaussian AR baselines lack. A fitted RBL2 at Astlingen would almost certainly not
+  exactly what our first Gaussian AR baselines lacked. A fitted RBL2 at Astlingen would almost certainly not
   produce "75% single-step showers". It is the most natural strong classical baseline for us, and pyBL
   makes it cheap to run.
 - The benchmark dataset of this literature (Bochum, 69 years of 5-min data) is in Germany, near our
@@ -230,9 +232,13 @@ at hourly to daily resolution.
 
 ### Inferences
 - CoSMoS is the closest relative of our Gaussian-copula AR baseline: a transformed parent Gaussian
-  with a target ACF and intermittency. Our AR fragmentation result therefore suggests CoSMoS-style
-  generators at 5 min will also under-represent event structure, unless the parent ACF is fitted
-  with long memory. This is our inference, not a published finding.
+  with a target ACF and intermittency. Our first copula fit fragmented rain because its parent
+  correlation was under-estimated (lag-1 0.47; occurrence needs 0.976). Refitted with the parent
+  correlation matched to occurrence at every lag up to 5h20 (2026-10-05), it reproduces long storms
+  (15.8/yr vs 14.3) but over-produces 1-24 h extremes: one parent process carries both occurrence
+  and amount, so heavy rain persists. This suggests CoSMoS-style generators at 5 min get event
+  timing from a well-fitted parent ACF but need separate amount dependence for extremes. This is our
+  inference, not a published finding.
 - Alternating-renewal models describe whole events (duration, depth, internal profile), which is the
   property RL training episodes most need. They are a natural "event-structured" classical baseline.
 
