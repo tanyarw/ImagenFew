@@ -1,5 +1,8 @@
 {
   "model_name": "Vanilla ARIMA",
+  "transform": "none",
+  "asinh_scale": null,
+  "dry_cut_mm": null,
   "model_order": "ARIMA(24, 0, 0)",
   "p": 24,
   "d": 0,
@@ -33,11 +36,33 @@
   "innovation_sigma": 0.02370040147551954,
   "innovation_sigma2": 0.0005617090301008089,
   "mean_offset_mm": 0.006750371599124808,
+  "mean_offset_fitted_space": 0.006750371599124808,
   "train_partition": "data/rainfall/splits/train_years_labelled.csv",
   "train_steps": 840960,
   "train_years": "2000-2007",
   "val_partition": "data/rainfall/splits/val_years_labelled.csv",
   "val_1step_mse": 0.0005883017797673498,
+  "val_1step_forecast_mm": {
+    "mse_ar_mm": 0.0005883017797673498,
+    "mse_persistence_mm": 0.0006842189521960874,
+    "mse_train_mean_mm": 0.0025626166274529284,
+    "skill_vs_persistence": 0.140184910284755,
+    "skill_vs_mean": 0.770429266139554
+  },
+  "diagnostics": {
+    "adf_t_stat": -158.02671084100234,
+    "adf_crit_1pct": -3.43,
+    "adf_crit_5pct": -2.86,
+    "adf_lags": 12,
+    "ljung_box_q12": 0.6808533547734221,
+    "ljung_box_p12": 0.9999983838689255,
+    "ljung_box_q288": 1682.8570411358487,
+    "ljung_box_p288": 7.85079416458524e-205,
+    "residual_skewness": 16.905905693784565,
+    "residual_excess_kurtosis": 1940.8548620936745,
+    "jarque_bera_stat": 132029083573.10655,
+    "jarque_bera_p": 0.0
+  },
   "bic_table": [
     {
       "p": 1,
@@ -83,6 +108,11 @@
       "p": 48,
       "sigma2": 0.0005613984350701772,
       "bic": -6293997.778659105
+    },
+    {
+      "p": 64,
+      "sigma2": 0.0005613461690754992,
+      "bic": -6293857.798590818
     }
   ],
   "synthetic_realization": {
@@ -95,6 +125,6 @@
     "simulated_annual_volume_mm": 2292.9850748195176,
     "simulated_max_burst_mm": 0.21206015087001925
   },
-  "created_at": "2026-09-24 19:10:08",
-  "runtime_sec": 2.89
+  "created_at": "2026-10-06 20:36:48",
+  "runtime_sec": 3.1
 }

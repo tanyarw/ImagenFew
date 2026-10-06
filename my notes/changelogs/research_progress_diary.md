@@ -3,6 +3,85 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 6, 2026 — Gaussian AR Baseline Strengthened: Diagnostics, Persistence Benchmark, asinh Variant
+
+### 🔍 Overview
+A review of `run_vanilla_arima.py` found it is a weak "textbook" baseline: it fits raw millimetres
+(no transform), never compares its forecasts with persistence, and runs none of the Box–Jenkins
+checks. Three additions, all on the 2000–2007 split:
+1. **Diagnostics in the model card:** ADF unit-root test (constant, 12 lags; MacKinnon 5% critical
+   value −2.86), Ljung–Box on the training residuals (lags 12 and 288), residual skewness, kurtosis
+   and Jarque–Bera.
+2. **Forecast benchmarks on 2008:** 1-step MSE of the AR against persistence (x̂_t = x_{t−1}) and
+   the training mean.
+3. **New version `arima_asinh_len64`:** the same AR(64) fitted on asinh(x / 0.035), the transform
+   that made v14 the best diffusion model. Back-transform with sinh, then set the lowest 90.8% of
+   values to 0 so the dry fraction matches (the one calibrated number). Seed 42, 10 years.
+
+The existing `arima_len24` / `arima_len64` series must be unchanged (same seed, same default path).
+
+### 🔮 Predictions (written before running)
+* ADF rejects a unit root by a wide margin (supports d = 0). Ljung–Box rejects whiteness and
+  Jarque–Bera rejects normality by huge margins (heavy-tailed residuals).
+* The AR beats persistence on 2008 by only ~10–15% in MSE.
+* `arima_asinh_len64`: better than vanilla, worse than the occurrence-matched copula. Volume within
+  ±30% of real, single-step showers 45–70%, storm duration 20–40 min, largest 5-min step ≥ 1 mm,
+  Gate A 3–7/18. Persistence of a thresholded Gaussian AR whose lag-1 correlation is set by the
+  asinh values, not by occurrence, should still be too weak (see the copula refit: occurrence needs
+  latent ρ₁ = 0.976).
+
+### 📊 Findings
+The default path still reproduces `arima_len64` byte for byte; the regenerated `arima_len24` /
+`arima_len64` cards differ only in the new fields (and a p = 64 row now in the len24 BIC table).
+
+| Diagnostic (training fit) | AR(64), mm | AR(64), asinh |
+| :--- | :---: | :---: |
+| ADF t (5% critical −2.86) | **−158** | −124 |
+| Ljung–Box Q(288), df 224 | 1,100 (p ≈ 1e−115) | 410 (p ≈ 4e−13) |
+| Residual skewness / excess kurtosis | 16.9 / 1,943 | 2.3 / 64 |
+| 2008 1-step MSE vs persistence (mm) | **−14%** | −8% |
+| 2008 1-step MSE vs training mean | −77% | −76% |
+
+| | real | AR(64) | **AR(64) asinh** | copula, first fit | copula, occ.-matched |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Gate A (/18) | 10 (held-out) | 2 | **2** | 5 | 12 |
+| Volume (mm/yr) | 710 | 2,291 | **311** | 703 | 715 |
+| Dry steps | 90.8% | 48.8% | 90.8% (calibrated) | 90.8% | 90.8% |
+| P(wet \| wet) | 0.84 | 0.83 | 0.72 | 0.30 | 0.85 |
+| Single-step showers | 38% | 24% | 39% | 75% | 39% |
+| Wet spell / storm (min) | 32 / 62 | 29 / 44 | 18 / 34 | 7 / 19 | 33 / 64 |
+| Storms > 5h20 / yr | 14.3 | 7.7 | 0.3 | 0 | 15.8 |
+| Max 5-min / P99.9 wet (mm) | 5.56 / 1.60 | 0.21 / 0.16 | **0.13 / 0.08** | 4.10 / 1.60 | 5.56 / 1.47 |
+| Wettest day (mm) | 50.9 | 16.3 | 6.4 | 19.1 | 89.5 |
+| Classifier AUC 5 h / 1 day | 0.48 / 0.52 | 0.96 / 0.98 | 0.99 / 0.78 | 0.95 / 0.79 | 0.58 / 0.51 |
+| TSTR next 1 h / 6 h ≥ 2 mm | 0.907 / 0.769 | 0.882 / 0.739 | 0.899 / 0.670 | 0.899 / 0.772 | 0.902 / 0.766 |
+
+1. **d = 0 is now tested, not assumed:** ADF rejects a unit root at t = −158 (critical −2.86).
+2. **Residuals are not Gaussian white noise**, as predicted: whiteness fails beyond lag 64 and
+   kurtosis is ~1,900 (raw) / 64 (asinh). Short-lag Ljung–Box (Q(12) ≈ 0) is uninformative for an
+   AR(64), whose residuals are uncorrelated at lags ≤ 64 by construction.
+3. **The AR forecasts only 14% better than persistence** (raw) and 8% (asinh), in mm.
+4. **The asinh transform does not rescue a Gaussian AR; the prediction was wrong.** The 91% spike at
+   zero dominates the variance in asinh space, so the fitted Gaussian is narrow and its tail, back-
+   transformed, never reaches heavy rain: max 0.13 mm, P99.9 0.08 mm, volume 0.44× real. Timing
+   improves on the raw AR (showers 39%), but storms are short (34 min) and almost never long (0.3/yr).
+   Gate A 2/18 (zero fraction, by calibration, and hourly ACF).
+5. Window metrics carry sampling noise: adding a series shifts the shared random draws, and the
+   occurrence-matched copula's classifier AUC moved 0.557 → 0.581 (5 h) and 0.535 → 0.510 (1 day).
+   Treat differences under ~0.03 as noise.
+
+### ✅ Decision
+* The Gaussian AR is the floor, and now a documented one: no unit root, non-Gaussian residuals,
+  14% better than persistence. **A variance-stabilising transform is not enough; zero-inflation has
+  to be modelled explicitly** (the copula's threshold), which is the argument for variant 2.
+* `arima_asinh_len64` is kept as a record only (this entry, its model card and the script's
+  `--transform asinh` option); it is not carried into the evaluation registry, notebook tables or
+  version log. Report AR baselines as "AR / Gaussian-copula AR", not ARIMA.
+
+**Verdict:** **the textbook AR now passes the textbook checks it should (no unit root) and fails the
+ones it must (Gaussian residuals); transforming it with v14's asinh makes it drier and lighter, not
+better.**
+
 ## October 5, 2026 — Copula AR Refit: Latent Correlation Matched to Rain Occurrence
 
 ### 🔍 Overview
