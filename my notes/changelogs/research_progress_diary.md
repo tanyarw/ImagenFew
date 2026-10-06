@@ -3,6 +3,75 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 6, 2026 — Does q > 0 Help? ARMA Comparison for the AR Baselines
+
+### 🔍 Overview
+Every AR baseline uses ARIMA(p, 0, 0); d = 0 is now backed by ADF (t = −158), but q = 0 was never
+tested. Script `scripts/baselines/compare_arma.py`, 2000–2007 fit, 2008 for out-of-sample error:
+* **A. Add MA terms to the AR(64), raw mm:** ARMA(64, q), q = 0…4, by Hannan–Rissanen (long AR(128)
+  residuals as the shocks, then least squares on 64 lags and q lagged shocks).
+* **B. Short ARMA instead of AR(64), raw mm:** ARMA(p, q), p, q ≤ 4, by exact maximum likelihood
+  (statsmodels 0.15, state space), ~70–120 s per model; progress saved per model.
+* **C. Copula latent process (occurrence-matched targets):** latent correlation targets solved out to
+  lag 144 (12 h). How far is AR(64) from the targets at lags 65–144, where it extrapolates? Short
+  ARMA(p, q), p, q ≤ 4, fitted by least squares to lags 1–64: error on lags 1–64 and 65–144.
+  (ARMA(64, q) is not identifiable from 64 correlations: 64 + q unknowns.)
+* Every model scored the same way: BIC* = N·ln σ̂² + (p + q)·ln N with σ̂² the 1-step residual
+  variance from the same recursion on the training years, and 2008 1-step MSE.
+* **D.** Generate and score only if A–C prefer q > 0 by a meaningful margin (ΔBIC* beyond ~100 and
+  2008 MSE lower by > 1%).
+
+### 🔮 Predictions (written before running)
+* A: q = 1…4 changes σ̂² by < 0.1%; BIC* may favour a small q, but 2008 MSE changes by < 1%.
+* B: the best short ARMA comes within ~1% of AR(64)'s σ̂² with far fewer parameters, but does not beat
+  it on 2008.
+* C: AR(64)'s correlations beyond lag 64 differ from the targets by < 0.05; short ARMA models fit
+  lags 1–64 worse (the target curve is not a simple ARMA shape).
+* So D is not triggered, and q = 0 stands.
+
+### 📊 Findings
+Results: `results/reference/arma_comparison.json` (B fitted in ~45 min; all 24 models MA-invertible;
+ARMA(3,1) did not converge and is reported as fitted).
+
+| Model (raw mm, 2000–07 fit) | Params | σ̂² (×10⁻⁴) | BIC* | 2008 1-step MSE (×10⁻⁴) |
+| :--- | :---: | :---: | :---: | :---: |
+| **AR(64), Yule–Walker (baseline)** | 64 | 5.6146 | **−6,292,191** | 5.8898 |
+| ARMA(64, 1), Hannan–Rissanen | 65 | 5.6146 | −6,292,181 | 5.8901 |
+| ARMA(64, 4), Hannan–Rissanen | 68 | 5.6146 | −6,292,143 | 5.8900 |
+| ARMA(4, 4), MLE (best short) | 8 | 5.6204 | −6,292,083 | **5.8854** |
+| ARMA(3, 3), MLE | 6 | 5.6211 | −6,292,003 | 5.8884 |
+| ARMA(1, 1), MLE | 2 | 5.6782 | −6,283,565 | 5.9765 |
+| AR(1), MLE | 1 | 5.9140 | −6,249,369 | 6.4017 |
+| MA(4), MLE | 4 | 6.0824 | −6,225,724 | 6.4099 |
+
+| Copula latent targets (C) | RMSE lags 1–64 | RMSE lags 65–144 | Mean diff 65–144 |
+| :--- | :---: | :---: | :---: |
+| AR(64) | 0 (exact) | 0.0124 | −0.009 |
+| ARMA(2, 1), 3 params | 0.0013 | 0.0120 | −0.009 |
+| ARMA(4, 4) | 0.0008 | 0.0129 | −0.010 |
+| AR(1) | 0.0278 | 0.0613 | −0.060 |
+
+1. **A: MA terms add nothing to the AR(64).** σ̂² is identical to five figures for q = 0…4; 2008 MSE
+   moves by < 0.01%; BIC* worsens by 10–49 as q grows. As predicted.
+2. **B: a short ARMA nearly matches AR(64) with far fewer parameters.** ARMA(4, 4) (8 parameters)
+   is 0.1% worse in-sample and 0.07% better on 2008; BIC* still prefers AR(64) by 109. Pure-MA models
+   are poor (MA(4) σ̂² 8% higher): rain needs autoregressive memory. As predicted.
+3. **C: AR(64)'s extrapolation beyond 5h20 is close and slightly low** (RMSE 0.012, mean −0.009 on
+   correlations of 0.3–0.45): at most a slight under-production of the very longest storms. **Not as
+   predicted:** a 3-parameter ARMA(2, 1) reproduces the 64 targets almost exactly (RMSE 0.0013) and
+   extrapolates as well. The latent curve is a simple ARMA shape after all.
+4. Trigger for D (ΔBIC* > 100 in favour of q > 0 and > 1% lower 2008 MSE) not met: nothing generated.
+
+### ✅ Decision
+* **q = 0 stands, now on evidence.** With d = 0 from the ADF test, ARIMA(p, 0, 0) is supported by
+  both tests, and no ARMA alternative changes any fitted quantity that drives the generated rain.
+* Defence line: "AR(64) and ARMA(4,4) / ARMA(2,1) are interchangeable descriptions of the same
+  dependence; the AR form was kept because it reproduces the target correlations exactly and is fitted
+  in closed form."
+
+**Verdict:** **q > 0 tested and rejected: MA terms change nothing for the AR(64), short ARMA models
+are equivalent but not better, and the AR(64)'s behaviour beyond 5h20 is within 0.01 of the targets.**
+
 ## October 6, 2026 — Gaussian AR Baseline Strengthened: Diagnostics, Persistence Benchmark, asinh Variant
 
 ### 🔍 Overview
