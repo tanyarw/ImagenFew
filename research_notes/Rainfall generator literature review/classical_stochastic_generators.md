@@ -3,9 +3,9 @@
 Scope: families of classical generators that can produce long, continuous, 5-10 min point rainfall
 for urban hydrology, their state around 2015-2026, and how they are evaluated. Written to compare
 against our diffusion generator (10-year continuous 5-min Astlingen series for RL valve control) and
-our own Gaussian AR / Gaussian-copula AR baselines (the first fits fragment rain: 75% single-step
+our own Gaussian AR / latent Gaussian AR baselines (Gaussian-copula models in the literature's terms) (the first fits fragment rain: 75% single-step
 showers, no IDF cells in band; refitted on 2026-10-05 so the latent correlation matches rain
-occurrence, the copula gets showers and long storms right but over-produces 1-24 h extremes,
+occurrence, the latent Gaussian AR gets showers and long storms right but over-produces 1-24 h extremes,
 1.3-1.9x real).
 
 Verification note: every bullet below has a link I opened or saw in search results during this
@@ -231,8 +231,8 @@ at hourly to daily resolution.
   resampling of other variables (HESS 27:3957, 2023). — [HESS](https://hess.copernicus.org/articles/27/3957/2023/)
 
 ### Inferences
-- CoSMoS is the closest relative of our Gaussian-copula AR baseline: a transformed parent Gaussian
-  with a target ACF and intermittency. Our first copula fit fragmented rain because its parent
+- CoSMoS is the closest relative of our latent Gaussian AR baseline: a transformed parent Gaussian
+  with a target ACF and intermittency. Our first latent Gaussian fit fragmented rain because its parent
   correlation was under-estimated (lag-1 0.47; occurrence needs 0.976). Refitted with the parent
   correlation matched to occurrence at every lag up to 5h20 (2026-10-05), it reproduces long storms
   (15.8/yr vs 14.3) but over-produces 1-24 h extremes: one parent process carries both occurrence

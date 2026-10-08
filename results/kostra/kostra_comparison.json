@@ -15,7 +15,7 @@
   "v14 (current best)":2.7113991084,
   "storm-and-cell model":1.7868790272,
   "storm-and-cell (classic)":1.4052092873,
-  "copula AR(64), occurrence-matched":2.2524680766,
+  "latent Gaussian AR(64)":2.2524680766,
   "gauges mean":5.4242827924,
   "areal factor (average \/ gauges)":0.5746099122
  },
@@ -35,7 +35,7 @@
   "v14 (current best)":3.8725186858,
   "storm-and-cell model":2.3118879186,
   "storm-and-cell (classic)":1.5545635336,
-  "copula AR(64), occurrence-matched":3.2613280332,
+  "latent Gaussian AR(64)":3.2613280332,
   "gauges mean":7.0369988422,
   "areal factor (average \/ gauges)":0.5872406722
  },
@@ -55,7 +55,7 @@
   "v14 (current best)":4.6412808783,
   "storm-and-cell model":2.6594894873,
   "storm-and-cell (classic)":1.6534490404,
-  "copula AR(64), occurrence-matched":3.9292811082,
+  "latent Gaussian AR(64)":3.9292811082,
   "gauges mean":8.1047571943,
   "areal factor (average \/ gauges)":0.5928375635
  },
@@ -75,7 +75,7 @@
   "v14 (current best)":4.9462130672,
   "storm-and-cell model":3.2370963771,
   "storm-and-cell (classic)":2.7062623487,
-  "copula AR(64), occurrence-matched":4.1172536209,
+  "latent Gaussian AR(64)":4.1172536209,
   "gauges mean":8.5199337135,
   "areal factor (average \/ gauges)":0.6482350964
  },
@@ -95,7 +95,7 @@
   "v14 (current best)":7.157964547,
   "storm-and-cell model":4.2259218998,
   "storm-and-cell (classic)":3.0786939857,
-  "copula AR(64), occurrence-matched":6.1574741793,
+  "latent Gaussian AR(64)":6.1574741793,
   "gauges mean":11.6606729683,
   "areal factor (average \/ gauges)":0.6562532684
  },
@@ -115,7 +115,7 @@
   "v14 (current best)":8.6223364774,
   "storm-and-cell model":4.8806104363,
   "storm-and-cell (classic)":3.3252761357,
-  "copula AR(64), occurrence-matched":7.5082777144,
+  "latent Gaussian AR(64)":7.5082777144,
   "gauges mean":13.7401156397,
   "areal factor (average \/ gauges)":0.6595450898
  },
@@ -135,7 +135,7 @@
   "v14 (current best)":6.6576158721,
   "storm-and-cell model":4.7060247202,
   "storm-and-cell (classic)":3.9142572081,
-  "copula AR(64), occurrence-matched":5.8880981267,
+  "latent Gaussian AR(64)":5.8880981267,
   "gauges mean":10.5987815527,
   "areal factor (average \/ gauges)":0.6760685386
  },
@@ -155,7 +155,7 @@
   "v14 (current best)":9.4261640296,
   "storm-and-cell model":6.1437555403,
   "storm-and-cell (classic)":4.4838276272,
-  "copula AR(64), occurrence-matched":8.9849155288,
+  "latent Gaussian AR(64)":8.9849155288,
   "gauges mean":14.6753933615,
   "areal factor (average \/ gauges)":0.6738912096
  },
@@ -175,7 +175,7 @@
   "v14 (current best)":11.2591838092,
   "storm-and-cell model":7.0956584442,
   "storm-and-cell (classic)":4.8609328046,
-  "copula AR(64), occurrence-matched":11.0352781119,
+  "latent Gaussian AR(64)":11.0352781119,
   "gauges mean":17.3744650966,
   "areal factor (average \/ gauges)":0.6730118153
  },
@@ -195,7 +195,7 @@
   "v14 (current best)":9.4803096752,
   "storm-and-cell model":8.1199435878,
   "storm-and-cell (classic)":6.7167158242,
-  "copula AR(64), occurrence-matched":10.5279871362,
+  "latent Gaussian AR(64)":10.5279871362,
   "gauges mean":13.4924272153,
   "areal factor (average \/ gauges)":0.760049883
  },
@@ -215,7 +215,7 @@
   "v14 (current best)":12.8391462557,
   "storm-and-cell model":10.2268797702,
   "storm-and-cell (classic)":7.6942416336,
-  "copula AR(64), occurrence-matched":15.4464200952,
+  "latent Gaussian AR(64)":15.4464200952,
   "gauges mean":18.6976499831,
   "areal factor (average \/ gauges)":0.7257907966
  },
@@ -235,7 +235,7 @@
   "v14 (current best)":15.062988334,
   "storm-and-cell model":11.6218548535,
   "storm-and-cell (classic)":8.3414487767,
-  "copula AR(64), occurrence-matched":18.7028506811,
+  "latent Gaussian AR(64)":18.7028506811,
   "gauges mean":22.1439603768,
   "areal factor (average \/ gauges)":0.7119702368
  },
@@ -255,7 +255,7 @@
   "v14 (current best)":11.9053272908,
   "storm-and-cell model":11.8708840245,
   "storm-and-cell (classic)":10.1548309617,
-  "copula AR(64), occurrence-matched":17.0062504616,
+  "latent Gaussian AR(64)":17.0062504616,
   "gauges mean":16.66003821,
   "areal factor (average \/ gauges)":0.7961513471
  },
@@ -275,7 +275,7 @@
   "v14 (current best)":15.6798955661,
   "storm-and-cell model":15.5635080158,
   "storm-and-cell (classic)":12.0884832559,
-  "copula AR(64), occurrence-matched":23.4053660396,
+  "latent Gaussian AR(64)":23.4053660396,
   "gauges mean":22.0579957718,
   "areal factor (average \/ gauges)":0.76369429
  },
@@ -295,7 +295,7 @@
   "v14 (current best)":18.1789882003,
   "storm-and-cell model":18.0083464039,
   "storm-and-cell (classic)":13.3687293273,
-  "copula AR(64), occurrence-matched":27.6421373577,
+  "latent Gaussian AR(64)":27.6421373577,
   "gauges mean":25.6319133695,
   "areal factor (average \/ gauges)":0.749726774
  },
@@ -315,7 +315,7 @@
   "v14 (current best)":15.2182762483,
   "storm-and-cell model":17.2746681516,
   "storm-and-cell (classic)":14.3217242317,
-  "copula AR(64), occurrence-matched":25.6810642236,
+  "latent Gaussian AR(64)":25.6810642236,
   "gauges mean":20.1647924698,
   "areal factor (average \/ gauges)":0.8742013768
  },
@@ -335,7 +335,7 @@
   "v14 (current best)":19.6350834292,
   "storm-and-cell model":20.5687891389,
   "storm-and-cell (classic)":16.1449557225,
-  "copula AR(64), occurrence-matched":31.8377516109,
+  "latent Gaussian AR(64)":31.8377516109,
   "gauges mean":26.4836594588,
   "areal factor (average \/ gauges)":0.8049007653
  },
@@ -355,7 +355,7 @@
   "v14 (current best)":22.559394102,
   "storm-and-cell model":22.7497838635,
   "storm-and-cell (classic)":17.352093614,
-  "copula AR(64), occurrence-matched":35.9140143723,
+  "latent Gaussian AR(64)":35.9140143723,
   "gauges mean":30.6672992283,
   "areal factor (average \/ gauges)":0.7747311091
  },
@@ -375,7 +375,7 @@
   "v14 (current best)":18.0567908616,
   "storm-and-cell model":18.9236074783,
   "storm-and-cell (classic)":17.472326048,
-  "copula AR(64), occurrence-matched":31.9988463408,
+  "latent Gaussian AR(64)":31.9988463408,
   "gauges mean":22.8623115506,
   "areal factor (average \/ gauges)":0.8886418595
  },
@@ -395,7 +395,7 @@
   "v14 (current best)":22.4152303786,
   "storm-and-cell model":22.0127720211,
   "storm-and-cell (classic)":20.7323264945,
-  "copula AR(64), occurrence-matched":38.482175931,
+  "latent Gaussian AR(64)":38.482175931,
   "gauges mean":30.2301116392,
   "areal factor (average \/ gauges)":0.8367524403
  },
@@ -415,7 +415,7 @@
   "v14 (current best)":25.3008965792,
   "storm-and-cell model":24.0580677455,
   "storm-and-cell (classic)":22.890730452,
-  "copula AR(64), occurrence-matched":42.7747042528,
+  "latent Gaussian AR(64)":42.7747042528,
   "gauges mean":35.1082363914,
   "areal factor (average \/ gauges)":0.8143804304
  },
@@ -435,7 +435,7 @@
   "v14 (current best)":21.0860610696,
   "storm-and-cell model":21.6207334686,
   "storm-and-cell (classic)":20.7773589865,
-  "copula AR(64), occurrence-matched":42.8446908335,
+  "latent Gaussian AR(64)":42.8446908335,
   "gauges mean":27.569728747,
   "areal factor (average \/ gauges)":0.8883693506
  },
@@ -455,7 +455,7 @@
   "v14 (current best)":24.0816567565,
   "storm-and-cell model":25.5446852062,
   "storm-and-cell (classic)":25.2593890382,
-  "copula AR(64), occurrence-matched":52.4046836108,
+  "latent Gaussian AR(64)":52.4046836108,
   "gauges mean":34.317631037,
   "areal factor (average \/ gauges)":0.822161103
  },
@@ -475,7 +475,7 @@
   "v14 (current best)":26.0650017567,
   "storm-and-cell model":28.1426826909,
   "storm-and-cell (classic)":28.2268829268,
-  "copula AR(64), occurrence-matched":58.7342306718,
+  "latent Gaussian AR(64)":58.7342306718,
   "gauges mean":38.7853295074,
   "areal factor (average \/ gauges)":0.7910014818
  },
@@ -495,7 +495,7 @@
   "v14 (current best)":23.4671178191,
   "storm-and-cell model":24.4138955489,
   "storm-and-cell (classic)":25.1731111754,
-  "copula AR(64), occurrence-matched":53.1277257843,
+  "latent Gaussian AR(64)":53.1277257843,
   "gauges mean":32.5210779962,
   "areal factor (average \/ gauges)":0.9327136456
  },
@@ -515,7 +515,7 @@
   "v14 (current best)":30.6608568516,
   "storm-and-cell model":27.9392057387,
   "storm-and-cell (classic)":31.8540100545,
-  "copula AR(64), occurrence-matched":64.9833049242,
+  "latent Gaussian AR(64)":64.9833049242,
   "gauges mean":42.5735814223,
   "areal factor (average \/ gauges)":0.9286330093
  },
@@ -535,7 +535,7 @@
   "v14 (current best)":35.4237380391,
   "storm-and-cell model":30.2732678317,
   "storm-and-cell (classic)":36.2773464367,
-  "copula AR(64), occurrence-matched":72.8327299028,
+  "latent Gaussian AR(64)":72.8327299028,
   "gauges mean":49.2292133875,
   "areal factor (average \/ gauges)":0.926848228
  },
@@ -555,7 +555,7 @@
   "v14 (current best)":26.8010735254,
   "storm-and-cell model":29.6405637009,
   "storm-and-cell (classic)":30.98442919,
-  "copula AR(64), occurrence-matched":60.703072122,
+  "latent Gaussian AR(64)":60.703072122,
   "gauges mean":36.9732334393,
   "areal factor (average \/ gauges)":0.9319582816
  },
@@ -575,7 +575,7 @@
   "v14 (current best)":33.327738395,
   "storm-and-cell model":34.33136739,
   "storm-and-cell (classic)":41.2681336728,
-  "copula AR(64), occurrence-matched":74.7463139736,
+  "latent Gaussian AR(64)":74.7463139736,
   "gauges mean":47.8059615437,
   "areal factor (average \/ gauges)":0.9384903307
  },
@@ -595,7 +595,7 @@
   "v14 (current best)":37.6489584425,
   "storm-and-cell model":37.4370875925,
   "storm-and-cell (classic)":48.076840855,
-  "copula AR(64), occurrence-matched":84.0441620221,
+  "latent Gaussian AR(64)":84.0441620221,
   "gauges mean":54.9781701356,
   "areal factor (average \/ gauges)":0.9413987811
  }
