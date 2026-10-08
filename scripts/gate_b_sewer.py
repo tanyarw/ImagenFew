@@ -19,6 +19,10 @@ flood-control's saved real and v14 rows for comparison). Needs flood-control's .
 
     cd ../flood-control && PYTHONPATH=. .venv/bin/python ../ImagenFew/scripts/gate_b_sewer.py v16 v16_m1 \\
         --controllers BC EFD
+
+A version can be given as `csvname=label` to store it under another name: the ImagenFew `v14`
+series must be run as `v14=v14_markov`, because `v14` here means flood-control's saved run
+(`v14_nobridge_cal`).
 """
 import argparse
 import json
@@ -56,7 +60,8 @@ def build(name, fc, tmp):
     """Four gauge files and a model copy reading them; returns (directory, first date, steps)."""
     from src.astlingen.model import control_free_inp
     from src.rain.split import load_params, split
-    df = pd.read_csv(GEN / f'rainfall_synthetic_10y_{name}.csv', parse_dates=['date'])
+    csv, _, name = name.partition('=') if '=' in name else (name, '', name)
+    df = pd.read_csv(GEN / f'rainfall_synthetic_10y_{csv}.csv', parse_dates=['date'])
     if not (df.date.diff().dropna() == STEP).all():
         raise ValueError(f'{name} is not contiguous at 5 min')
     d = Path(tmp) / name
@@ -123,8 +128,11 @@ def main():
     tmp = tempfile.mkdtemp(prefix='gate_b_')
     try:
         jobs = []
-        for name in args.versions:
-            d, start0, n = build(name, fc, tmp)
+        for spec in args.versions:
+            name = spec.split('=')[-1]
+            if name in ('real', 'v14'):
+                raise SystemExit(f"'{name}' is flood-control's saved run; store this series under another label")
+            d, start0, n = build(spec, fc, tmp)
             years = range(start0.year, (start0 + (n - 1) * STEP).year + 1)
             jobs += [(name, d, start0, n, y, c, fc) for y in years for c in args.controllers]
         rows = []
@@ -139,7 +147,7 @@ def main():
     ref = pd.read_csv(saved) if saved.exists() else pd.DataFrame()
     ref = ref[ref.source.isin(['real', 'v14'])] if len(ref) else ref     # both controllers: older runs may need them
     old = json.loads(OUT.read_text())['rows'] if OUT.exists() else []
-    keep = [r for r in old if r['source'] not in set(args.versions) | {'real', 'v14'}]
+    keep = [r for r in old if r['source'] not in {v.split('=')[-1] for v in args.versions} | {'real', 'v14'}]
     all_rows = keep + (json.loads(ref.to_json(orient='records')) if len(ref) else []) + rows
     t = summary(all_rows)
     print(t.round(3).to_string())
