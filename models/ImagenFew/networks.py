@@ -195,7 +195,7 @@ class AttentionOp(torch.autograd.Function):
 class UNetBlock(torch.nn.Module):
     def __init__(self,
         in_channels, out_channels, emb_channels, up=False, down=False, attention=False,
-        num_heads=None, channels_per_head=64, dropout=0, skip_scale=1, eps=1e-5,
+        num_heads=None, channels_per_head=64, dropout=0.10, skip_scale=1, eps=1e-5,
         resample_filter=[1,1], resample_proj=False, adaptive_scale=True,
         init=dict(), init_zero=dict(init_weight=0), init_attn=None, r = None, min_heads=0
     ):

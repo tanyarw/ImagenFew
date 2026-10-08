@@ -63,7 +63,7 @@ ema: true
 ema_warmup: 100
 ft_method: all       # fine-tune all parameters
 lora_dim: 4          # ignored when ft_method != 'lora'
-dropout: 0.0
+dropout: 0.10
 
 # --- Logging & Monitoring ---
 logging_iter: 25       # Log metrics, evaluate, and update plots every 25 epochs

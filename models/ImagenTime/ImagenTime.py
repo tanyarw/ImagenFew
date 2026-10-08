@@ -27,9 +27,12 @@ class ImagenTime(nn.Module):
         self.num_classes = args.n_classes
         if not args.ft_method == 'lora':
             args.lora_dim = None
+        dropout = getattr(args, 'dropout', 0.10)
+        extra = {'dropout': 0.10 if dropout is None else dropout}
         self.net = EDMPrecond(args.img_resolution, args.input_channels, channel_mult=args.ch_mult,
                               model_channels=args.unet_channels, attn_resolutions=args.attn_resolution,
-                              label_dim=self.num_classes, lora_rank = args.lora_dim)
+                              label_dim=self.num_classes, lora_rank = args.lora_dim,
+                              **extra)
 
 
         # delay embedding is used
