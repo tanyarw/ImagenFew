@@ -62,36 +62,24 @@ REGISTRY = [
     ('v6', 'early', 'v6', '4 seasonal-phase classes (day of year)', None, None, False),
     ('v7', 'early', 'v7', '4 seasonal-phase classes, trained on 2000-2009 (incl. held-out years)', None, None, False),
     ('v8', 'context length', 'v8 L24', 'clean 2000-2007 split, 2-h blocks', 24, 'markov24', True),
-    ('v8_cal', 'context length', 'v8 L24 cal', 'v8, calendar assembly', 24, 'cal24', True),
     ('v9', 'context length', 'v9 L36', '3-h blocks', 36, 'markov36', True),
-    ('v9_cal', 'context length', 'v9 L36 cal', 'v9, calendar assembly', 36, 'cal36', True),
     ('v10', 'context length', 'v10 L64', '5h20 blocks (previous best)', 64, 'markov64', True),
-    ('v10_cal', 'context length', 'v10 L64 cal', 'v10, calendar assembly', 64, 'cal64', True),
     ('e1_v10ckpt24', 'checkpoint control', 'v10 init24', 'v10 initialised from the 24-step checkpoint', 64, 'markov64', True),
-    ('e1_v10ckpt24_cal', 'checkpoint control', 'v10 init24 cal', 'as above, calendar assembly', 64, 'cal64', True),
     ('v11', 'conditioning', 'v11 no label', 'v8 without the state label', 24, 'uncond24', True),
     ('v12', 'conditioning', 'v12 no label', 'v10 without the state label', 64, 'uncond64', True),
     ('v13', 'transform', 'v13 log1p', 'v10 + log1p transform', 64, 'markov64', True),
-    ('v13_cal', 'transform', 'v13 log1p cal', 'v13, calendar assembly', 64, 'cal64', True),
     ('v14', 'transform', 'v14 asinh', 'v10 + asinh transform (current baseline)', 64, 'markov64', True),
-    ('v14_cal', 'transform', 'v14 asinh cal', 'v14, calendar assembly', 64, 'cal64', True),
     ('v15', 'attention (E1)', 'v15 attn (E1)', 'v14 + 8x8 attention, 200 more epochs', 64, 'markov64', True),
-    ('v15_cal', 'attention (E1)', 'v15 attn cal (E1)', 'v15, calendar assembly', 64, 'cal64', True),
     ('v15_ctrl', 'attention (E1)', 'v15 ctrl (E1 control)', 'v14 + 200 more epochs, no change (control)', 64, 'markov64', True),
-    ('v15_ctrl_cal', 'attention (E1)', 'v15 ctrl cal', 'v15_ctrl, calendar assembly', 64, 'cal64', True),
-    ('v14_nobridge_cal', 'assembly', 'v14 cal no bridge', 'v14_cal without bridge blocks (no calendar drift)', 64, 'cal64nb', True),
+    ('v14_nobridge_cal', 'assembly', 'v14 cal no bridge', 'v14, calendar assembly without bridge blocks (texture source for v16)', 64, 'cal64nb', True),
     ('v14_ctx', 'context chaining (E2)', 'v14 ctx (E2)', 'v14 + context chaining; partial: 4 chains x 2 y', 64, 'markov64', True),
-    ('v14_ctx_cal', 'context chaining (E2)', 'v14 ctx cal (E2)', 'as above, exact calendar; partial: 4 chains x 2 y', 64, 'calexact', True),
     ('arima_len24', 'classical baseline', 'AR(24)', 'Gaussian AR(24)', 24, None, True),
     ('arima_len64', 'classical baseline', 'AR(64)', 'Gaussian AR(64)', 64, None, True),
     ('arima_copula_len24', 'classical baseline', 'copula AR(24)', 'Gaussian-copula AR(24) + quantile mapping', 24, None, True),
     ('arima_copula_len64', 'classical baseline', 'copula AR(64)', 'Gaussian-copula AR(64) + quantile mapping', 64, None, True),
     ('arima_copula_seas_markov_len24', 'classical baseline', 'seas. copula AR(24)', 'copula AR(24), 4 states, Markov assembly', 24, None, True),
     ('arima_copula_seas_markov_len64', 'classical baseline', 'seas. copula AR(64)', 'copula AR(64), 4 states, Markov assembly', 64, None, True),
-    ('arima_copula_seas_cal_len24', 'classical baseline', 'seas. copula AR(24) cal', 'copula AR(24), 4 states, calendar', 24, None, True),
-    ('arima_copula_seas_cal_len64', 'classical baseline', 'seas. copula AR(64) cal', 'copula AR(64), 4 states, calendar', 64, None, True),
     ('arima_copula_occ_len64', 'classical baseline', 'copula AR(64), occurrence-matched', 'copula AR(64), latent correlation solved from joint wet probabilities', 64, None, True),
-    ('arima_copula_occ_cal_len64', 'classical baseline', 'copula AR(64), occurrence-matched cal', 'as above, 4 state quantile tables, calendar', 64, None, True),
     ('bartlett_lewis_classic', 'classical baseline', 'storm-and-cell (classic)', 'randomised Bartlett-Lewis pulses, fixed cell intensity, per month', None, None, True),
     ('bartlett_lewis', 'classical baseline', 'storm-and-cell', 'randomised Bartlett-Lewis pulses, intensity scales with cell speed (Kaczmarska 2014), per month', None, None, True),
     ('bartlett_lewis_relaxed', 'classical baseline', 'storm-and-cell (alpha relaxed)', 'as storm-and-cell, alpha allowed down to 0.2 (Onof & Wang 2020)', None, None, True),
@@ -124,7 +112,7 @@ def load_real():
     return a[:8 * Y], a[8 * Y:]
 
 
-PARTIAL = ('v14_ctx', 'v14_ctx_cal')      # E2 runs stopped early: only their progress files exist
+PARTIAL = ('v14_ctx',)      # E2 runs stopped early: only their progress files exist
 
 
 def data_path(name):

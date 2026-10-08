@@ -46,7 +46,7 @@ DURATIONS = [5, 10, 15, 30, 60, 120, 180, 360, 720, 1440]       # minutes
 RETURN = [2, 5, 10]                                             # years
 Y = 105120
 SERIES = {'v10': 'v10 (previous best)', 'v14': 'v14 (current best)', 'bartlett_lewis': 'storm-and-cell model',
-          'bartlett_lewis_classic': 'storm-and-cell (classic)', 'arima_copula_seas_cal_len64': 'seasonal copula AR(64)'}
+          'bartlett_lewis_classic': 'storm-and-cell (classic)', 'arima_copula_occ_len64': 'copula AR(64), occurrence-matched'}
 
 
 # ──────────────────────────────────────────────────────────────────────

@@ -3,6 +3,44 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 8, 2026 — Calendar Versions Dropped from the Comparison
+
+### 🔍 Overview
+Every model with a calendar-timeline version was compared against its Markov / free version on the
+cached evaluation (Gate A, monthly cycle, long storms, IDF).
+
+### 📊 Findings
+| Model | Gate A: free → calendar | Monthly r | Storms > 5h20 / yr | IDF in band |
+| :--- | :---: | :---: | :---: | :---: |
+| v8 | 5 → 6 | 0.46 → 0.87 | 0.1 → 0.1 | 6 → 6 |
+| v9 | 4 → 3 | 0.06 → 0.70 | 0.2 → 0.3 | 0 → 0 |
+| v10 | 11 → 7 | −0.06 → 0.68 | 1.1 → 1.1 | 7 → 7 |
+| v13 | 14 → 12 | −0.18 → 0.66 | 1.7 → 1.6 | 9 → 12 |
+| v14 (bridges) | 14 → 13 | −0.11 → 0.62 | 1.9 → 1.7 | 12 → 12 |
+| **v14, no bridges** | 14 → 14 | −0.11 → **0.97** | 1.9 → 1.4 | 12 → 12 |
+| v15 / v15_ctrl | 11 → 8 / 14 → 13 | ~0 → 0.47 / 0.63 | slightly lower | ~same |
+| Seasonal copula AR(64), first fit | 6 → 7 | 0.23 → 0.94 | 0 → 0 | 0 → 0 |
+| Copula AR(64), occurrence-matched | 12 → 12 | 0.29 → 0.84 | 15.8 → 16.0 | 3 → 3 |
+
+* **Calendar timing improves the monthly cycle and nothing else.** No storm, extreme or texture
+  statistic improves in any model. With bridge blocks it costs 1–4 Gate A checks (season drift up to
+  39 days by year 10). The only Gate A gains are the monthly check itself (plus "max" for the first-fit
+  seasonal copula, a lookup-table side effect).
+
+### ✅ Decision
+* **Removed from the comparison** (evaluation registry, version log, `notebooks/research_evaluation.ipynb`,
+  the AR study page): v8_cal, v9_cal, v10_cal, e1_v10ckpt24_cal, v13_cal, v14_cal, v15_cal,
+  v15_ctrl_cal, v14_ctx_cal, arima_copula_seas_cal_len24/64, arima_copula_occ_cal_len64. Their data
+  files, model cards, generation scripts and earlier diary entries are kept as the record.
+* **Kept:** `v14_nobridge_cal` (v16's texture source; v16 passes the monthly check, r = 0.93) and the
+  bridge-drift finding (r 0.62 → 0.97 without bridges), now a short note in notebook §3.6.
+* The seasonal Markov copulas stay: they are the seasonal variant without calendar timing.
+* `scripts/kostra_compare.py` now compares the occurrence-matched copula instead of the calendar
+  seasonal copula (re-run, `results/kostra/`).
+
+**Verdict:** **calendar assembly is a seasonal-cycle fix only; it is kept where it matters (inside
+v16) and dropped from the comparison tables elsewhere.**
+
 ## October 6, 2026 — Does q > 0 Help? ARMA Comparison for the AR Baselines
 
 ### 🔍 Overview
