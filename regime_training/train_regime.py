@@ -36,10 +36,14 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
 import argparse
+import json
 import logging
 import pickle
+import random
 import socket
+import subprocess
 import uuid
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -63,7 +67,8 @@ from regime_training.regime_dataset import RegimeDataset
 def parse_args():
     p = argparse.ArgumentParser(description="GMM Regime Conditional Training")
     p.add_argument("--model_ckpt", type=str, required=True,
-                   help="Path to the fine-tuned Rainfall checkpoint")
+                   help="Path to the pretrained checkpoint to fine-tune from, or 'none' to "
+                        "train from random weights (the no-pretraining control)")
     p.add_argument("--config", type=str,
                    default=os.path.join(os.path.dirname(__file__), "config.yaml"),
                    help="Path to regime config YAML")
@@ -74,6 +79,12 @@ def parse_args():
     p.add_argument("--learning_rate", type=float, default=None)
     p.add_argument("--device", type=str, default=None,
                    help="Compute device ('cuda' or 'cpu'). Defaults to 'cuda' (errors if unavailable).")
+    p.add_argument("--seed", type=int, default=None,
+                   help="Seed for weight init, data order, noise draws and masks. Default: unseeded "
+                        "(how v1-v15 were trained). Seeded GPU runs are repeatable in distribution, "
+                        "not bit for bit (cuDNN kernels are not deterministic).")
+    p.add_argument("--limit_batches", type=int, default=None,
+                   help="Stop each epoch after this many batches. For local smoke tests only.")
     return p.parse_args()
 
 
@@ -86,7 +97,66 @@ def load_config(config_path, cli):
             cfg[key] = cli_val
     cfg["model_ckpt"] = cli.model_ckpt
     cfg["run_id"] = cli.run_id
+    cfg["seed"] = cli.seed
+    cfg["limit_batches"] = cli.limit_batches
     return argparse.Namespace(**cfg)
+
+
+def seed_everything(seed):
+    """Seeds every random number generator training uses. Returns the DataLoader's generator."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    return torch.Generator().manual_seed(seed)
+
+
+def known_prefix_settings(args):
+    """E3 (v17): train with a random known prefix, so the model learns to continue a block.
+
+    known_prefix_prob  : share of training windows that get a known prefix (default 0.0 =
+                         off, how v1-v15 were trained: every pixel noised, nothing known)
+    known_prefix_steps : list of prefix lengths in 5-min steps, drawn uniformly per window.
+                         With delay = embedding = 8, a multiple of 8 is a whole number of
+                         image columns, which is what regime_training/generate_context.py
+                         provides at generation (context_cols K = steps / 8).
+    Returns (prob, LongTensor of lengths) or (0.0, None).
+    """
+    prob = float(getattr(args, "known_prefix_prob", 0.0))
+    if prob <= 0.0:
+        return 0.0, None
+    if prob > 1.0:
+        raise ValueError(f"known_prefix_prob must be in [0, 1], got {prob}")
+    steps = [int(s) for s in getattr(args, "known_prefix_steps", [8, 16, 24, 32])]
+    if not steps or min(steps) < 1 or max(steps) >= args.seq_len:
+        raise ValueError(f"known_prefix_steps must lie in 1..{args.seq_len - 1}, got {steps}")
+    return prob, torch.tensor(steps, dtype=torch.long)
+
+
+def known_prefix_mask(x_ts, prob, steps):
+    """[B, L, 1] mask, 1 on each window's known prefix and 0 elsewhere (all 0 when prob is 0).
+
+    With probability `prob` a window gets a prefix of a length drawn from `steps`; the rest
+    get none, so the model keeps generating first blocks with nothing known."""
+    B, L = x_ts.shape[0], x_ts.shape[1]
+    if steps is None:
+        return torch.zeros_like(x_ts)
+    use = torch.rand(B, device=x_ts.device) < prob
+    k = steps.to(x_ts.device)[torch.randint(len(steps), (B,), device=x_ts.device)]
+    k = torch.where(use, k, torch.zeros_like(k))
+    mask = torch.arange(L, device=x_ts.device)[None, :] < k[:, None]
+    return mask.to(x_ts.dtype).unsqueeze(-1)
+
+
+def git_commit():
+    try:
+        out = subprocess.run(["git", "rev-parse", "HEAD"], cwd=PROJECT_ROOT, capture_output=True,
+                             text=True, check=True).stdout.strip()
+        dirty = subprocess.run(["git", "status", "--porcelain", "--untracked-files=no"], cwd=PROJECT_ROOT,
+                               capture_output=True, text=True, check=True).stdout.strip()
+        return out, bool(dirty)
+    except (OSError, subprocess.CalledProcessError):
+        return None, None
 
 # ──────────────────────────────────────────────────────────────────────
 # Checkpoint loading (shape-safe)
@@ -96,11 +166,18 @@ def load_checkpoint_safe(model, ckpt_path, device):
     """
     Load weights from a checkpoint while gracefully skipping any
     parameters whose shapes don't match (e.g. the map_label layer
-    changes from 43 → 4 classes).
+    changes from 32 dataset tokens → 4 seasonal phases).
+
+    ckpt_path 'none' keeps the random initialisation (the no-pretraining control). Any
+    other path must exist: a mistyped path used to fall back to random weights with only a
+    warning, which would silently turn a fine-tuning run into a from-scratch run.
     """
-    if not os.path.exists(ckpt_path):
-        logging.warning("No checkpoint at %s — using random init.", ckpt_path)
+    if str(ckpt_path).lower() == "none":
+        logging.info("model_ckpt = none: training from random initialisation (no pretraining).")
         return
+    if not os.path.exists(ckpt_path):
+        raise FileNotFoundError(f"No checkpoint at {ckpt_path}. Pass --model_ckpt none to train from "
+                                f"random weights on purpose.")
 
     loaded = torch.load(ckpt_path, map_location=device, weights_only=False)
     ckpt_state = loaded.get("model", loaded)       # handle both dict styles
@@ -227,6 +304,12 @@ def main():
     logging.info("Device  : %s", args.device)
     logging.info("Epochs  : %d  |  Batch : %d  |  LR : %s",
                  args.epochs, args.batch_size, args.learning_rate)
+    logging.info("Init    : %s", "random (no pretraining)" if str(args.model_ckpt).lower() == "none"
+                 else args.model_ckpt)
+    logging.info("Seed    : %s", "unseeded" if args.seed is None else args.seed)
+
+    # Seed before the model is built, so weight init (incl. the new label embedding) follows it
+    loader_gen = seed_everything(args.seed) if args.seed is not None else None
 
     # ── Data ──────────────────────────────────────────────────────────
     train_csv = os.path.join(PROJECT_ROOT, args.train_csv)
@@ -236,14 +319,21 @@ def main():
     # v1–v12; 'asinh' is opt-in from the config (see transforms.py).
     data_transform = getattr(args, "data_transform", "standard")
     asinh_scale = float(getattr(args, "asinh_scale", 0.035))
-    logging.info("Transform : %s%s", data_transform,
-                 f" (s = {asinh_scale} mm/5min)" if data_transform == "asinh" else "")
+    data_scale = float(getattr(args, "data_scale", 1.0))
+    logging.info("Transform : %s%s%s", data_transform,
+                 f" (s = {asinh_scale} mm/5min)" if data_transform == "asinh" else "",
+                 f", then x {data_scale}" if data_scale != 1.0 else "")
+
+    prefix_prob, prefix_steps = known_prefix_settings(args)
+    if prefix_steps is not None:
+        logging.info("Known prefix (E3): %.0f%% of windows, prefix lengths %s steps",
+                     100 * prefix_prob, prefix_steps.tolist())
 
     train_ds = RegimeDataset(
         train_csv, seq_len=args.seq_len,
         regime_col=getattr(args, "regime_col", "gmm_regime"),
         data_col=getattr(args, "data_col", "avg_rainfall"),
-        transform=data_transform, asinh_scale=asinh_scale,
+        transform=data_transform, asinh_scale=asinh_scale, data_scale=data_scale,
     )
     test_ds = RegimeDataset(
         test_csv, seq_len=args.seq_len,
@@ -255,6 +345,7 @@ def main():
     train_loader = DataLoader(
         train_ds, batch_size=args.batch_size,
         shuffle=True, num_workers=0, drop_last=True,
+        generator=loader_gen,             # None (unseeded) = the previous behaviour
     )
 
     regime_counts = train_ds.get_regime_counts()
@@ -298,6 +389,21 @@ def main():
     with open(scaler_path, "wb") as f:
         pickle.dump(train_ds.scaler, f)
 
+    # Provenance: what config.yaml cannot show (CLI overrides, init, seed, code version)
+    commit, dirty = git_commit()
+    with open(os.path.join(ckpt_dir, "run_args.json"), "w") as f:
+        json.dump({
+            "run_id": args.run_id, "config": cli.config, "model_ckpt": args.model_ckpt,
+            "pretrained": str(args.model_ckpt).lower() != "none", "seed": args.seed,
+            "epochs": args.epochs, "batch_size": args.batch_size, "learning_rate": args.learning_rate,
+            "data_transform": data_transform, "asinh_scale": asinh_scale, "data_scale": data_scale,
+            "known_prefix_prob": prefix_prob,
+            "known_prefix_steps": None if prefix_steps is None else prefix_steps.tolist(),
+            "limit_batches": args.limit_batches, "git_commit": commit, "git_dirty": dirty,
+            "torch": torch.__version__, "host": socket.gethostname(),
+            "slurm_job_id": os.environ.get("SLURM_JOB_ID"), "started": datetime.now().isoformat(timespec="seconds"),
+        }, f, indent=1)
+
     # Persist regime proportions so the generator doesn't need hardcoded values
     if getattr(args, "n_classes", 0) > 0:
         total = sum(regime_counts.values())
@@ -338,14 +444,18 @@ def main():
         epoch_grad_norms = []
         epoch_clip_frac = []
 
-        for x_ts, regime_labels in train_loader:
+        for batch_idx, (x_ts, regime_labels) in enumerate(train_loader):
+            if args.limit_batches is not None and batch_idx >= args.limit_batches:
+                break
             x_ts = x_ts.to(args.device)                    # [B, seq_len, 1]
             regime_labels = regime_labels.to(args.device)   # [B]
 
             optimizer.zero_grad()
 
-            # Convert to image representation (delay embedding)
-            x_ts_mask = torch.zeros_like(x_ts)
+            # Convert to image representation (delay embedding). The mask marks KNOWN
+            # pixels (1 = known, kept clean by ImagenFew.forward; 0 = noised and scored).
+            # All zeros unless known_prefix_prob > 0 (E3).
+            x_ts_mask = known_prefix_mask(x_ts, prefix_prob, prefix_steps)
             x_img = model.ts_to_img(x_ts)
             x_img_mask = model.ts_to_img(x_ts_mask, pad_val=1)
 

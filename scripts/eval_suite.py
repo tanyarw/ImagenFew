@@ -85,6 +85,24 @@ REGISTRY = [
     ('bartlett_lewis_relaxed', 'classical baseline', 'storm-and-cell (alpha relaxed)', 'as storm-and-cell, alpha allowed down to 0.2 (Onof & Wang 2020)', None, None, True),
     ('bartlett_lewis_relaxed_wet', 'classical baseline', 'storm-and-cell (relaxed, wet fraction)', 'relaxed alpha, objective scores the wet fraction', None, None, True),
     ('bartlett_lewis_relaxed_ivw', 'classical baseline', 'storm-and-cell (relaxed, inverse variance)', 'relaxed alpha, inverse-variance weights (pyBL)', None, None, True),
+    # Strengthening runs (code_plan/STRENGTHENING_RUNS.md); scored once their CSVs exist
+    ('v14_s1', 'training seed', 'v14 seed 1', 'v14 retrained, training seed 1', 64, 'markov64', True),
+    ('v14_s1_nobridge_cal', 'training seed', 'v14 seed 1 cal', 'v14 seed 1, calendar, no bridges', 64, 'cal64', True),
+    ('v14_s2', 'training seed', 'v14 seed 2', 'v14 retrained, training seed 2', 64, 'markov64', True),
+    ('v14_s2_nobridge_cal', 'training seed', 'v14 seed 2 cal', 'v14 seed 2, calendar, no bridges', 64, 'cal64', True),
+    ('v10_s1', 'training seed', 'v10 seed 1', 'v10 retrained, training seed 1', 64, 'markov64', True),
+    ('v10_s1_nobridge_cal', 'training seed', 'v10 seed 1 cal', 'v10 seed 1, calendar, no bridges', 64, 'cal64', True),
+    ('v14_scratch', 'no pretraining', 'v14 from scratch', 'v14 config, random initial weights', 64, 'markov64', True),
+    ('v14_scratch_nobridge_cal', 'no pretraining', 'v14 scratch cal', 'v14 from scratch, calendar, no bridges', 64, 'cal64', True),
+    ('v17', 'E3 known prefix', 'v17 (E3)', 'v14 trained with known prefixes; independent blocks', 64, 'markov64', True),
+    ('v17_nobridge_cal', 'E3 known prefix', 'v17 cal', 'v17, independent blocks, calendar, no bridges', 64, 'cal64', True),
+    ('v17_ctx_cal', 'E3 known prefix', 'v17 chained', 'v17, each block continues the previous 80 min (calendar)', 64, None, True),
+    ('v17_ctx_cal_m1', 'E3 known prefix', 'v17 chained m1', 'v17 chained, chain 1', 64, None, True),
+    ('v17_ctx_cal_m2', 'E3 known prefix', 'v17 chained m2', 'v17 chained, chain 2', 64, None, True),
+    ('v17_ctx_cal_m3', 'E3 known prefix', 'v17 chained m3', 'v17 chained, chain 3', 64, None, True),
+    ('v17_ctx0_cal', 'E3 known prefix', 'v17 unchained', 'v17 through the chained code with no context (control)', 64, None, True),
+    ('v18', 'sigma_data', 'v18 data x0.5', 'v14 with data scaled to std 0.5 = EDM sigma_data', 64, 'markov64', True),
+    ('v18_nobridge_cal', 'sigma_data', 'v18 cal', 'v18, calendar, no bridges', 64, 'cal64', True),
 ]
 META = pd.DataFrame(REGISTRY, columns=['name', 'group', 'label', 'change', 'L', 'plan', 'clean']).set_index('name')
 

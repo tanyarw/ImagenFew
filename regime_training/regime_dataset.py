@@ -27,7 +27,8 @@ class RegimeDataset(Dataset):
 
     def __init__(self, csv_path, seq_len=24, scale=True, scaler=None,
                  regime_col="gmm_regime", data_col="avg_rainfall",
-                 block_col="block_id", transform="standard", asinh_scale=0.035):
+                 block_col="block_id", transform="standard", asinh_scale=0.035,
+                 data_scale=1.0):
         """
         Args:
             csv_path   : Path to train or test CSV
@@ -47,6 +48,9 @@ class RegimeDataset(Dataset):
                         regime_training/transforms.py.
                         Ignored when a pre-fitted `scaler` is passed.
             asinh_scale: s in asinh(x / s), mm per 5 min (asinh only).
+            data_scale : constant the transformed values are multiplied by
+                        (1.0 = none; see transforms.ScaledScaler).
+                        Ignored when a pre-fitted `scaler` is passed.
         """
         self.seq_len = seq_len
         self.scale = scale
@@ -85,7 +89,7 @@ class RegimeDataset(Dataset):
                 if scaler is not None:
                     self.scaler = scaler
                 else:
-                    self.scaler = make_scaler(transform, asinh_scale)
+                    self.scaler = make_scaler(transform, asinh_scale, data_scale)
                     self.scaler.fit(values)
                 scaled = self.scaler.transform(values)
             else:
@@ -115,7 +119,7 @@ class RegimeDataset(Dataset):
             if scaler is not None:
                 self.scaler = scaler
             else:
-                self.scaler = make_scaler(transform, asinh_scale)
+                self.scaler = make_scaler(transform, asinh_scale, data_scale)
                 self.scaler.fit(all_values)
         else:
             self.scaler = None

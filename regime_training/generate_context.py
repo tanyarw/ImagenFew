@@ -27,6 +27,13 @@ Noisy history (Diffusion Forcing, Chen et al., NeurIPS 2024): the known values a
 previous block's output plus a small fixed noise (--history_noise, in model units), so the
 model is never handed its own output exactly, ~22,000 times in a row.
 
+--known_pixels clean (E3, v17): for a model TRAINED with known prefixes
+(regime_training/train_regime.py, known_prefix_prob > 0). ImagenFew.forward trains such a model
+with the known pixels CLEAN and only the unknown pixels noised, so here the known pixels are
+pasted in clean before every network call (including the Heun correction), exactly as in
+DiffusionProcess.impute(), and nothing is re-noised. Use it with --resample 1 and, to match
+training exactly, --history_noise 0. The default, renoise, is E2's behaviour, unchanged.
+
 Labels: one-hot HMM state per block, looked up by TIME on the same state timeline as the
 production run with the same seed. Markov: the seed's production plan, including its bridge
 offsets, so year y here lines up with year y of v14 (the drift test compares them year by
@@ -77,6 +84,10 @@ def parse_args():
                    help='only steps with sigma >= this are resampled')
     p.add_argument('--history_noise', type=float, default=0.05,
                    help='std of the fixed noise added to the known history (model units)')
+    p.add_argument('--known_pixels', default='renoise', choices=['renoise', 'clean'],
+                   help='renoise: known pixels re-noised to the current sigma (E2, for a model never '
+                        'trained with known pixels). clean: known pixels kept clean, as a model trained '
+                        'with known prefixes saw them (E3)')
     p.add_argument('--device', default='cuda')
     p.add_argument('--save_every', type=int, default=500, help='blocks between progress saves')
     p.add_argument('--output_dir', default='results/generated_data')
@@ -139,19 +150,28 @@ def state_timeline(cli, total, L):
 
 
 @torch.no_grad()
-def sample_block(net, x_known, mask, labels, t_steps, passes_per_step):
-    """EDM Heun sampling with RePaint conditioning on the known pixels (mask == 1)."""
+def sample_block(net, x_known, mask, labels, t_steps, passes_per_step, clean_known=False):
+    """EDM Heun sampling conditioned on the known pixels (mask == 1).
+
+    clean_known=False (E2): RePaint, the known pixels re-noised to the current sigma.
+    clean_known=True (E3): the known pixels pasted in clean before every network call, as in
+    training with known prefixes and in DiffusionProcess.impute(); passes_per_step must be 1."""
+    if clean_known and any(p != 1 for p in passes_per_step):
+        raise ValueError('clean known pixels are not resampled: use --resample 1')
     x = torch.randn_like(x_known) * t_steps[0]
     n = len(t_steps) - 1
     for i in range(n):
         t_cur, t_next = t_steps[i], t_steps[i + 1]
         passes = passes_per_step[i]
         for u in range(passes):
-            x = mask * (x_known + t_cur * torch.randn_like(x)) + (1 - mask) * x
+            known = x_known if clean_known else x_known + t_cur * torch.randn_like(x)
+            x = mask * known + (1 - mask) * x
             d = (x - net(x, t_cur, labels).to(torch.float64)) / t_cur
             x_next = x + (t_next - t_cur) * d
             last = u == passes - 1
             if last and i < n - 1:                      # Heun correction, as in production
+                if clean_known:
+                    x_next = mask * x_known + (1 - mask) * x_next
                 d2 = (x_next - net(x_next, t_next, labels).to(torch.float64)) / t_next
                 x_next = x + (t_next - t_cur) * (0.5 * d + 0.5 * d2)
             x = x_next if last else x_next + (t_cur ** 2 - t_next ** 2).sqrt() * torch.randn_like(x_next)
@@ -166,6 +186,16 @@ def main():
     if cli.device == 'cuda' and not torch.cuda.is_available():
         raise RuntimeError('CUDA is not available; pass --device cpu only for a small smoke test')
     args.device = cli.device
+    clean_known = cli.known_pixels == 'clean'
+    if clean_known and cli.resample != 1:
+        raise ValueError('--known_pixels clean needs --resample 1 (RePaint resampling is for re-noised known pixels)')
+    trained_with_prefix = float(getattr(args, 'known_prefix_prob', 0.0)) > 0
+    if clean_known and not trained_with_prefix:
+        print(f'WARNING: config_{cli.run}.yaml has no known_prefix_prob: this model never saw clean known '
+              f'pixels in training, so --known_pixels clean is off-distribution for it', flush=True)
+    if trained_with_prefix and not clean_known and cli.context_cols > 0:
+        print(f'WARNING: {cli.run} was trained with clean known prefixes; --known_pixels renoise is '
+              f'off-distribution for it (use --known_pixels clean)', flush=True)
     L, M, K = args.seq_len, cli.members, cli.context_cols
     known_steps = 8 * K
     total = int(cli.years * STEPS_PER_YEAR)
@@ -212,11 +242,13 @@ def main():
     print(f'{cli.run} | {cli.mode} | {cli.years} y = {total} steps | {M} members | K = {K} '
           f'({known_steps} known + {new_per_block} new steps per block) | {n_blocks} blocks x '
           f'~{evals} network evals | resample {cli.resample} for sigma >= {cli.resample_min_sigma} '
-          f'({n_res} steps) | history noise {cli.history_noise}', flush=True)
+          f'({n_res} steps) | history noise {cli.history_noise} | known pixels {cli.known_pixels}', flush=True)
 
-    # Resume if a matching progress file exists
-    key = np.array([cli.run, cli.mode, str(cli.years), str(cli.seed), str(M), str(K), str(cli.resample),
-                    str(cli.resample_min_sigma), str(cli.history_noise)])
+    # Resume if a matching progress file exists. The E2 key is kept as it was (so E2 progress
+    # files still resume); the known-pixel mode is appended only when it is not the default.
+    key = [cli.run, cli.mode, str(cli.years), str(cli.seed), str(M), str(K), str(cli.resample),
+           str(cli.resample_min_sigma), str(cli.history_noise)]
+    key = np.array(key + ([cli.known_pixels] if clean_known else []))
     out = np.zeros((M, total), dtype=np.float32)
     ctx, pos, b = None, 0, 0
     if os.path.exists(state_path):
@@ -243,7 +275,8 @@ def main():
             t_mid = min(pos + n_new // 2, total - 1)
             labels = eye[timeline[t_mid]].expand(M, -1) if n_cls > 0 else None
 
-            img = sample_block(net, x_known, m, labels, t_steps, single if (ctx is None or K == 0) else passes)
+            img = sample_block(net, x_known, m, labels, t_steps, single if (ctx is None or K == 0) else passes,
+                               clean_known=clean_known)
             ts = model.img_to_ts(img.to(torch.float32))[:, :, 0].to(args.device, torch.float64)   # [M, L]
 
             new = ts[:, first_new:].cpu().numpy()

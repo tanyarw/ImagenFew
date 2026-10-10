@@ -1,0 +1,87 @@
+# ==============================================================================
+# v17 — E3: v14 trained with known prefixes (single-variable ablation of v14)
+# ==============================================================================
+# IDENTICAL to config_v14.yaml (split, seq_len = 64, 4 phase classes, asinh
+# s = 0.035, delay embedding, EDM schedule, loss weights, base checkpoint
+# ImagenFew_64.ckpt, 500 epochs) except for ONE thing: in 75% of training
+# windows the first 8, 16, 24 or 32 steps (1-4 image columns, 40-160 min) are
+# KNOWN. ImagenFew.forward keeps known pixels clean and noises only the rest,
+# and the loss is taken on the unknown pixels only. The other 25% are trained
+# exactly as v14, so the model can still draw a first block with nothing known.
+#
+# Why: blocks are generated independently, so storms cannot outlast a block
+# (diary 2026-09-28, the storm cliff). E2 handed an untrained model the end of
+# the previous block and failed (diary 2026-10-02). Training the model to
+# continue a known start is the standard fix (CSDI, Tashiro et al. 2021; MCVD,
+# Voleti et al. 2022; Flexible Diffusion, Harvey et al. 2022).
+#
+# Generation: regime_training/generate_context.py --run v17 --known_pixels clean
+#   --resample 1 --history_noise 0 --context_cols 2 (scripts/submit_generation_v17_ctx.sh)
+# Plan and pre-registered targets: code_plan/STRENGTHENING_RUNS.md, run 5.
+# ==============================================================================
+
+# --- Training ---
+epochs: 500
+batch_size: 2048
+learning_rate: 0.0001    # 1e-4
+weight_decay: 0.00001    # 1e-5
+
+# --- Loss: matching v7/v8 exact baseline ---
+# alpha = 0.0 reproduces v7/v8 unweighted loss baseline
+intensity_weight_alpha: 0.0
+intensity_weight_gamma: 0.5
+intensity_weight_normalize: true
+fft_weight: 1.0
+grad_clip: 1.0
+
+# --- Data: Clean Chronological Holdout Datasets ---
+train_csv: data/rainfall/splits/train_years_labelled.csv
+test_csv: data/rainfall/splits/val_years_labelled.csv
+seq_len: 64
+n_classes: 4   # 4 seasonal phases (0: Dry Baseline -> 3: Peak Cloudburst)
+
+# --- Column names ---
+regime_col: hmm_state
+data_col: avg_rainfall
+
+# --- Rainfall -> model-space transform (the ONLY change vs v10) ---
+data_transform: asinh    # 'standard' = v10 behaviour
+asinh_scale: 0.035       # s in mm/5min = median wet step (>= 0.005 mm), 2000-2007 train split
+
+# --- Transform (Delay Embedding) ---
+use_stft: false
+delay: 8
+embedding: 8
+
+# --- Model Architecture (must match base checkpoint) ---
+handler: models.ImagenFew.handler
+img_resolution: 8
+input_channels: 1
+unet_channels: 32
+ch_mult: [1, 2, 2, 4]
+attn_resolution: [8, 4, 2]
+diffusion_steps: 36
+dynamic_size: [128, 128]
+
+# --- Diffusion Sampler ---
+beta1: 0.00001      # 1e-5
+betaT: 0.01         # 1e-2
+deterministic: false
+
+# --- Fine-tuning ---
+finetune: true
+pretrain: false
+ema: true
+ema_warmup: 100
+ft_method: all       # fine-tune all parameters
+lora_dim: 4          # ignored when ft_method != 'lora'
+dropout: 0.10
+
+# --- Logging & Monitoring ---
+logging_iter: 25       # Log metrics, evaluate regimes, and update plots every 25 epochs
+run_id: null           # auto-generated if null
+run_dir: ImagenFew/Rainfall_v17/
+
+# --- E3: known-prefix training (the ONLY change vs v14) ---
+known_prefix_prob: 0.75
+known_prefix_steps: [8, 16, 24, 32]
