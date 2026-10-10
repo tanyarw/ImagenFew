@@ -3,6 +3,72 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 10, 2026 — v16 Dropped: Kept Only as a Diagnostic
+
+### 🔍 Overview
+A review of the work to date asked whether v16 (the two-level generator, Oct 4) is a result the
+thesis can stand on. Decision (user): **no, because it does not generalise.** It is removed from the
+comparison and kept as one diagnostic sentence.
+
+### 📊 Findings
+| Why v16 does not generalise | Evidence |
+| :--- | :--- |
+| Its storms are copied, not learned | Level 1 picks a real 2000–2007 storm that started within ±15 days and ±2 h, and perturbs it (log-normal, width 0.15). It cannot make a storm beyond the record except by perturbation: its largest storm (84 mm) is the real 55 mm storm stretched |
+| Its design was tuned to this record | ±15 days, ±2 h, ±30 days, 600 chains and the matching penalties were adjusted step by step against the scores (Gate A 9 → 12 → 13–16 → 14–17) |
+| Its storm-scale scores are largely built in | Tier 6 is scored against the same 2000–2007 storms that level 1 resamples (storms ≥ 10 mm / yr 15.9 vs 15.75) |
+| It distorts the diffusion rain it uses | v14's chains are scaled to each target depth (p99 scale factor 2.3): heavy-rain checks fell from 12/15 (v14) to 5/15 |
+
+The case for v16 also weakened downstream: in flood-control's agent test (2026-10-06,
+`flood-control/docs/SYNTHETIC_RAIN.md` §6.1) PPO trained on **v14 alone** scored 0.969 × BC on real
+2008, the same as PPO trained on real rain (0.969), although v14 gives 38% less overflow than real
+rain. The sewer-overflow gap v16 closed has not been shown to matter to the agent.
+
+### ✅ Decision
+* **Kept as one diagnostic line:** *replacing v14's storm sizes with resampled real ones brings sewer
+  overflow from 0.62× to 1.00× real (0.95× over five seeds), so storm size, not 5-minute detail, is
+  what drives overflow.*
+* **Removed** from the evaluation registry (`scripts/eval_suite.py`, cache refreshed), the version log,
+  `notebooks/research_evaluation.ipynb` (re-run), the metric-validity study (re-run; v16's five seeds were
+  5 of its 33 versions), the Gate B job defaults (`gate_b_kpis.py`, `submit_gate_b_kpis.sh`) and the
+  strengthening summary. `code_plan/PAPER_MISSING_EXPERIMENTS.md`: experiment 1 (classical texture
+  inside v16) dropped, the "two-level design is necessary" message withdrawn, the paper's main message
+  open again. `code_plan/ACCEPTANCE_CRITERIA.md` Gate B status updated.
+* **Metric validity without v16** (28 versions instead of 33; Spearman ρ of each metric's distance
+  from real against the sewer error, all versions, 95% interval). The conclusion holds: storm- and
+  day-scale metrics still predict the sewer and 5-h window metrics still do not.
+
+  | Metric | ρ with v16 | ρ without v16 [95%] |
+  | :--- | :---: | :---: |
+  | Variance-scaling RMSE | 0.97 | **0.96** [0.87, 0.99] |
+  | W1 daily totals | 0.91 | 0.86 [0.66, 0.95] |
+  | Storms ≥ 10 mm ratio | 0.86 | 0.79 [0.57, 0.93] |
+  | Recall | 0.82 | 0.74 [0.51, 0.88] |
+  | Tier 6 checks failed | 0.82 | 0.69 [0.45, 0.84] |
+  | C2ST, 1-day windows | 0.76 | 0.64 [0.37, 0.78] |
+  | Precision | 0.31 | 0.59 [0.24, 0.80] |
+  | C2ST, 5-h windows | 0.60 | 0.43 [0.02, 0.74] |
+  | Gate A checks failed | 0.50 | **0.24** [−0.09, 0.51] |
+  | TSTR, ≥ 2 mm next 6 h | 0.34 | 0.13 [−0.35, 0.61] |
+
+  Gate A's link to the sewer was carried mostly by v16 (high Gate A and right overflow); without it,
+  Gate A barely predicts overflow.
+* The evaluation cache was trimmed (v16 entries deleted) rather than recomputed, so every other
+  version's numbers are unchanged; the notebook's version table now leaves out registered versions
+  with no data yet (the pending cluster runs).
+* **Kept as the record:** `regime_training/generate_two_level.py` (marked dropped), the v16 CSVs, the
+  sewer runs in `results/reference/gate_b_sewer.json` and the Oct 4 diary entry.
+* **v14 is the deliverable again**; too-short storms (1.9 vs 14.3 per year longer than 5h20; sewer
+  overflow 0.62× real) are its documented limitation. A fix that generalises has to be learned by the
+  model: trained continuation (v17), with at least 2 h of known history so a storm survives a dry
+  break, or conditioning on storm-level information.
+* flood-control is not changed (it still uses v14).
+
+**Verdict:** **v16 answered a diagnostic question (storm size drives overflow) but is not a
+generator the thesis can offer: its storms come from the record. Dropped; v14 is the deliverable
+again.**
+
+---
+
 ## October 8, 2026 — Calendar Versions Dropped from the Comparison
 
 ### 🔍 Overview

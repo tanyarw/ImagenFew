@@ -1,11 +1,17 @@
 # Missing Experiments for a Paper
 
 **Written:** 2026-10-06 · **Status:** proposed, none started.
-**Context:** the single-site generator work (v1–v16, the AR / copula / storm-and-cell baselines and
-the sewer check) supports a paper framed as an evaluation-and-design study: *generators fail in
-complementary ways, and only a two-level design reproduces sewer loading* (v16, BC overflow 1.00×
-real). It does not yet support "diffusion beats classical generators". These experiments close
-the gaps a reviewer would raise. Background: research diary, entries from 2026-10-01 to 2026-10-06.
+**Context:** the single-site generator work (v1–v15, the AR / copula / storm-and-cell baselines and
+the sewer check) supports a paper framed as an evaluation study: *generators fail in
+complementary ways, and no single generator reproduces sewer loading*. It does not yet support
+"diffusion beats classical generators". These experiments close the gaps a reviewer would raise.
+Background: research diary, entries from 2026-10-01 to 2026-10-06.
+
+**Update 2026-10-10:** the two-level generator v16 was dropped (diary, "v16 Dropped"): its storms
+are resampled from the 2000–2007 record, so it does not generalise. It is kept only as one
+diagnostic line: replacing v14's storm sizes with resampled real ones brings sewer overflow from
+0.62× to 1.00× real, so storm size, not 5-minute detail, is what drives overflow. The paper's
+main message is open again.
 
 **Current headline numbers** (one realisation each unless noted; `results/evaluation/eval_cache.pkl`,
 `results/reference/gate_b_sewer.json`):
@@ -13,7 +19,6 @@ the gaps a reviewer would raise. Background: research diary, entries from 2026-1
 | | Gate A | Tier 6 | Storms > 5h20 / yr (real 14.3) | IDF in band | Sewer overflow, BC |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | v14 (diffusion) | 14/18 | 0/3 | 1.9 | 12/15 | 0.62× |
-| v16 (storm model + v14 texture), seed 0 | 16/18 | 3/3 | 6.6 | 5/15 | 1.00× (seeds 1–4: 0.86–1.08) |
 | Copula AR(64), occurrence-matched | 12/18 | 1/3 | 15.8 | 3/15 | 1.47× |
 | Storm-and-cell, relaxed α, wet-fraction objective (10 seeds) | 6.5/18 | 1/3 | 32 | 10/15 | not run |
 
@@ -23,9 +28,9 @@ Time estimates are rough.
 
 ## Priority 1: decide the paper's message
 
-### 1. Fully classical two-level generator
+### 1. Fully classical two-level generator (dropped 2026-10-10, with v16)
 * **Question:** does v16 work because of the two-level structure, or because of the diffusion
-  texture?
+  texture? No longer needed: v16 itself is no longer a result.
 * **How:** keep v16's storm renewal model (`regime_training/generate_two_level.py`) and replace
   the v14 texture inside each storm with a classical one: (a) the occurrence-matched copula,
   (b) real storm segments resampled from 2000–2007, (c) storm-and-cell. Score each with Gate A,
@@ -37,8 +42,8 @@ Time estimates are rough.
 
 ### 2. Multi-seed ensembles for the headline models
 * **Question:** are the differences larger than seed-to-seed spread?
-* **How:** 10 seeds each for the occurrence-matched copula (seconds each), v16 (5 exist; add 5)
-  and v14 (about 10 generation runs on the cluster); storm-and-cell already has 10. Sewer check
+* **How:** 10 seeds each for the occurrence-matched copula (seconds each) and v14 (about 10
+  generation runs on the cluster); storm-and-cell already has 10. Sewer check
   (BC) on every member, about 1 minute per seed locally (`scripts/gate_b_sewer.py`). Report means
   with ranges; paired tests where seeds align.
 * **Cost:** under an hour locally, plus cluster time for v14.
@@ -63,15 +68,15 @@ Time estimates are rough.
   `run_copula_arima_occ.py`), a second, less persistent one for amounts (wet-to-wet latent
   correlation about 0.85), joined by the threshold.
 * **Cost:** about a day; seconds to run.
-* **What it decides:** if it matches v16 on the sewer check, a classical single-level model
-  competes, and the claim that a two-level design is necessary has to be weakened.
+* **What it decides:** if it matches real overflow on the sewer check (the copula is 1.47×, v14
+  0.62×), a classical single-level model is the one to beat.
 
 ### 5. Sewer check with a second controller
 * **Question:** do the overflow results hold beyond the baseline controller?
 * **How:** rerun the sewer check with `--controllers BC EFD` for every headline model and seed;
   report per-year spread.
 * **Cost:** about 1 minute per series; under an hour in total.
-* **What it decides:** whether "only v16 matches the sewer" is robust.
+* **What it decides:** whether the overflow ranking of the generators is robust.
 
 ### 6. The four individual gauges
 * **Question:** do the conclusions hold at gauge level, where 5-minute peaks are about 40% higher
@@ -94,8 +99,10 @@ Time estimates are rough.
 
 ### 8. Agent-in-the-loop test
 * **Question:** does training controllers on synthetic rain help?
-* **How:** in flood-control, train PPO/DQN on real 2000–2007 rain versus v16 (and one baseline);
-  test all on real 2008–2009; compare overflow.
+* **How:** in flood-control, train PPO/DQN on real 2000–2007 rain versus synthetic rain; test all
+  on real 2008–2009; compare overflow. **Partly done (flood-control, 2026-10-06):** PPO trained on
+  v14 alone scored 0.969 × BC on 2008, the same as on real rain (0.969); differences below
+  0.03–0.12 were not detectable with 5 seeds (flood-control `docs/SYNTHETIC_RAIN.md` §6.1).
 * **Cost:** large: days of compute and setup.
 * **What it decides:** turns "statistically right" into "useful", the project's actual goal.
 
@@ -118,8 +125,8 @@ Time estimates are rough.
 
 | Target | Experiments | Effort |
 | :--- | :--- | :--- |
-| Defence | 1 | about a day |
-| Workshop paper | 1, 2, 5 | about a week, mostly local plus cluster time for v14 seeds |
+| Defence | 2, 7 | about a day, plus cluster time for v14 seeds |
+| Workshop paper | 2, 5, 7 | about a week, mostly local plus cluster time for v14 seeds |
 | Journal paper (e.g. HESS, WRR, J. Hydrology, EMS) | add 3, 4, 7; ideally 6 or 8 | a few months |
 
 **Before writing:** check thesis timing, authorship and the data terms for the Erftverband /

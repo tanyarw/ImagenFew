@@ -3,6 +3,10 @@
 generate_two_level.py — v16: a storm model decides when it rains, for how long and how much;
 v14's diffusion output supplies the 5-minute rain inside each storm.
 
+DROPPED 2026-10-10 (research diary, "v16 Dropped"): level 1 resamples the 2000-2007 storms, so the
+generator does not generalise beyond this record. Kept as the record of the diagnostic that storm
+size, not 5-minute detail, drives sewer overflow; v16 is no longer in the evaluation registry.
+
 Why: at a given storm length v14 already has the right storm depth (325-720 min storms: 4.52 mm
 vs 4.53 real) and the right texture inside (wet fraction 0.64 vs 0.62), but its storms are too
 short (longer than 12 h: 1.7/yr vs 19.7 real) because every 5h20 block is generated on its own

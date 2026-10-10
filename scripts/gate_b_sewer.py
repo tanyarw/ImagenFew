@@ -17,7 +17,7 @@ Reproduces flood-control's saved v14 result exactly (2026 under BC: 188,327 m3).
 Results: results/reference/gate_b_sewer.json (one row per version, year and controller, plus
 flood-control's saved real and v14 rows for comparison). Needs flood-control's .venv (pyswmm):
 
-    cd ../flood-control && PYTHONPATH=. .venv/bin/python ../ImagenFew/scripts/gate_b_sewer.py v16 v16_m1 \\
+    cd ../flood-control && PYTHONPATH=. .venv/bin/python ../ImagenFew/scripts/gate_b_sewer.py arima_copula_occ_len64 \\
         --controllers BC EFD
 
 A version can be given as `csvname=label` to store it under another name: the ImagenFew `v14`

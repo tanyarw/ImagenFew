@@ -39,8 +39,6 @@ RNG = np.random.default_rng(0)
 
 
 def family(v):
-    if v.startswith('v16'):
-        return 'two-level'
     if v.startswith('arima'):
         return 'AR / copula'
     if v.startswith('bartlett'):

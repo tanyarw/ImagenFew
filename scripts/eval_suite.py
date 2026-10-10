@@ -71,7 +71,7 @@ REGISTRY = [
     ('v14', 'transform', 'v14 asinh', 'v10 + asinh transform (current baseline)', 64, 'markov64', True),
     ('v15', 'attention (E1)', 'v15 attn (E1)', 'v14 + 8x8 attention, 200 more epochs', 64, 'markov64', True),
     ('v15_ctrl', 'attention (E1)', 'v15 ctrl (E1 control)', 'v14 + 200 more epochs, no change (control)', 64, 'markov64', True),
-    ('v14_nobridge_cal', 'assembly', 'v14 cal no bridge', 'v14, calendar assembly without bridge blocks (texture source for v16)', 64, 'cal64nb', True),
+    ('v14_nobridge_cal', 'assembly', 'v14 cal no bridge', 'v14, calendar assembly without bridge blocks (seasonal version of v14)', 64, 'cal64nb', True),
     ('v14_ctx', 'context chaining (E2)', 'v14 ctx (E2)', 'v14 + context chaining; partial: 4 chains x 2 y', 64, 'markov64', True),
     ('arima_len24', 'classical baseline', 'AR(24)', 'Gaussian AR(24)', 24, None, True),
     ('arima_len64', 'classical baseline', 'AR(64)', 'Gaussian AR(64)', 64, None, True),
@@ -85,11 +85,6 @@ REGISTRY = [
     ('bartlett_lewis_relaxed', 'classical baseline', 'storm-and-cell (alpha relaxed)', 'as storm-and-cell, alpha allowed down to 0.2 (Onof & Wang 2020)', None, None, True),
     ('bartlett_lewis_relaxed_wet', 'classical baseline', 'storm-and-cell (relaxed, wet fraction)', 'relaxed alpha, objective scores the wet fraction', None, None, True),
     ('bartlett_lewis_relaxed_ivw', 'classical baseline', 'storm-and-cell (relaxed, inverse variance)', 'relaxed alpha, inverse-variance weights (pyBL)', None, None, True),
-    ('v16', 'two-level', 'v16 two-level', 'storm renewal model (2-h gap, 2000-2007) + v14 5-min texture', None, None, True),
-    ('v16_m1', 'two-level', 'v16 seed 1', 'v16, generator seed 1', None, None, True),
-    ('v16_m2', 'two-level', 'v16 seed 2', 'v16, generator seed 2', None, None, True),
-    ('v16_m3', 'two-level', 'v16 seed 3', 'v16, generator seed 3', None, None, True),
-    ('v16_m4', 'two-level', 'v16 seed 4', 'v16, generator seed 4', None, None, True),
 ]
 META = pd.DataFrame(REGISTRY, columns=['name', 'group', 'label', 'change', 'L', 'plan', 'clean']).set_index('name')
 

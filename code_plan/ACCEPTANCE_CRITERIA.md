@@ -175,8 +175,9 @@ much stronger result to report than the statistics alone.
 calendar year from empty tanks, four gauges split from the mean; `scripts/gate_b_sewer.py`,
 results in `results/reference/gate_b_sewer.json`). Total overflow per year under BC, ratio to
 real (2000–2008): **v14 0.62 (FAIL)**: right annual rain, too few deep storms, which is what Tier 6
-now catches. **v16 1.00**, 0.86–1.08 over five generator seeds (pooled 0.95): PASS. CSO event
-count: v14 0.93, v16 0.86–1.03. The other KPIs in the table are not computed yet.
+now catches. CSO event count: v14 0.93. The other KPIs in the table are not computed yet.
+(The two-level generator v16 passed at 1.00 but was dropped on 2026-10-10 because its storms are
+resampled from the record; it survives only as a diagnostic, see the research diary.)
 
 ---
 
