@@ -3,6 +3,40 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 12, 2026 — Code Review of the Strengthening Runs Before Sending
+
+### 🔍 Overview
+Line-by-line check of the code the strengthening runs depend on (`code_plan/STRENGTHENING_RUNS.md`):
+training windows and labels, the known-prefix mask, the delay embedding, `ImagenFew.forward`, the
+loss, chained sampling, the job scripts, the verdict script and `gate_b_kpis.py`.
+
+### 📊 Findings
+| Part | Result |
+| :--- | :--- |
+| Mask → image | 64 steps → 8×8, column *i* = steps 8*i*…8*i*+7, no padding: a prefix of *k* steps is exactly the first *k*/8 columns |
+| Forward pass | known pixels clean, unknown pixels noised at σ; loss on unknown pixels only (fixed earlier today) |
+| Chained sampling | each block's known steps are exactly the previous block's last 16 output steps (no gap or overlap); Heun schedule identical to `DiffusionProcess.impute()` (check 4: difference 0) |
+| Context vs training data | the context is the raw model output, before the 0.005 mm threshold. Measured on 128 v14 blocks: 85.6% of dry steps sit exactly at the dry value, the rest within ±0.003 model units (~10⁻⁴ mm). Negligible; left as is |
+| Dropout | every config says 0.10, what all earlier runs trained with (commit 7625cd7) |
+| Long-storm metric | unbroken wet runs > 64 steps; real 14.25 /yr, 21.4% of rain; matches the plan's targets |
+| `gate_b_kpis.py` | unit conversions, per-year scaling, both KS distances, depth bins and the stress rule correct |
+| **Verdict script, run 5** | **Fixed:** it issued SUCCESS / FAIL from whatever chains had finished; the written rule is the mean of all four. It now waits for four (tested with one and four stand-in chains) |
+
+Not errors, recorded for interpretation: (1) `eval_suite.compute()` recomputes every series whenever
+any CSV is added, and window metrics (classifier AUC) shift by up to ~0.03 when the set of series
+changes; no verdict uses them. (2) "Best" checkpoints are saved only at logging epochs (1, every 25,
+last) and chosen on the noisy training loss; this applies to every version since v8. (3) At high noise
+EDM scales the whole input, known context included, by about 1/σ, so the model sees the context
+clearly only at low-to-mid noise: a design limit of in-channel conditioning, not a bug.
+
+### ✅ Decision
+* No code, maths or logic errors remain in the v17 pipeline after today's two fixes (frequency loss,
+  four-chain rule). All seven code checks pass; a two-batch v17 training run works on CPU.
+* `submit_strengthening.sh` refuses to send while tracked files are uncommitted:
+  `code_plan/PAPER_MISSING_EXPERIMENTS.md` must be committed first.
+
+---
+
 ## October 12, 2026 — Frequency Loss Fixed for Known-Prefix Training (v17)
 
 ### 🔍 Overview

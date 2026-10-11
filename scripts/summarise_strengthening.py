@@ -2,7 +2,7 @@
 """
 summarise_strengthening.py — one verdict per strengthening run (code_plan/STRENGTHENING_RUNS.md),
 using the decision rules written in that plan BEFORE the runs (pre-registered). Reads the
-scores of scripts/eval_suite.py (computing them for any new CSV first, ~1 min per series) and,
+scores of scripts/eval_suite.py (which recomputes every series whenever a CSV is added or changed) and,
 for runs 4 and 7, the result files those runs write. Runs whose outputs do not exist yet are
 reported as "not run yet".
 
@@ -129,8 +129,11 @@ def main():
         if ctrl:
             print(f'control (same model, no context): {ctrl["runs > 5h20 /yr"]:.1f} long runs/yr; the gain is '
                   f'{"from the context" if ctrl["runs > 5h20 /yr"] < 0.5 * long_ else "NOT clearly from the context"}')
-        verdict('SUCCESS: the diffusion model continues storms across blocks.' if all(checks.values()) else
-                'PARTIAL / FAIL on the targets above (report which).')
+        if len(have) < len(members):     # the rule is the mean of all four chains
+            verdict(f'not decidable yet ({len(have)} of {len(members)} chains; the rule is the mean of all four)')
+        else:
+            verdict('SUCCESS: the diffusion model continues storms across blocks.' if all(checks.values()) else
+                    'PARTIAL / FAIL on the targets above (report which).')
     else:
         verdict('not run yet')
     if 'v17_nobridge_cal' in r5 and 'v14_nobridge_cal' in r5:
