@@ -10,14 +10,13 @@
 
 # ==============================================================================
 # Train one model with a production config, then generate its 10-year series the
-# way the scored versions were generated. Used by strengthening runs 2, 3 and 6
+# way the scored versions were generated. Used by strengthening runs 2 and 3
 # (code_plan/STRENGTHENING_RUNS.md):
 #
 #   sbatch -J v14_s1      scripts/submit_retrain.sh v14_s1      config_v14.yaml ImagenFew_64.ckpt 1   # run 2
 #   sbatch -J v14_s2      scripts/submit_retrain.sh v14_s2      config_v14.yaml ImagenFew_64.ckpt 2   # run 2
 #   sbatch -J v10_s1      scripts/submit_retrain.sh v10_s1      config_v10.yaml ImagenFew_64.ckpt 1   # run 2
 #   sbatch -J v14_scratch scripts/submit_retrain.sh v14_scratch config_v14.yaml none              0   # run 3
-#   sbatch -J v18         scripts/submit_retrain.sh v18         config_v18.yaml ImagenFew_64.ckpt 0   # run 6
 #
 # (scripts/submit_strengthening.sh sends all of them.)
 #

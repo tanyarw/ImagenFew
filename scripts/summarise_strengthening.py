@@ -139,18 +139,6 @@ def main():
               f'(compare with the run-2 seed spread)')
 
     print('\n' + '=' * 100)
-    print('RUN 6: sigma_data. Does scaling the data to match EDM help?')
-    r6 = table(c, ['v14', 'v14_s1', 'v14_s2', 'v18'], 'Markov plan')
-    table(c, ['v14_nobridge_cal', 'v18_nobridge_cal'], 'calendar plan, no bridges')
-    if 'v18' in r6 and v14 and v14[2] == 3:
-        s = r6['v18']['Gate A /18']
-        verdict(f'v18 {s}/18 vs v14 seeds {v14[0]}-{v14[1]}: ' +
-                ('BETTER, outside the seed range' if s > v14[1] else 'WORSE, outside the seed range' if s < v14[0]
-                 else 'within training noise: the mismatch does not matter at this budget (report as checked)'))
-    else:
-        verdict('not decidable yet (needs v18 and the three v14 seeds)')
-
-    print('\n' + '=' * 100)
     print('RUN 4: Gate B KPIs (results/reference/gate_b_kpis.json)')
     path = os.path.join(ROOT, 'results', 'reference', 'gate_b_kpis.json')
     if os.path.exists(path):

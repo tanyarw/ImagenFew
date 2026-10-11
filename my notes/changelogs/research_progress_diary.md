@@ -3,6 +3,41 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 12, 2026 — v18 Dropped Before Running
+
+### 🔍 Overview
+v18 (strengthening run 6, `code_plan/STRENGTHENING_RUNS.md`) was v14 with every model-space value
+multiplied by 0.5, so the data's spread matches the 0.5 that EDM's preconditioning and loss weights
+assume (ImagenFew hard-codes it; our standardised data have spread 1; on v14 the weighted loss levels
+off at 4 instead of 1 at high noise). It was set up on Oct 11 and never sent to the cluster. Before
+sending, each planned run was asked three questions: could a likely result change a decision or a
+claim, is an effect big enough to see plausible, and is the cost reasonable?
+
+### 📊 Findings
+| Question | v18 |
+| :--- | :--- |
+| Can it move the main failure? | No. Long storms and the sewer deficit come from independent 5h20 blocks (the window-horizon pilot: a *perfect* 64-step generator also gives 2.0–3.0 long storms per year and 0.57–0.71 of real overflow). Rescaling changes how each noise level is weighted inside a block, nothing across blocks. |
+| Likely effect size | Small: the network learns around a mis-set constant. Telling a few-percent change from run-to-run noise needs several training seeds of both v14 and v18. |
+| Interpretable? | No, as set up. The ImagenFew pretraining datasets (ETTh, ETTm, SWaT, …) were also standardised to spread 1, so the pretrained weights carry the same mismatch as v14. v18 fixes the match to EDM but breaks the match to the pretrained weights (the v18 config claimed the opposite). A difference could come from either. |
+
+### ✅ Decision
+* **Dropped before running.** Removed `regime_training/config_v18.yaml`, the `data_scale` /
+  `ScaledScaler` code in `transforms.py` and `regime_dataset.py` (restored to their pre-v18 state),
+  the `data_scale` lines in `train_regime.py`, the v18 rows in `scripts/eval_suite.py`, and run 6 in
+  `submit_strengthening.sh`, `submit_retrain.sh`, `summarise_strengthening.py` and
+  `check_strengthening_code.py` (all six checks still pass). `STRENGTHENING_RUNS.md` keeps run 6's
+  written rule, struck through, so the plan stays a faithful record of what was written before
+  running.
+* **The mismatch stays a documented limitation** (`code_plan/LOSS_FUNCTION.md` finding 4): known,
+  measured on v14, expected to change noise-level weighting, not storm length.
+* flood-control's policy-level metric-validity pilot (I31) listed v18 as one of its generators; it
+  needs a replacement or does without (flood-control not edited).
+
+**Verdict:** **v18 could not change the thesis's conclusions and could not be read from one run;
+dropped before any cluster time was spent.**
+
+---
+
 ## October 10, 2026 — v16 Dropped: Kept Only as a Diagnostic
 
 ### 🔍 Overview

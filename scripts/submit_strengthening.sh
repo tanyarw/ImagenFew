@@ -12,7 +12,6 @@
 #   run 4  Gate B KPIs      (CPU)                           scripts/submit_gate_b_kpis.sh
 #   run 5  E3               v17 training, then chained      scripts/submit_retrain.sh,
 #                           generation K = 2 and K = 0      scripts/submit_generation_v17_ctx.sh
-#   run 6  sigma_data       v18                             scripts/submit_retrain.sh
 #   run 7  denoising check  training years                  scripts/submit_denoise_diagnostic.sh
 #
 # Refuses to send uncommitted code (every job records the commit it ran; ALLOW_DIRTY=1 to
@@ -32,7 +31,7 @@ for f in models_ckpt/ImagenFew/ImagenFew_64.ckpt logs/ImagenFew/Rainfall_Regime/
          logs/ImagenFew/Rainfall_Regime/aebe363f/best_regime_model.pt logs/ImagenFew/Rainfall_Regime/v13/best_regime_model.pt; do
     [ -f "${f}" ] || { echo "ERROR: ${f} not found"; exit 1; }
 done
-for r in v14_s1 v14_s2 v10_s1 v14_scratch v17 v18; do
+for r in v14_s1 v14_s2 v10_s1 v14_scratch v17; do
     [ ! -e "logs/ImagenFew/Rainfall_Regime/${r}/best_regime_model.pt" ] \
         || { echo "ERROR: logs/ImagenFew/Rainfall_Regime/${r} already holds a model: nothing sent"; exit 1; }
 done
@@ -65,8 +64,6 @@ echo "== run 5: E3 (v17), training then chained generation" >&2
 V17=$(send -J v17 scripts/submit_retrain.sh v17 config_v17.yaml ImagenFew_64.ckpt 0)
 send --dependency=afterok:${V17} scripts/submit_generation_v17_ctx.sh 2 >/dev/null
 send --dependency=afterok:${V17} scripts/submit_generation_v17_ctx.sh 0 >/dev/null
-echo "== run 6: sigma_data (v18)" >&2
-send -J v18 scripts/submit_retrain.sh v18 config_v18.yaml ImagenFew_64.ckpt 0 >/dev/null
 echo "== run 7: denoising check on the training years" >&2
 send scripts/submit_denoise_diagnostic.sh train >/dev/null
 echo "== run 4: Gate B KPIs (CPU, flood-control's .venv)" >&2

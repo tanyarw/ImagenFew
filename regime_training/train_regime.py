@@ -319,10 +319,8 @@ def main():
     # v1–v12; 'asinh' is opt-in from the config (see transforms.py).
     data_transform = getattr(args, "data_transform", "standard")
     asinh_scale = float(getattr(args, "asinh_scale", 0.035))
-    data_scale = float(getattr(args, "data_scale", 1.0))
-    logging.info("Transform : %s%s%s", data_transform,
-                 f" (s = {asinh_scale} mm/5min)" if data_transform == "asinh" else "",
-                 f", then x {data_scale}" if data_scale != 1.0 else "")
+    logging.info("Transform : %s%s", data_transform,
+                 f" (s = {asinh_scale} mm/5min)" if data_transform == "asinh" else "")
 
     prefix_prob, prefix_steps = known_prefix_settings(args)
     if prefix_steps is not None:
@@ -333,7 +331,7 @@ def main():
         train_csv, seq_len=args.seq_len,
         regime_col=getattr(args, "regime_col", "gmm_regime"),
         data_col=getattr(args, "data_col", "avg_rainfall"),
-        transform=data_transform, asinh_scale=asinh_scale, data_scale=data_scale,
+        transform=data_transform, asinh_scale=asinh_scale,
     )
     test_ds = RegimeDataset(
         test_csv, seq_len=args.seq_len,
@@ -396,7 +394,7 @@ def main():
             "run_id": args.run_id, "config": cli.config, "model_ckpt": args.model_ckpt,
             "pretrained": str(args.model_ckpt).lower() != "none", "seed": args.seed,
             "epochs": args.epochs, "batch_size": args.batch_size, "learning_rate": args.learning_rate,
-            "data_transform": data_transform, "asinh_scale": asinh_scale, "data_scale": data_scale,
+            "data_transform": data_transform, "asinh_scale": asinh_scale,
             "known_prefix_prob": prefix_prob,
             "known_prefix_steps": None if prefix_steps is None else prefix_steps.tolist(),
             "limit_batches": args.limit_batches, "git_commit": commit, "git_dirty": dirty,

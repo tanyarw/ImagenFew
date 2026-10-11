@@ -7,8 +7,7 @@ runs (code_plan/STRENGTHENING_RUNS.md). Run before submitting, on the cluster or
 
 Each check proves one claim the runs rely on, and exits non-zero on the first failure:
 
-  1. make_scaler() without data_scale builds exactly the scaler it built before (v14 unchanged);
-     data_scale = 0.5 halves model-space values, inverts exactly and survives pickling (v18).
+  1. make_scaler() builds the scalers v10-v14 were trained with (the transforms are unchanged).
   2. The known-prefix mask (E3) marks exactly the first k steps, and with delay = embedding = 8
      those steps are exactly the first k / 8 image columns; prob 0 gives an all-zero mask
      (every earlier run's training is unchanged).
@@ -43,7 +42,7 @@ from models.ImagenFew.sampler import DiffusionProcess  # noqa: E402
 from regime_training.generate_context import sample_block  # noqa: E402
 from regime_training.train_regime import (known_prefix_mask, known_prefix_settings,  # noqa: E402
                                           load_checkpoint_safe, seed_everything)
-from regime_training.transforms import AsinhScaler, ScaledScaler, make_scaler  # noqa: E402
+from regime_training.transforms import AsinhScaler, make_scaler  # noqa: E402
 
 V14 = os.path.join(ROOT, 'logs', 'ImagenFew', 'Rainfall_Regime', 'v14', 'best_regime_model.pt')
 
@@ -63,19 +62,7 @@ def check_scalers():
     print('1. transforms', flush=True)
     assert type(make_scaler('asinh', 0.035)) is AsinhScaler
     assert type(make_scaler('standard')) is StandardScaler
-    assert type(make_scaler('asinh', 0.035, 1.0)) is AsinhScaler
-    x = pd.read_csv(os.path.join(ROOT, 'data/rainfall/splits/train_years_labelled.csv'),
-                    usecols=['avg_rainfall'], nrows=200_000)['avg_rainfall'].to_numpy().reshape(-1, 1)
-    base = make_scaler('asinh', 0.035).fit(x)
-    scaled = make_scaler('asinh', 0.035, 0.5).fit(x)
-    assert isinstance(scaled, ScaledScaler)
-    np.testing.assert_allclose(scaled.transform(x), 0.5 * base.transform(x), rtol=1e-6, atol=1e-7)
-    z = scaled.transform(x)
-    assert abs(z.std() - 0.5) < 1e-3, z.std()
-    np.testing.assert_allclose(scaled.inverse_transform(z), x, rtol=1e-4, atol=1e-6)
-    again = pickle.loads(pickle.dumps(scaled))
-    np.testing.assert_array_equal(again.transform(x), z)
-    ok(f'default scalers unchanged; data_scale 0.5 -> std {z.std():.4f}, inverts, pickles')
+    ok('default scalers unchanged')
 
 
 def check_masks(model, args):

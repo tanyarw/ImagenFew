@@ -22,8 +22,8 @@ The perfect 24-step generator gives 0.50 of real overflow (v8: 0.48). Lengthenin
 raises it: 12 h 0.81, 1 day 0.94. A continuation version (each window matched to the last
 80–160 min generated) brings long storms back (16.5–21 /yr). Two consequences frame the runs:
 
-1. **Changes inside the 64-step window cannot move the long-scale or sewer numbers.** Runs 2,
-   3 and 6 change only how a window is learned, so they test this prediction.
+1. **Changes inside the 64-step window cannot move the long-scale or sewer numbers.** Runs 2
+   and 3 change only how a window is learned, so they test this prediction.
 2. **A model trained to continue from 80 min of context can, in principle, reach the real
    storm structure.** Run 5 (E3) tests whether the diffusion model learns to.
 
@@ -41,7 +41,7 @@ reach it.
 | 3 | No pretraining | `v14_scratch` | random initial weights (`--model_ckpt none`) |
 | 4 | Gate B KPIs | `submit_gate_b_kpis.sh` (CPU) | none: sewer KPIs for real, v14 and the baselines |
 | 5 | E3, trained continuation | `v17`, then chained generation K = 2 and K = 0 | 75% of windows get a clean known prefix of 8/16/24/32 steps |
-| 6 | sigma_data | `v18` | data × 0.5, so its std matches EDM's sigma_data = 0.5 |
+| 6 | ~~sigma_data~~ **dropped 2026-10-12, before running** | ~~`v18`~~ | data × 0.5, so its std matches EDM's sigma_data = 0.5 |
 | 7 | Denoising check | `submit_denoise_diagnostic.sh train` | none: denoising error on the training years |
 
 Every retrain also generates the two standard 10-year series with plan seed 42 (Markov with
@@ -60,14 +60,18 @@ bridges, and calendar without), so only the trained weights differ from v14's ro
   0.95–1.05 of real, wet spell 0.90–1.10. The gain counts as coming from the context only if
   the K = 0 control (`v17_ctx0_cal`) has under half the chained long-run rate. Side check:
   `v17_nobridge_cal` against the run-2 seed spread (did mask training harm ordinary blocks?).
-* **Run 6.** v18 is BETTER / WORSE only outside the v14 seed range on Gate A; otherwise the
-  mismatch does not matter at this budget.
+* **Run 6 (dropped 2026-10-12, before running; research diary "v18 Dropped").** Written rule, kept
+  for the record: v18 is BETTER / WORSE only outside the v14 seed range on Gate A; otherwise the
+  mismatch does not matter at this budget. Dropped because by point 1 it cannot move the
+  long-scale or sewer numbers, its likely effect is small enough to need several seeds of each
+  model, and its result would be confounded: the ImagenFew pretraining data were also
+  standardised to spread 1, so v18 matches EDM but departs from the pretrained weights.
 
 ## Pre-registered sewer predictions (from the pilot)
 
 Run the sewer check (`scripts/gate_b_sewer.py`, BC) on each new calendar series once it exists:
 
-* **Runs 2, 3, 6** (`v14_s1/_s2`, `v14_scratch`, `v18`, calendar no-bridge series): overflow
+* **Runs 2, 3** (`v14_s1/_s2`, `v14_scratch`, calendar no-bridge series): overflow
   **0.55–0.70** of real, inside the perfect 64-step generator's range. A run outside it
   would falsify "the window sets the sewer number".
 * **Run 5 chained** (`v17_ctx_cal` and members): if the model learns to continue, overflow

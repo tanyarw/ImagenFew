@@ -101,8 +101,6 @@ REGISTRY = [
     ('v17_ctx_cal_m2', 'E3 known prefix', 'v17 chained m2', 'v17 chained, chain 2', 64, None, True),
     ('v17_ctx_cal_m3', 'E3 known prefix', 'v17 chained m3', 'v17 chained, chain 3', 64, None, True),
     ('v17_ctx0_cal', 'E3 known prefix', 'v17 unchained', 'v17 through the chained code with no context (control)', 64, None, True),
-    ('v18', 'sigma_data', 'v18 data x0.5', 'v14 with data scaled to std 0.5 = EDM sigma_data', 64, 'markov64', True),
-    ('v18_nobridge_cal', 'sigma_data', 'v18 cal', 'v18, calendar, no bridges', 64, 'cal64', True),
 ]
 META = pd.DataFrame(REGISTRY, columns=['name', 'group', 'label', 'change', 'L', 'plan', 'clean']).set_index('name')
 
