@@ -245,6 +245,24 @@ def intensity_weights(x_img, alpha, gamma, normalize=True):
 # Evaluation helper
 # ──────────────────────────────────────────────────────────────────────
 
+def denoising_loss(output, x_img, x_img_mask, weight, w_int, fft_weight):
+    """Training loss, scored on the unknown pixels only. Returns (loss, time term, FFT term).
+
+    signal = 1 - mask marks the pixels the model must produce (all of them unless a known
+    prefix is given, E3). The time term is masked pixel by pixel. The FFT term is taken of
+    the error with the known pixels zeroed BEFORE the transform: every frequency mixes all
+    64 steps, so masking frequency bins with a pixel mask (the code until 2026-10-12) let
+    errors on known pixels into the loss and dropped arbitrary bins. With nothing known
+    (every run before v17) both forms are identical. By Parseval the FFT term is then
+    exactly the masked time MSE / 64 (code_plan/LOSS_FUNCTION.md section 3.1).
+    """
+    signal = 1 - x_img_mask
+    time_loss = (output - x_img).square() * signal
+    fft_loss = torch.fft.fft2((output - x_img) * signal, norm='forward').abs().square()
+    loss = (weight * (w_int * time_loss + fft_weight * fft_loss)).mean()
+    return loss, (weight * time_loss).mean(), (weight * fft_loss).mean()
+
+
 @torch.no_grad()
 def evaluate_regime(model, args, regime, n_samples=100, channels=1):
     """Generate a small batch for a single regime and return basic stats."""
@@ -468,22 +486,13 @@ def main():
             # Forward (EDM denoising)
             output, weight = model(x_img, x_img_mask, labels=labels)
 
-            # Weighted MSE + FFT loss on the signal region only
-            fft_x = torch.fft.fft2(x_img, norm='forward')
-            fft_output = torch.fft.fft2(output, norm='forward')
-            fft_loss = (
-                (torch.real(fft_output) - torch.real(fft_x)).square()
-                + (torch.imag(fft_output) - torch.imag(fft_x)).square()
-            )
-            time_loss = (output - x_img).square()
-
             # Heavy-tail reweighting applies to the TIME term only. The FFT
             # term lives in frequency space, where a per-pixel intensity
             # weight has no meaningful counterpart.
             w_int = intensity_weights(x_img, tail_alpha, tail_gamma, tail_normalize)
 
-            signal = 1 - x_img_mask
-            loss = (weight * (w_int * time_loss + fft_weight * fft_loss) * signal).mean()
+            # Weighted MSE + FFT loss on the unknown pixels only (see denoising_loss)
+            loss, time_term, fft_term = denoising_loss(output, x_img, x_img_mask, weight, w_int, fft_weight)
 
             loss.backward()
             grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
@@ -491,8 +500,8 @@ def main():
             model.on_train_batch_end()          # EMA update
 
             epoch_losses.append(loss.item())
-            epoch_time_losses.append((weight * time_loss * signal).mean().item())
-            epoch_fft_losses.append((weight * fft_loss * signal).mean().item())
+            epoch_time_losses.append(time_term.item())
+            epoch_fft_losses.append(fft_term.item())
             epoch_grad_norms.append(float(grad_norm))
             epoch_clip_frac.append(1.0 if float(grad_norm) > grad_clip else 0.0)
 

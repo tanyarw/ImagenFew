@@ -3,6 +3,39 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 12, 2026 — Frequency Loss Fixed for Known-Prefix Training (v17)
+
+### 🔍 Overview
+Review of v17's training before sending it. The loss has a time term and a frequency (FFT) term.
+For v17 the FFT term transformed the whole predicted and real image, known prefix included, then
+multiplied the frequency bins by the pixel mask (`signal = 1 - mask`). Every frequency mixes all 64
+steps, so that mask means nothing in frequency space: errors on the known pixels leaked into the loss
+and arbitrary bins were dropped.
+
+### 📊 Findings
+| Test (random images, first 3 columns = 24 steps known) | old code | fixed |
+| :--- | :---: | :---: |
+| FFT term | 0.00103 | 0.00107 (= masked time term / 64) |
+| After changing ONLY the known pixels of the output | 0.05153 (moves ~50×) | 0.00107 (unchanged) |
+| Nothing known (every run v1–v15) | 0.0016680 | 0.0016680 (identical) |
+| v17 smoke run, 2 batches, CPU: time / FFT term | 0.8971 / 0.0117 | 0.8970 / 0.0140 (= 0.897 / 64) |
+
+### ✅ Decision
+* **Fix:** `denoising_loss()` in `regime_training/train_regime.py` zeroes the error on known pixels
+  *before* the transform (`fft2((output - x_img) * signal)`) and masks only the time term; the
+  epoch logs use the same terms. Earlier runs train exactly as before; v17 still differs from v14
+  only in its known prefixes.
+* **New check 7** in `scripts/check_strengthening_code.py`: same loss as before with nothing known;
+  changing the known pixels neither moves the loss nor receives gradient; FFT term = time term / 64.
+  The first version of the fix had a misplaced `@torch.no_grad()` (it sat on the new function, so the
+  loss carried no gradient); the two-batch smoke run caught it, and check 7 now asserts gradients flow.
+* By Parseval the FFT term adds nothing but 1/64 extra weight on the ordinary error (as found in the
+  Sept 1 audit). It is kept, fixed, so v17 changes one thing only.
+
+**Verdict:** **v17's loss now scores only what the model has to produce.**
+
+---
+
 ## October 12, 2026 — v18 Dropped Before Running
 
 ### 🔍 Overview

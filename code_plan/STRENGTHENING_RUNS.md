@@ -3,8 +3,8 @@
 **Written:** 2026-10-11, before any of these runs started (the decision rules below are
 pre-registered). **Send:** `scripts/submit_strengthening.sh` (`--dry-run` first).
 **Verdicts:** `python scripts/summarise_strengthening.py` applies the rules below to whatever
-has finished. **Code checks:** `scripts/check_strengthening_code.py` (six checks; all passed
-on 2026-10-11).
+has finished. **Code checks:** `scripts/check_strengthening_code.py` (seven checks; all passed
+on 2026-10-12; check 7, the loss fix, added that day).
 
 ## Why these runs
 

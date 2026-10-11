@@ -19,6 +19,9 @@ Each check proves one claim the runs rely on, and exits non-zero on the first fa
   5. train_regime.load_checkpoint_safe: 'none' keeps the random init; a mistyped path is an
      error, not a silent from-scratch run.
   6. Seeding: two seeded mask draws are identical.
+  7. The training loss ignores known pixels: with nothing known it equals the loss every
+     earlier run trained with; with a known prefix, changing the output on the known pixels
+     does not move it; and its FFT term is the masked time term / 64 (Parseval).
 
 Uses the v14 checkpoint for checks 3-4 if it is present, random weights otherwise (the
 identities hold for any weights).
@@ -40,8 +43,8 @@ sys.path.insert(0, ROOT)
 from models.ImagenFew.ImagenFew import ImagenFew  # noqa: E402
 from models.ImagenFew.sampler import DiffusionProcess  # noqa: E402
 from regime_training.generate_context import sample_block  # noqa: E402
-from regime_training.train_regime import (known_prefix_mask, known_prefix_settings,  # noqa: E402
-                                          load_checkpoint_safe, seed_everything)
+from regime_training.train_regime import (denoising_loss, known_prefix_mask,  # noqa: E402
+                                          known_prefix_settings, load_checkpoint_safe, seed_everything)
 from regime_training.transforms import AsinhScaler, make_scaler  # noqa: E402
 
 V14 = os.path.join(ROOT, 'logs', 'ImagenFew', 'Rainfall_Regime', 'v14', 'best_regime_model.pt')
@@ -181,6 +184,36 @@ def check_seeding():
     ok('same seed, same masks and same data order')
 
 
+def check_loss():
+    print('7. training loss on unknown pixels only', flush=True)
+    g = torch.Generator().manual_seed(0)
+    x = torch.randn(64, 1, 8, 8, generator=g)
+    out = x + 0.3 * torch.randn(x.shape, generator=g)
+    weight = torch.rand(64, 1, 1, 1, generator=g) + 0.5
+    w_int = torch.ones_like(x)
+    # nothing known: identical to the loss v1-v15 trained with (FFT of each image, then subtract)
+    none = torch.zeros_like(x)
+    old_fft = (torch.fft.fft2(out, norm='forward') - torch.fft.fft2(x, norm='forward')).abs().square()
+    old = (weight * ((out - x).square() + old_fft)).mean()
+    new, _, _ = denoising_loss(out, x, none, weight, w_int, 1.0)
+    torch.testing.assert_close(new, old, rtol=1e-5, atol=1e-8)
+    # first 3 columns (24 steps) known: the output there must not matter
+    known = torch.zeros_like(x)
+    known[..., :, :3] = 1
+    a, t_a, f_a = denoising_loss(out, x, known, weight, w_int, 1.0)
+    out2 = out + 5.0 * known
+    b, _, _ = denoising_loss(out2, x, known, weight, w_int, 1.0)
+    torch.testing.assert_close(a, b, rtol=0, atol=0)
+    torch.testing.assert_close(f_a, t_a / 64, rtol=1e-5, atol=1e-9)
+    # gradients reach the output, and only through the unknown pixels
+    out_g = out.clone().requires_grad_(True)
+    loss_g, _, _ = denoising_loss(out_g, x, known, weight, w_int, 1.0)
+    assert loss_g.requires_grad, 'the loss carries no gradient'
+    loss_g.backward()
+    assert out_g.grad[known.bool()].abs().max() == 0 and out_g.grad[~known.bool()].abs().max() > 0
+    ok('nothing known: same loss as before; known pixels do not move it or get gradient; FFT term = time term / 64')
+
+
 def main():
     torch.set_num_threads(max(1, (os.cpu_count() or 2) // 2))
     check_scalers()
@@ -194,6 +227,7 @@ def main():
     check_sampler(model, args)
     check_checkpoint_loading(build('config_v14.yaml')[1])
     check_seeding()
+    check_loss()
     print('all checks passed')
 
 
