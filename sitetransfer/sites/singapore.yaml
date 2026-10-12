@@ -1,0 +1,48 @@
+# Singapore: the transfer site. Hand-written choices live here; every data-derived value is computed by
+# `python -m sitetransfer derive --site singapore` and written to <results_dir>/derived.json (never typed).
+# Plan: code_plan/SINGAPORE_TRANSFER_PLAN.md (sections 4 and 5).
+name: singapore
+description: Mean of four nearby national-network tipping-bucket gauges (0.2 mm), Singapore local time
+
+ingest:
+  raw_pattern: data/singapore/raw/HistoricalRainfallacrossSingapore{year}.csv
+  years: [2017, 2024]
+  gauge_resolution_mm: 0.2
+  usable_stations:
+    min_completeness: 0.85          # share of the year's 5-minute slots with a reading
+    exempt_years: [2018]            # network-wide outage year (16% of slots empty)
+    min_resolution_share: 0.99      # share of non-zero readings that are multiples of 0.2 mm, every year
+  cluster_size: 4                   # the most compact set of usable stations (smallest largest distance)
+  fill:
+    idw_power: 2
+    max_neighbours: 4
+    radius_km: 10.0
+    max_time_gap_steps: 12          # network gaps up to 1 hour are interpolated in time; longer = outage
+
+series:
+  csv: data/singapore/processed/cluster4.csv
+  date_col: date
+  value_col: avg_rainfall
+  outage_col: outage
+  first_year: 2017
+
+years:
+  train: [2017, 2022]
+  val: [2023, 2023]
+  test: [2024, 2024]
+  heldout: [2023, 2024]
+
+reference_rule:
+  max_outage_share: 0.05            # a training year joins the evaluation reference only below this
+
+splits_dir: data/singapore/splits
+transition_bundle: data/singapore/splits/seasonal_transition_matrix_train_len64.pkl
+
+series_to_score:
+  v14: results/generated_data/singapore/rainfall_synthetic_10y_sg_v14_nobridge_cal.csv
+  lgar: results/generated_data/singapore/rainfall_synthetic_10y_sg_lgar_occ_len64.csv
+
+results_dir: results/transfer/singapore
+
+expect:
+  diurnal_peak_hour: [14, 16]       # afternoon convection; a peak near 07:00 would mean a UTC slip

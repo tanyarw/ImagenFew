@@ -1,0 +1,2 @@
+# Large regenerable arrays stay out of git; JSON records, evaluations and verdicts are tracked.
+*.npy

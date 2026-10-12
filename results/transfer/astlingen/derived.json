@@ -1,0 +1,50 @@
+{
+ "params": {
+  "wet_threshold_mm": 0.005,
+  "asinh_scale_mm": 0.035,
+  "storm_depth_mm": 10.025000000002365,
+  "reference_years": [
+   2000,
+   2001,
+   2002,
+   2003,
+   2004,
+   2005,
+   2006,
+   2007
+  ]
+ },
+ "facts": {
+  "resolution_mm": 0.0025,
+  "home_deep_storm_share": 0.04106910039113429,
+  "outage_share_by_year": {
+   "2000": 0.0,
+   "2001": 0.0,
+   "2002": 0.0,
+   "2003": 0.0,
+   "2004": 0.0,
+   "2005": 0.0,
+   "2006": 0.0,
+   "2007": 0.0,
+   "2008": 0.0,
+   "2009": 0.0
+  },
+  "training_years": [
+   2000,
+   2001,
+   2002,
+   2003,
+   2004,
+   2005,
+   2006,
+   2007
+  ],
+  "storms_per_year_reference": 383.5
+ },
+ "rules": "sitetransfer/rules.py (wet_threshold, asinh_scale, storm_depth_threshold, reference_years)",
+ "invariant_1": {
+  "wet_threshold_mm": true,
+  "asinh_scale_mm": true,
+  "storm_depth_classification": true
+ }
+}

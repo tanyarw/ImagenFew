@@ -1,0 +1,46 @@
+{
+ "command": "baseline",
+ "site": "singapore",
+ "params": {
+  "model": "occurrence-matched latent Gaussian AR",
+  "p": 64,
+  "years": 10,
+  "seed": 42
+ },
+ "argv": [
+  "/Users/tanyawarrier/Desktop/projects/ImagenFew/sitetransfer/__main__.py",
+  "baseline",
+  "--site",
+  "singapore"
+ ],
+ "git": {
+  "commit": "0c7da5c8f1604d18db5dac37637e7ef03c72eb5e",
+  "branch": "use-asinh",
+  "dirty": true,
+  "diff_sha256": "cc8518d15a034de2af3ef2b2079fac80daebf780f6bd641ebb96d0ffc3fc84ac"
+ },
+ "host": "Tanyas-MacBook-Air.local",
+ "slurm_job_id": null,
+ "started": "2026-10-12T13:27:51",
+ "inputs": {},
+ "outputs": {
+  "results/generated_data/singapore/rainfall_synthetic_10y_sg_lgar_occ_len64.csv": "3e25de796a15c542e2d6124927a95bd9f1db33acdb5aa5738ce848ee892977e8",
+  "results/transfer/singapore/lgar_model_card.json": "ad49ff2a058574cb47937ff74e5bfd6db3635ea9345dd8b29aa84726ab564107"
+ },
+ "results": {
+  "generated_zero_pct": 94.8193493150685,
+  "generated_mm_per_year": 2409.944998100001,
+  "toeplitz_min_eigenvalue": 0.021432666120304887
+ },
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "sklearn": "1.7.2",
+  "hmmlearn": "0.3.3",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-12T13:27:52",
+ "status": "ok"
+}

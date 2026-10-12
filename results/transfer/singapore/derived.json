@@ -1,0 +1,38 @@
+{
+ "params": {
+  "wet_threshold_mm": 0.05,
+  "asinh_scale_mm": 0.15,
+  "storm_depth_mm": 36.4499979999855,
+  "reference_years": [
+   2017,
+   2019,
+   2020,
+   2021,
+   2022
+  ]
+ },
+ "facts": {
+  "resolution_mm": 0.05,
+  "home_deep_storm_share": 0.04106910039113429,
+  "outage_share_by_year": {
+   "2017": 0.005755327245053272,
+   "2018": 0.12653158295281583,
+   "2019": 0.036929223744292236,
+   "2020": 0.03728120243531202,
+   "2021": 0.012585616438356165,
+   "2022": 0.001113013698630137,
+   "2023": 0.02894786910197869,
+   "2024": 0.002530441400304414
+  },
+  "training_years": [
+   2017,
+   2018,
+   2019,
+   2020,
+   2021,
+   2022
+  ],
+  "storms_per_year_reference": 354.8
+ },
+ "rules": "sitetransfer/rules.py (wet_threshold, asinh_scale, storm_depth_threshold, reference_years)"
+}

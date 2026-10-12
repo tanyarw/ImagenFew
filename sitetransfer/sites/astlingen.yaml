@@ -1,0 +1,35 @@
+# Astlingen: the home site. Everything here describes the EXISTING pipeline; nothing is re-fitted.
+# The rules in sitetransfer/rules.py must reproduce the `frozen` values from this site's data
+# (invariant 1, checked by `python -m sitetransfer derive --site astlingen`).
+name: astlingen
+description: Mean of the four Erftverband gauges read by SWMM-Astlingen (data/rainfall/real_rainfall_data.csv)
+
+series:
+  csv: data/rainfall/real_rainfall_data.csv
+  date_col: date
+  value_col: avg_rainfall
+  outage_col: null              # the record has no gaps
+  first_year: 2000
+
+years:
+  train: [2000, 2007]
+  val: [2008, 2008]
+  test: [2009, 2009]
+  heldout: [2008, 2009]         # scored as if they were a generator (calibration)
+
+splits_dir: data/rainfall/splits
+transition_bundle: data/rainfall/splits/seasonal_transition_matrix_train_len64.pkl
+
+# The values the existing pipeline uses. The evaluation of this site uses exactly these.
+frozen:
+  wet_threshold_mm: 0.005       # gate_a_scorecard.WET_THR, eval_suite.WET
+  asinh_scale_mm: 0.035         # regime_training/config_v14.yaml
+  storm_depth_mm: 10.0          # eval_suite Tier 6 S1
+  reference_years: [2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007]
+
+# Series scored by the transfer evaluation at this site (paths relative to the repository root).
+series_to_score:
+  v14: results/generated_data/rainfall_synthetic_10y_v14_nobridge_cal.csv
+  lgar: results/generated_data/rainfall_synthetic_10y_arima_copula_occ_len64.csv
+
+results_dir: results/transfer/astlingen

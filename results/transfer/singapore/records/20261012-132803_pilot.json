@@ -1,0 +1,66 @@
+{
+ "command": "pilot",
+ "site": "singapore",
+ "params": {
+  "variants": {
+   "w64": {
+    "window": 64,
+    "match_time_of_day": true
+   },
+   "w64_anytime": {
+    "window": 64,
+    "match_time_of_day": false
+   },
+   "w288": {
+    "window": 288,
+    "match_time_of_day": true
+   }
+  },
+  "seeds": [
+   0,
+   1,
+   2
+  ],
+  "years": 10
+ },
+ "argv": [
+  "/Users/tanyawarrier/Desktop/projects/ImagenFew/sitetransfer/__main__.py",
+  "pilot",
+  "--site",
+  "singapore"
+ ],
+ "git": {
+  "commit": "0c7da5c8f1604d18db5dac37637e7ef03c72eb5e",
+  "branch": "use-asinh",
+  "dirty": true,
+  "diff_sha256": "cc8518d15a034de2af3ef2b2079fac80daebf780f6bd641ebb96d0ffc3fc84ac"
+ },
+ "host": "Tanyas-MacBook-Air.local",
+ "slurm_job_id": null,
+ "started": "2026-10-12T13:28:04",
+ "inputs": {},
+ "outputs": {
+  "results/transfer/singapore/pilot/w64_s0.npy": "b25be91057ddca441645d4250ce7e7e761dfa293dd8339b678476bdb4797ea21",
+  "results/transfer/singapore/pilot/w64_s1.npy": "86e710abf3874af9fdcccc52798d1d5c7c742beae7074a70b376af2c61bc8773",
+  "results/transfer/singapore/pilot/w64_s2.npy": "768278786e24bacc87909403546501459e2917665e101bc9aec46ab4abeca151",
+  "results/transfer/singapore/pilot/w64_anytime_s0.npy": "a10751a48d24a798006349f4985e52b5141e61999ed1806657deabfa1843988c",
+  "results/transfer/singapore/pilot/w64_anytime_s1.npy": "ecd11449dac2c33d87c25bd4b62370862b1c055865edeed568f482170d581081",
+  "results/transfer/singapore/pilot/w64_anytime_s2.npy": "fc563ab2cbdd4e35dc8908a4a86a81d5fc02aea1bbf830070ad100ab242f9aa9",
+  "results/transfer/singapore/pilot/w288_s0.npy": "d4bf533010406fdfd9b2af0bb9af8b081b7930c032a576dc3215314d6629a761",
+  "results/transfer/singapore/pilot/w288_s1.npy": "98211e661f8fadcdd4643f09e3545580806ad0f700e2faa55e91df418a926ad1",
+  "results/transfer/singapore/pilot/w288_s2.npy": "48d85aadf5818cfb49365b5a3081d9e160ef06e36b24eb088f790f40b9cd7bb7",
+  "results/transfer/singapore/pilot.json": "94f8b1aa905eca7c3d7f7e120dd7a85fc283102467e09532360326d13cb6e225"
+ },
+ "results": {},
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "sklearn": "1.7.2",
+  "hmmlearn": "0.3.3",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-12T13:29:12",
+ "status": "ok"
+}

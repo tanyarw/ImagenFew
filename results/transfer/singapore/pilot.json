@@ -1,0 +1,240 @@
+{
+ "w64": {
+  "per_seed": [
+   {
+    "volume_mm_yr": 2313.2399993,
+    "long_storms_yr": 0.1,
+    "long_storm_rain_pct": 0.30930642744225184,
+    "storms_ge_depth_yr": 11.1,
+    "rain_in_320min_pct": 14.805208244866964,
+    "top_storm_mm": 77.01250008332659,
+    "var_scaling_rmse": 0.09365413422576806,
+    "w1_daily": 0.641150683561643,
+    "diurnal_r": 0.9811467105086419,
+    "diurnal_peak_trough": 8.070751708780705,
+    "monthly_r": 0.849164672262395,
+    "fallbacks": 0,
+    "candidates": 514046
+   },
+   {
+    "volume_mm_yr": 2295.9849983,
+    "long_storms_yr": 0.1,
+    "long_storm_rain_pct": 0.13959150440325416,
+    "storms_ge_depth_yr": 9.6,
+    "rain_in_320min_pct": 14.624660036914278,
+    "top_storm_mm": 78.13333358333,
+    "var_scaling_rmse": 0.11671747992002827,
+    "w1_daily": 0.757356164657534,
+    "diurnal_r": 0.9859777605220681,
+    "diurnal_peak_trough": 9.427676531610832,
+    "monthly_r": 0.9462892235578073,
+    "fallbacks": 0,
+    "candidates": 514046
+   },
+   {
+    "volume_mm_yr": 2352.0099955,
+    "long_storms_yr": 0.2,
+    "long_storm_rain_pct": 0.39115479175692136,
+    "storms_ge_depth_yr": 10.5,
+    "rain_in_320min_pct": 15.610902985208869,
+    "top_storm_mm": 76.01249866666456,
+    "var_scaling_rmse": 0.07589810045946412,
+    "w1_daily": 0.586547950410958,
+    "diurnal_r": 0.9855098737680071,
+    "diurnal_peak_trough": 8.862898705560546,
+    "monthly_r": 0.8866356432947383,
+    "fallbacks": 0,
+    "candidates": 514046
+   }
+  ],
+  "min": {
+   "volume_mm_yr": 2295.9849983,
+   "long_storms_yr": 0.1,
+   "long_storm_rain_pct": 0.13959150440325416,
+   "storms_ge_depth_yr": 9.6,
+   "rain_in_320min_pct": 14.624660036914278,
+   "top_storm_mm": 76.01249866666456,
+   "var_scaling_rmse": 0.07589810045946412,
+   "w1_daily": 0.586547950410958,
+   "diurnal_r": 0.9811467105086419,
+   "diurnal_peak_trough": 8.070751708780705,
+   "monthly_r": 0.849164672262395
+  },
+  "max": {
+   "volume_mm_yr": 2352.0099955,
+   "long_storms_yr": 0.2,
+   "long_storm_rain_pct": 0.39115479175692136,
+   "storms_ge_depth_yr": 11.1,
+   "rain_in_320min_pct": 15.610902985208869,
+   "top_storm_mm": 78.13333358333,
+   "var_scaling_rmse": 0.11671747992002827,
+   "w1_daily": 0.757356164657534,
+   "diurnal_r": 0.9859777605220681,
+   "diurnal_peak_trough": 9.427676531610832,
+   "monthly_r": 0.9462892235578073
+  }
+ },
+ "w64_anytime": {
+  "per_seed": [
+   {
+    "volume_mm_yr": 2410.7949991999994,
+    "long_storms_yr": 0.4,
+    "long_storm_rain_pct": 0.6371342235692821,
+    "storms_ge_depth_yr": 12.3,
+    "rain_in_320min_pct": 13.657113060594947,
+    "top_storm_mm": 80.03333266666353,
+    "var_scaling_rmse": 0.06390213562002492,
+    "w1_daily": 0.3982602816438361,
+    "diurnal_r": -0.0953301309364222,
+    "diurnal_peak_trough": 1.545216512447732,
+    "monthly_r": 0.9155234142244484,
+    "fallbacks": 0,
+    "candidates": 514046
+   },
+   {
+    "volume_mm_yr": 2383.574998,
+    "long_storms_yr": 0.1,
+    "long_storm_rain_pct": 0.3188487799367326,
+    "storms_ge_depth_yr": 10.1,
+    "rain_in_320min_pct": 13.853770041932986,
+    "top_storm_mm": 79.6750004166656,
+    "var_scaling_rmse": 0.06819135417663325,
+    "w1_daily": 0.46535616876712266,
+    "diurnal_r": -0.3181169082366638,
+    "diurnal_peak_trough": 1.3794300328827132,
+    "monthly_r": 0.8469181339604731,
+    "fallbacks": 0,
+    "candidates": 514046
+   },
+   {
+    "volume_mm_yr": 2399.379996500002,
+    "long_storms_yr": 0.1,
+    "long_storm_rain_pct": 0.26548524240812116,
+    "storms_ge_depth_yr": 12.4,
+    "rain_in_320min_pct": 12.983354006216635,
+    "top_storm_mm": 80.78333249999747,
+    "var_scaling_rmse": 0.05788801797405954,
+    "w1_daily": 0.46128767150684874,
+    "diurnal_r": -0.45120757010067114,
+    "diurnal_peak_trough": 1.2971097040183508,
+    "monthly_r": 0.8246541212975148,
+    "fallbacks": 0,
+    "candidates": 514046
+   }
+  ],
+  "min": {
+   "volume_mm_yr": 2383.574998,
+   "long_storms_yr": 0.1,
+   "long_storm_rain_pct": 0.26548524240812116,
+   "storms_ge_depth_yr": 10.1,
+   "rain_in_320min_pct": 12.983354006216635,
+   "top_storm_mm": 79.6750004166656,
+   "var_scaling_rmse": 0.05788801797405954,
+   "w1_daily": 0.3982602816438361,
+   "diurnal_r": -0.45120757010067114,
+   "diurnal_peak_trough": 1.2971097040183508,
+   "monthly_r": 0.8246541212975148
+  },
+  "max": {
+   "volume_mm_yr": 2410.7949991999994,
+   "long_storms_yr": 0.4,
+   "long_storm_rain_pct": 0.6371342235692821,
+   "storms_ge_depth_yr": 12.4,
+   "rain_in_320min_pct": 13.853770041932986,
+   "top_storm_mm": 80.78333249999747,
+   "var_scaling_rmse": 0.06819135417663325,
+   "w1_daily": 0.46535616876712266,
+   "diurnal_r": -0.0953301309364222,
+   "diurnal_peak_trough": 1.545216512447732,
+   "monthly_r": 0.9155234142244484
+  }
+ },
+ "w288": {
+  "per_seed": [
+   {
+    "volume_mm_yr": 2652.5299974000004,
+    "long_storms_yr": 3.4,
+    "long_storm_rain_pct": 5.785042972196774,
+    "storms_ge_depth_yr": 18.0,
+    "rain_in_320min_pct": 41.065699391429604,
+    "top_storm_mm": 107.27500074999841,
+    "var_scaling_rmse": 0.06942831814251398,
+    "w1_daily": 0.8269041068493147,
+    "diurnal_r": 0.9922367961785101,
+    "diurnal_peak_trough": 8.598713169657916,
+    "monthly_r": 0.8414766779945673,
+    "fallbacks": 0,
+    "candidates": 508414
+   },
+   {
+    "volume_mm_yr": 2429.020002699999,
+    "long_storms_yr": 2.3,
+    "long_storm_rain_pct": 4.619764340156377,
+    "storms_ge_depth_yr": 14.9,
+    "rain_in_320min_pct": 39.3860486548635,
+    "top_storm_mm": 98.20833466666159,
+    "var_scaling_rmse": 0.03503865652255857,
+    "w1_daily": 0.24139727205479275,
+    "diurnal_r": 0.9817871500460438,
+    "diurnal_peak_trough": 8.23200560447233,
+    "monthly_r": 0.9044649890528483,
+    "fallbacks": 0,
+    "candidates": 508414
+   },
+   {
+    "volume_mm_yr": 2476.014998400001,
+    "long_storms_yr": 2.4,
+    "long_storm_rain_pct": 4.9276761521575105,
+    "storms_ge_depth_yr": 14.8,
+    "rain_in_320min_pct": 39.56377482902272,
+    "top_storm_mm": 107.35416774999915,
+    "var_scaling_rmse": 0.030405216663060647,
+    "w1_daily": 0.34343835616438406,
+    "diurnal_r": 0.9801400848615838,
+    "diurnal_peak_trough": 6.9790915951259915,
+    "monthly_r": 0.8531429128561135,
+    "fallbacks": 0,
+    "candidates": 508414
+   }
+  ],
+  "min": {
+   "volume_mm_yr": 2429.020002699999,
+   "long_storms_yr": 2.3,
+   "long_storm_rain_pct": 4.619764340156377,
+   "storms_ge_depth_yr": 14.8,
+   "rain_in_320min_pct": 39.3860486548635,
+   "top_storm_mm": 98.20833466666159,
+   "var_scaling_rmse": 0.030405216663060647,
+   "w1_daily": 0.24139727205479275,
+   "diurnal_r": 0.9801400848615838,
+   "diurnal_peak_trough": 6.9790915951259915,
+   "monthly_r": 0.8414766779945673
+  },
+  "max": {
+   "volume_mm_yr": 2652.5299974000004,
+   "long_storms_yr": 3.4,
+   "long_storm_rain_pct": 5.785042972196774,
+   "storms_ge_depth_yr": 18.0,
+   "rain_in_320min_pct": 41.065699391429604,
+   "top_storm_mm": 107.35416774999915,
+   "var_scaling_rmse": 0.06942831814251398,
+   "w1_daily": 0.8269041068493147,
+   "diurnal_r": 0.9922367961785101,
+   "diurnal_peak_trough": 8.598713169657916,
+   "monthly_r": 0.9044649890528483
+  }
+ },
+ "real_reference": {
+  "volume_mm_yr": 2395.586219707535,
+  "long_storms_yr": 1.8,
+  "long_storm_rain_pct": 3.825652686261191,
+  "storms_ge_depth_yr": 14.6,
+  "rain_in_320min_pct": 40.77023528432933,
+  "top_storm_mm": 108.16666750000108,
+  "var_scaling_rmse": 0.0,
+  "w1_daily": 0.0,
+  "diurnal_r": 0.9999999999999998,
+  "diurnal_peak_trough": 7.395471781163657,
+  "monthly_r": 1.0
+ }
+}

@@ -1,0 +1,57 @@
+{
+ "command": "train-config",
+ "site": "singapore",
+ "params": {
+  "run_id": "sg_v14"
+ },
+ "argv": [
+  "/Users/tanyawarrier/Desktop/projects/ImagenFew/sitetransfer/__main__.py",
+  "train-config",
+  "--site",
+  "singapore",
+  "--run-id",
+  "sg_v14"
+ ],
+ "git": {
+  "commit": "0c7da5c8f1604d18db5dac37637e7ef03c72eb5e",
+  "branch": "use-asinh",
+  "dirty": true,
+  "diff_sha256": "cc8518d15a034de2af3ef2b2079fac80daebf780f6bd641ebb96d0ffc3fc84ac"
+ },
+ "host": "Tanyas-MacBook-Air.local",
+ "slurm_job_id": null,
+ "started": "2026-10-12T13:27:49",
+ "inputs": {
+  "regime_training/config_v14.yaml": "8463eb71c689b131e7f5ba7b3bbc99528b836d0dac0e05131302b82fd035f1cc"
+ },
+ "outputs": {
+  "regime_training/config_sg_v14.yaml": "ecf64cfc00b4687c3d1a4fa71595e3854750cf359fef6fc9ffc14c0a2458969c"
+ },
+ "results": {
+  "changes": {
+   "train_csv": "data/singapore/splits/train_years_labelled.csv",
+   "test_csv": "data/singapore/splits/val_years_labelled.csv",
+   "asinh_scale": 0.15,
+   "epochs": 698,
+   "run_dir": "ImagenFew/Rainfall_sg_v14/",
+   "mask_col": "outage"
+  },
+  "template": "regime_training/config_v14.yaml",
+  "template_sha256": "8463eb71c689b131e7f5ba7b3bbc99528b836d0dac0e05131302b82fd035f1cc",
+  "home_optimizer_steps": 205000,
+  "home_windows": 840897,
+  "site_windows": 603641,
+  "site_steps": 205212
+ },
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "sklearn": "1.7.2",
+  "hmmlearn": "0.3.3",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-12T13:27:49",
+ "status": "ok"
+}

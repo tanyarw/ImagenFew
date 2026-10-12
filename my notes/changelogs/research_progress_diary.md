@@ -3,6 +3,64 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 12, 2026 — Singapore Transfer: Code, Data Build and Predictions Before Training
+
+### 🔍 Overview
+The transfer test of `code_plan/SINGAPORE_TRANSFER_PLAN.md`, implemented as the package `sitetransfer/`
+(README there). Everything new is in the package; existing code is imported, never edited, except an
+opt-in `mask_col` in `regime_training/regime_dataset.py` (skip windows touching a data outage; tested to
+change nothing when off). Decisions in plan section 10 taken as recommended. The model itself (`sg_v14`)
+is not trained yet; the predictions below are written before it is.
+
+### 📊 Findings
+**The ports reproduce Astlingen exactly** (17 unit and regression tests, `python -m unittest discover -s
+sitetransfer/tests -t .`): the rules give 0.005 mm and 0.035 mm and classify every storm as 10 mm does;
+seasonal phases, labels and transition matrix are identical; all 45 metrics and every Gate A / Tier 6
+result equal `eval_suite.py`'s cache; the latent Gaussian AR series is identical value for value.
+
+**Singapore data** (`python -m sitetransfer build-data`, audit in `data/singapore/processed/audit.json`):
+91 stations seen, 20 usable, cluster S113 Marine Parade Road, S119 Nicoll Highway, S43 Kim Chuan Road,
+S78 Poole Road (4.91 km). Wet threshold 0.05 mm, asinh scale 0.15 mm, deep-storm threshold 36.4 mm (same
+storm rank as 10 mm at Astlingen). Outage share 0.1–3.7% a year, 12.7% in 2018, so the reference years are
+2017 and 2019–2022. Daily-cycle peak 15:00 local (check against a UTC slip passes). 603,641 usable training
+windows: 698 epochs give 205,212 optimiser steps (v14: 205,000). Seasonal phases change 31 times a year
+(Astlingen 21): six years of tropical rain give a noisier climatology. 14 invariants hold.
+
+**Bands, corrected during implementation.** Resampled bands first compared 10-year resamples against the
+fixed reference and made real held-out years fail almost everything (Singapore: 1/3 amount, 0/6 timing
+checks). Each draw now resamples both sides, as the Tier 6 bands did; real held-out years then pass most
+families at both sites. Singapore's bands are wide (volume 0.84–1.27): five variable reference years.
+
+**Perfect-window pilot** (real windows joined independently, 3 seeds; `pilot.json`):
+
+| | Astlingen real | perfect 5h20 | perfect 5h20, no time of day | perfect 1 day | Singapore real | perfect 5h20 | perfect 5h20, no time of day | perfect 1 day |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Rain in storms > 5h20 (2-h gap) | 64.7% | 25–31% | 24–27% | 60% | 40.8% | 14.6–15.6% | 13.0–13.9% | 39–41% |
+| Unbroken runs > 5h20 / yr | 14.3 | 1.9–2.8 | 2.1–3.0 | 11–14 | 1.8 | 0.1–0.2 | 0.1–0.4 | 2.3–3.4 |
+| Deep storms / yr | 15.8 | 8.3–9.6 | 7.2–9.6 | 13–15 | 14.6 | 9.6–11.1 | 10.1–12.4 | 15–18 |
+| Daily cycle r / peak÷trough | 1 / 1.5 | 0.74–0.93 / 1.4–1.8 | 0.23–0.26 / 1.3–1.4 | 0.76–0.94 / 1.5–1.7 | 1 / 7.4 | 0.98 / 8.1–9.4 | −0.45 to −0.10 / 1.3–1.6 | 0.98–0.99 / 7.0–8.6 |
+
+* **The window loss carries over.** A perfect 5h20 generator keeps about 40% of the long-storm rain at
+  both sites (25–31 of 65; 15 of 41); a perfect one-day generator keeps almost all of it.
+* **The daily cycle needs time of day.** Without it the cycle disappears at Singapore (peak÷trough 1.3–1.6
+  against 7.4); at Astlingen the cycle is too weak for this to show.
+* Under the resampled bands at Astlingen, the latent Gaussian AR passes more family checks than v14
+  (B 5/7 vs 4/7, C 4/6 vs 3/6): the "diffusion wins extremes" advantage does not show in pass counts.
+
+### 🔮 Predictions for `sg_v14` (written before training)
+1. **Recipe verdict: TRANSFERS.** Families A, B, C and the monthly cycle pass at Singapore, as at Astlingen.
+2. **Daily cycle fails:** diurnal r < 0.3 and peak÷trough < 2 (real 7.4), like the pilot without time of day.
+3. **Long-scale structure short, as the 5h20 pilot:** rain in storms > 5h20 between 10% and 20% (real 41%);
+   unbroken runs > 5h20 ≤ 0.5 per year (real 1.8); deep storms ≤ 12 per year (real 14.6).
+4. **Volume** within 10% of real.
+5. **Against the latent Gaussian AR**, the same ordering as at Astlingen: v14 does not pass more B or C checks.
+
+### ✅ Decision
+* Send `sg_v14` with `sitetransfer/slurm/submit.sh` (GPU: train ~8.5 h + generate; CPU: evaluate, verdict).
+  Apply the plan's rules (section 8.4, with the changes in section 13) and score these predictions.
+
+---
+
 ## October 12, 2026 — Code Review of the Strengthening Runs Before Sending
 
 ### 🔍 Overview

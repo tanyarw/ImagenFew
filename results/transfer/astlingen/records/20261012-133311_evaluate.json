@@ -1,0 +1,40 @@
+{
+ "command": "evaluate",
+ "site": "astlingen",
+ "params": {},
+ "argv": [
+  "/Users/tanyawarrier/Desktop/projects/ImagenFew/sitetransfer/__main__.py",
+  "evaluate",
+  "--site",
+  "astlingen"
+ ],
+ "git": {
+  "commit": "0c7da5c8f1604d18db5dac37637e7ef03c72eb5e",
+  "branch": "use-asinh",
+  "dirty": true,
+  "diff_sha256": "cc8518d15a034de2af3ef2b2079fac80daebf780f6bd641ebb96d0ffc3fc84ac"
+ },
+ "host": "Tanyas-MacBook-Air.local",
+ "slurm_job_id": null,
+ "started": "2026-10-12T13:33:11",
+ "inputs": {
+  "results/transfer/astlingen/bands.json": "1a0d905ff201954c8ab9dc927bbfdee9401483d8b0db1e337e1f87d3f35a46c7",
+  "results/generated_data/rainfall_synthetic_10y_v14_nobridge_cal.csv": "6ba63e375151ed2729974c8e067093c1ecea2ef56b23591bd5b542f663668ac9",
+  "results/generated_data/rainfall_synthetic_10y_arima_copula_occ_len64.csv": "23b19321c286b9153a923e1fe760094f5b57281a820753623a4015d24ccc0ae5"
+ },
+ "outputs": {
+  "results/transfer/astlingen/evaluation.json": "d7b64bbd2f4bf625de340b9e43e4c96a1c8e98ffd0335db31bea0250506240a3"
+ },
+ "results": {},
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "sklearn": "1.7.2",
+  "hmmlearn": "0.3.3",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-12T13:33:13",
+ "status": "ok"
+}

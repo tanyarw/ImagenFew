@@ -1,0 +1,184 @@
+{
+ "command": "labels",
+ "site": "singapore",
+ "params": {
+  "n_states": 4,
+  "smooth_window": 4032
+ },
+ "argv": [
+  "/Users/tanyawarrier/Desktop/projects/ImagenFew/sitetransfer/__main__.py",
+  "labels",
+  "--site",
+  "singapore"
+ ],
+ "git": {
+  "commit": "0c7da5c8f1604d18db5dac37637e7ef03c72eb5e",
+  "branch": "use-asinh",
+  "dirty": true,
+  "diff_sha256": "cc8518d15a034de2af3ef2b2079fac80daebf780f6bd641ebb96d0ffc3fc84ac"
+ },
+ "host": "Tanyas-MacBook-Air.local",
+ "slurm_job_id": null,
+ "started": "2026-10-12T13:27:42",
+ "inputs": {
+  "data/singapore/processed/cluster4.csv": "c16cd59790acf02060f464d0cb592ff5ef8e4af9d11bb758e35d36f111e14565"
+ },
+ "outputs": {
+  "data/singapore/splits/train_years_labelled.csv": "f696565a6047c607662502aa92abc6165fa749c54a3dd544888f5f81859e8995",
+  "data/singapore/splits/val_years_labelled.csv": "a0445ecea1884f13eb0a469786d93cb6454cfd408a69c64c1a12225e63bac339",
+  "data/singapore/splits/test_years_labelled.csv": "9b590fb3998d21ff7cbdfa4d644cb94d75e84a6a32a1bd37080ab49013a351b2",
+  "data/singapore/splits/seasonal_transition_matrix_train_len64.pkl": "5f9960ac1d38584715818f32d4bfe007b5babd1305a37bc690eef4af1f4462fa",
+  "data/singapore/splits/MANIFEST.json": "d18def304f912f25353fbf52991497ad4ab0fce03cc140b5b9a07d6d5ebabbe3"
+ },
+ "results": {
+  "min_days": 4,
+  "transitions_per_year": 31,
+  "state_means": [
+   0.014223824444516468,
+   0.021368631369387263,
+   0.025693032454457428,
+   0.03197039694764552
+  ],
+  "phase_start_days": [
+   {
+    "day": 1,
+    "phase": 3
+   },
+   {
+    "day": 9,
+    "phase": 1
+   },
+   {
+    "day": 23,
+    "phase": 2
+   },
+   {
+    "day": 27,
+    "phase": 0
+   },
+   {
+    "day": 86,
+    "phase": 3
+   },
+   {
+    "day": 96,
+    "phase": 2
+   },
+   {
+    "day": 104,
+    "phase": 3
+   },
+   {
+    "day": 128,
+    "phase": 1
+   },
+   {
+    "day": 146,
+    "phase": 2
+   },
+   {
+    "day": 154,
+    "phase": 1
+   },
+   {
+    "day": 160,
+    "phase": 0
+   },
+   {
+    "day": 169,
+    "phase": 3
+   },
+   {
+    "day": 177,
+    "phase": 1
+   },
+   {
+    "day": 181,
+    "phase": 0
+   },
+   {
+    "day": 187,
+    "phase": 1
+   },
+   {
+    "day": 192,
+    "phase": 0
+   },
+   {
+    "day": 235,
+    "phase": 3
+   },
+   {
+    "day": 239,
+    "phase": 2
+   },
+   {
+    "day": 244,
+    "phase": 3
+   },
+   {
+    "day": 249,
+    "phase": 1
+   },
+   {
+    "day": 258,
+    "phase": 0
+   },
+   {
+    "day": 265,
+    "phase": 1
+   },
+   {
+    "day": 276,
+    "phase": 2
+   },
+   {
+    "day": 282,
+    "phase": 1
+   },
+   {
+    "day": 289,
+    "phase": 0
+   },
+   {
+    "day": 298,
+    "phase": 1
+   },
+   {
+    "day": 302,
+    "phase": 3
+   },
+   {
+    "day": 325,
+    "phase": 2
+   },
+   {
+    "day": 334,
+    "phase": 1
+   },
+   {
+    "day": 338,
+    "phase": 3
+   },
+   {
+    "day": 356,
+    "phase": 0
+   },
+   {
+    "day": 361,
+    "phase": 1
+   }
+  ]
+ },
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "sklearn": "1.7.2",
+  "hmmlearn": "0.3.3",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-12T13:27:48",
+ "status": "ok"
+}

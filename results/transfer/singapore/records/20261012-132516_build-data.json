@@ -1,0 +1,86 @@
+{
+ "command": "build-data",
+ "site": "singapore",
+ "params": {
+  "ingest": {
+   "raw_pattern": "data/singapore/raw/HistoricalRainfallacrossSingapore{year}.csv",
+   "years": [
+    2017,
+    2024
+   ],
+   "gauge_resolution_mm": 0.2,
+   "usable_stations": {
+    "min_completeness": 0.85,
+    "exempt_years": [
+     2018
+    ],
+    "min_resolution_share": 0.99
+   },
+   "cluster_size": 4,
+   "fill": {
+    "idw_power": 2,
+    "max_neighbours": 4,
+    "radius_km": 10.0,
+    "max_time_gap_steps": 12
+   }
+  }
+ },
+ "argv": [
+  "/Users/tanyawarrier/Desktop/projects/ImagenFew/sitetransfer/__main__.py",
+  "build-data",
+  "--site",
+  "singapore"
+ ],
+ "git": {
+  "commit": "0c7da5c8f1604d18db5dac37637e7ef03c72eb5e",
+  "branch": "use-asinh",
+  "dirty": true,
+  "diff_sha256": "cc8518d15a034de2af3ef2b2079fac80daebf780f6bd641ebb96d0ffc3fc84ac"
+ },
+ "host": "Tanyas-MacBook-Air.local",
+ "slurm_job_id": null,
+ "started": "2026-10-12T13:25:16",
+ "inputs": {
+  "data/singapore/raw/HistoricalRainfallacrossSingapore2017.csv": "a51a27378607c6c37d51b72383259b27dae5dc7d5760a8b8fff04e86d9f92ddf",
+  "data/singapore/raw/HistoricalRainfallacrossSingapore2018.csv": "f42b40c37edbbc9a3ddb6e53e147606878280cbe1362e6580ea86aaf528db887",
+  "data/singapore/raw/HistoricalRainfallacrossSingapore2019.csv": "1f30310b94912c800a96a9beedd65fcff62c663a1cbc2ff5606f0f174867d73c",
+  "data/singapore/raw/HistoricalRainfallacrossSingapore2020.csv": "2b8df4c6adebb3ea41183ca22fc261fdb34ef78a492bb205f660c431b924ec48",
+  "data/singapore/raw/HistoricalRainfallacrossSingapore2021.csv": "3bb97164ec298b4057303bfecea4acc0a824fc41d83aa3df41c93bba2b91b96b",
+  "data/singapore/raw/HistoricalRainfallacrossSingapore2022.csv": "481eeafe94025f03e7ca0e8a22e78ff0addf76b35aeaf392e8bc5066b6a4cf14",
+  "data/singapore/raw/HistoricalRainfallacrossSingapore2023.csv": "94e23e285182c03ced2b6cae513332c94c64dcc051938753ec0bbf5d7f2afd11",
+  "data/singapore/raw/HistoricalRainfallacrossSingapore2024.csv": "2cc8433e1252ba8ef12dbc4c14cf01b5ddd62a2e14fcee5856ddaf354b53b9b3"
+ },
+ "outputs": {
+  "data/singapore/processed/cluster4.csv": "c16cd59790acf02060f464d0cb592ff5ef8e4af9d11bb758e35d36f111e14565",
+  "data/singapore/processed/cluster_gauges.npz": "540764e907036a19d5fa706b459b335e341754693161c79abc38eb7b856ef0e9",
+  "data/singapore/processed/audit.json": "1dbcd40ff488cbbeacee93548bf66729a26a0205e465903190765b29604245c7"
+ },
+ "results": {
+  "cluster": [
+   "S113",
+   "S119",
+   "S43",
+   "S78"
+  ],
+  "spacing_km": 4.911309,
+  "n_usable": 20,
+  "flag_share": {
+   "observed": 0.91885,
+   "filled_space": 0.04448,
+   "filled_time": 0.00521,
+   "outage": 0.03146
+  },
+  "diurnal_peak_hour": 15
+ },
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "sklearn": "1.7.2",
+  "hmmlearn": "0.3.3",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-12T13:27:10",
+ "status": "ok"
+}
