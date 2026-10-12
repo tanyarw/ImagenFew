@@ -350,13 +350,17 @@ def main():
         regime_col=getattr(args, "regime_col", "gmm_regime"),
         data_col=getattr(args, "data_col", "avg_rainfall"),
         transform=data_transform, asinh_scale=asinh_scale,
+        mask_col=getattr(args, "mask_col", None),
     )
     test_ds = RegimeDataset(
         test_csv, seq_len=args.seq_len,
         scaler=train_ds.scaler,
         regime_col=getattr(args, "regime_col", "gmm_regime"),
         data_col=getattr(args, "data_col", "avg_rainfall"),
+        mask_col=getattr(args, "mask_col", None),
     )
+    if getattr(args, "mask_col", None):
+        logging.info("Masked steps (%s): %d training windows skipped", args.mask_col, train_ds.n_skipped)
 
     train_loader = DataLoader(
         train_ds, batch_size=args.batch_size,

@@ -27,7 +27,8 @@ class RegimeDataset(Dataset):
 
     def __init__(self, csv_path, seq_len=24, scale=True, scaler=None,
                  regime_col="gmm_regime", data_col="avg_rainfall",
-                 block_col="block_id", transform="standard", asinh_scale=0.035):
+                 block_col="block_id", transform="standard", asinh_scale=0.035,
+                 mask_col=None):
         """
         Args:
             csv_path   : Path to train or test CSV
@@ -47,6 +48,11 @@ class RegimeDataset(Dataset):
                         regime_training/transforms.py.
                         Ignored when a pre-fitted `scaler` is passed.
             asinh_scale: s in asinh(x / s), mm per 5 min (asinh only).
+            mask_col   : optional 0/1 column marking steps with no real data (a
+                        transfer site's network outages, sitetransfer/). Windows
+                        containing a marked step are skipped and the scaler is
+                        fitted on unmarked steps only. None (default) = every
+                        window, exactly as before. Continuous mode only.
         """
         self.seq_len = seq_len
         self.scale = scale
@@ -67,6 +73,8 @@ class RegimeDataset(Dataset):
 
         # Collect per-block arrays and regime labels
         blocks = []
+        if mask_col is not None and block_col in df.columns and has_regimes:
+            raise ValueError("mask_col is supported in continuous mode only (no block_col)")
         if block_col in df.columns and has_regimes:
             # Grouped by explicit block_id
             for _, group in df.groupby(block_col, sort=True):
@@ -79,6 +87,7 @@ class RegimeDataset(Dataset):
             # assignment (majority state in each window)
             values = df[data_col].values.astype(np.float32).reshape(-1, 1)
             regimes = df[regime_col].values.astype(int) if has_regimes else np.zeros(len(df), dtype=int)
+            masked = df[mask_col].to_numpy().astype(bool) if mask_col is not None else None
 
             # --- Scaler ---
             if scale:
@@ -86,7 +95,7 @@ class RegimeDataset(Dataset):
                     self.scaler = scaler
                 else:
                     self.scaler = make_scaler(transform, asinh_scale)
-                    self.scaler.fit(values)
+                    self.scaler.fit(values if masked is None else values[~masked])
                 scaled = self.scaler.transform(values)
             else:
                 self.scaler = None
@@ -96,7 +105,13 @@ class RegimeDataset(Dataset):
             self.samples = []
             self.labels = []
             n_windows = len(scaled) - seq_len + 1
+            if masked is not None:
+                c = np.r_[0, np.cumsum(masked)]
+                clean = (c[seq_len:] - c[:-seq_len]) == 0          # window i holds no masked step
+            self.n_skipped = 0 if masked is None else int((~clean).sum())
             for i in range(n_windows):
+                if masked is not None and not clean[i]:
+                    continue
                 self.samples.append(
                     torch.FloatTensor(scaled[i : i + seq_len])
                 )
