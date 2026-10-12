@@ -44,6 +44,10 @@ if [ -e "${RUN_DIR}/best_regime_model.pt" ] && [ "${GENERATE_ONLY:-0}" != "1" ];
     echo "ERROR: ${RUN_DIR} already holds a model (GENERATE_ONLY=1 to only generate)"; exit 1
 fi
 
+# Checks that need torch (login nodes cannot load it): stop here, before any training, if one fails
+python -m unittest discover -s sitetransfer/tests -t .
+python -m sitetransfer check --site "${SITE}" --run-id "${RUN_ID}" --dataset
+
 if [ "${GENERATE_ONLY:-0}" != "1" ]; then
     python regime_training/train_regime.py --model_ckpt "${CKPT}" --config "${CONFIG}" --seed 0 --run_id "${RUN_ID}"
 fi

@@ -8,7 +8,8 @@
 #   CPU_PARTITION=normal                                     # where the evaluation job runs (default normal)
 #
 # 1. refuses uncommitted tracked files (every job records the commit it ran)
-# 2. checks the synced data is there and runs the unit tests and the invariants
+# 2. checks the synced data is there and runs the invariants that need no torch (login nodes cannot
+#    load torch); the unit tests and the training-dataset invariant run at the start of the GPU job
 # 3. GPU job: train + generate (train_generate.sbatch); CPU job afterwards: evaluate + verdict
 # ==============================================================================
 set -euo pipefail
@@ -30,8 +31,7 @@ done
 
 if [ "${DRY}" = "0" ]; then
     source .venv/bin/activate
-    python -m unittest discover -s sitetransfer/tests -t . 2>&1 | tail -3
-    python -m sitetransfer check --site "${SITE}" --run-id "${RUN_ID}" --dataset
+    python -m sitetransfer check --site "${SITE}" --run-id "${RUN_ID}"
     python -m sitetransfer check --site astlingen
 fi
 mkdir -p logs
