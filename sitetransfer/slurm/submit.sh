@@ -4,6 +4,8 @@
 #   sitetransfer/slurm/submit.sh                 # site singapore, run sg_v14
 #   sitetransfer/slurm/submit.sh --dry-run       # print the sbatch commands only
 #   SITE=singapore RUN_ID=sg_v14 sitetransfer/slurm/submit.sh
+#   GPU_PARTITION=gpu-long sitetransfer/slurm/submit.sh     # where the training job runs (default gpu)
+#   CPU_PARTITION=normal                                     # where the evaluation job runs (default normal)
 #
 # 1. refuses uncommitted tracked files (every job records the commit it ran)
 # 2. checks the synced data is there and runs the unit tests and the invariants
@@ -13,6 +15,8 @@ set -euo pipefail
 DRY=0; [ "${1:-}" = "--dry-run" ] && DRY=1
 SITE="${SITE:-singapore}"
 RUN_ID="${RUN_ID:-sg_v14}"
+GPU_PARTITION="${GPU_PARTITION:-gpu}"
+CPU_PARTITION="${CPU_PARTITION:-normal}"
 
 [ -f sitetransfer/__main__.py ] || { echo "run from the ImagenFew repository root"; exit 1; }
 if [ -n "$(git status --porcelain --untracked-files=no)" ] && [ "${ALLOW_DIRTY:-0}" != "1" ]; then
@@ -33,11 +37,11 @@ fi
 mkdir -p logs
 
 if [ "${DRY}" = "1" ]; then
-    echo "sbatch --parsable -J st_${RUN_ID} sitetransfer/slurm/train_generate.sbatch ${RUN_ID} ${SITE}"
-    echo "sbatch --dependency=afterok:<that job> sitetransfer/slurm/evaluate.sbatch ${SITE}"
+    echo "sbatch --parsable -p ${GPU_PARTITION} -J st_${RUN_ID} sitetransfer/slurm/train_generate.sbatch ${RUN_ID} ${SITE}"
+    echo "sbatch -p ${CPU_PARTITION} --dependency=afterok:<that job> sitetransfer/slurm/evaluate.sbatch ${SITE}"
     exit 0
 fi
-TRAIN=$(sbatch --parsable -J "st_${RUN_ID}" sitetransfer/slurm/train_generate.sbatch "${RUN_ID}" "${SITE}")
-EVAL=$(sbatch --parsable --dependency=afterok:"${TRAIN}" sitetransfer/slurm/evaluate.sbatch "${SITE}")
+TRAIN=$(sbatch --parsable -p "${GPU_PARTITION}" -J "st_${RUN_ID}" sitetransfer/slurm/train_generate.sbatch "${RUN_ID}" "${SITE}")
+EVAL=$(sbatch --parsable -p "${CPU_PARTITION}" --dependency=afterok:"${TRAIN}" sitetransfer/slurm/evaluate.sbatch "${SITE}")
 echo "train + generate: ${TRAIN}   evaluate + verdict: ${EVAL} (after ${TRAIN})"
 echo "watch: squeue -u \$USER ; logs/st_${RUN_ID}_${TRAIN}.out ; logs/st_eval_${EVAL}.out"
