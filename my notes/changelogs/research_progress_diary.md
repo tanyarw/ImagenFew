@@ -3,6 +3,61 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 13, 2026 — v17 (Trained Continuation): Results
+
+### 🔍 Overview
+Strengthening run 5 (`code_plan/STRENGTHENING_RUNS.md`). v17 = the v14 recipe trained with clean known
+prefixes in 75% of windows (8/16/24/32 steps), 500 epochs from `ImagenFew_64.ckpt`, seed 0, commit
+`0c7da5c` (includes the frequency-loss fix; at epoch 500 the FFT term is exactly the time term / 64).
+Training took 11 h (job 933991). Generation on the calendar timeline: four chains where each block is
+given the previous block's last 80 min (`v17_ctx_cal`, `_m1`–`_m3`), four chains through the same code
+with nothing known (`v17_ctx0_cal`, the control), and the usual independent-block series (`v17`,
+`v17_nobridge_cal`). Scored with `sitetransfer.metrics` (identical to `eval_suite.py` on every metric,
+regression-tested), so the full evaluation cache was not refreshed; sewer check with `gate_b_sewer.py` (BC).
+
+### 📊 Findings
+| | Rule | v17 chained (mean of 4) | control (mean of 4) | v17 independent (cal) | v14 (cal) | real 2000–07 |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| Unbroken runs > 5h20 / yr | ≥ 10 | **8.2** (6.8–9.0) | 1.9 | 1.3 | 1.4 | 14.3 |
+| Share of rain in them | ≥ 15% | **12.1%** | 2.4% | 1.7% | 1.9% | 21.4% |
+| Volume ratio | 0.95–1.05 | **0.88** (0.82–0.92) | 1.17 | 1.18 | 0.98 | 1 |
+| Wet-spell ratio | 0.90–1.10 | **0.89** | 0.90 | 0.92 | 0.96 | 1 |
+| Rain in 2-h-gap storms > 320 min | — | 53% | 28% | 28% | 25% | 65% |
+| P99.9 wet (mm) | — | 1.94 | 2.10 | 2.01 | 1.46 | 1.60 |
+| Rain continues across a join, P(wet \| wet) | — | 0.68 (inside a block 0.83) | 0.10 | — | — | 0.84 |
+| Gate A (fixed bands) | — | 5–7 /18 | 8–9 /18 | 8 /18 | 14 /18 | — |
+| **Sewer overflow (BC) / 277k m³** | ≥ 0.85 predicted | **0.82** (0.72–0.94) | 1.04–1.11 (2 chains) | 1.10 | 0.66 | 1 |
+
+1. **Pre-registered verdict: FAIL on all four targets** (two narrowly: 8.2 vs 10 long runs, 0.89 vs 0.90 wet
+   spell). The context condition is met: the control has under half the chained long-run rate (1.9 vs 8.2),
+   so the gain comes from the context.
+2. **Trained continuation works, partly.** Long unbroken runs rise about fourfold and the storm-scale share
+   of rain from 25% to 53%. Rain carries across 68% of joins (control 10%), still below the 83% inside a block.
+3. **Chained generation is uniformly dry**: wet steps 7.3% (real 9.2%) from the first year, no compounding
+   drift (yearly totals 570–662 mm, slope −5.5 mm per year). The same model without context is 17% too wet.
+4. **Training with prefixes harmed ordinary generation.** With nothing known, v17 is 18% too wet and its
+   heavy tail too heavy (P99.9 2.0 vs 1.6 mm); Gate A falls from 14 to 8. Only 25% of training windows
+   exercised that mode.
+5. **Both sewer predictions missed.** Chained 0.82 (predicted ≥ 0.85); control 1.04–1.11 (predicted
+   0.55–0.70, "like v14"). Per mm of rain, both v17 modes overflow about the same (chained 0.82 / 0.88 =
+   0.93; control 1.07 / 1.17 = 0.92; v14 0.67): the retrained model's heavier storms raise overflow whether
+   or not storms continue, so the sewer number cannot be credited to continuation.
+
+### ✅ Decision
+* **Reported as a partial result:** trained continuation carries storms across blocks (the mechanism the
+  window-horizon pilot said was needed), but this v17 is not a usable generator: it is 12% too dry chained
+  and miscalibrated in intensity. v14 stays the deliverable.
+* Not done, candidates if the chapter continues (one change each): the separate-input-channel context
+  (known values not shrunk by the network's 1/σ input scaling); more windows with nothing known than 25%;
+  fine-tuning v14 instead of training from the checkpoint (the v15 control already exists as a comparison).
+* Strengthening runs 2 and 3 (training seeds, no pretraining) are still needed to say whether v17's
+  intensity shift is beyond ordinary run-to-run variation.
+
+**Verdict:** **context works (long storms ×4, storm-scale rain 25% → 53%), but every pre-registered target is
+missed and the retrained model is miscalibrated; partial result, not a replacement for v14.**
+
+---
+
 ## October 12, 2026 — Singapore Transfer: Code, Data Build and Predictions Before Training
 
 ### 🔍 Overview
