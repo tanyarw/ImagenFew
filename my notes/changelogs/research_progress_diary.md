@@ -3,7 +3,50 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
-## October 15, 2026 — Guided Continuation of v14: Pilot Result (negative)
+## October 14, 2026 — Two-Resolution Generator: Plan and Predictions Before Any Code
+
+### 🔍 Overview
+After pasting, guidance and v17, the gap is clear: the sewer needs about a one-day horizon, and every way of
+stitching 5h20 pieces up to it fails at the seams. Proposal: a **coarse** diffusion model on 30-minute totals that
+sees 32 hours at once (64 steps, so the pretrained 8×8 network fits unchanged), and a **fine** v14-like model that
+fills in 5-minute detail given those totals, with the totals conserved exactly. Fine windows are independent given
+the coarse series, so nothing is chained. Plan: `code_plan/TWO_RESOLUTION_PLAN.md`. Novelty check:
+`docs/LITERATURE_TWO_LEVEL_GENERATION.md`.
+
+### 📊 Findings (laptop, before any code)
+* **Literature:** coarse-then-fine is established (classical disaggregation: cascades, HyetosMinute; cascaded
+  diffusion in ML); no learned generator of long continuous sub-hourly point rainfall was found. New as an
+  application and combination, not as a method; the window-horizon diagnostic is the most distinctive part.
+* **30-minute Astlingen, 2000–2007, by the `sitetransfer` rules:** wet threshold 0.0075 mm, asinh scale
+  0.1025 mm, 86.1% dry half-hours, 140,097 training windows (68 optimiser steps per epoch at batch 2048).
+* **Targets move with resolution.** Spreading each half-hour evenly over six steps lengthens storms:
+
+  | Rain in 2-h-gap storms > 5h20 | at 5 min | at 30 min |
+  | :--- | :---: | :---: |
+  | real 2000–2007 | 64.7% | 71.2% |
+  | v14 | 24.6% | 43.6% |
+
+  So the coarse model's bar is set at 30 minutes (≥ 60%), not taken from the 5-minute table. Storms longer than
+  32 h (one coarse piece) carry 4.6% of real rain: the design's ceiling.
+
+### ✅ Decision
+* **Three stages, each with a stop rule applied before the next is sent** (all training on the cluster):
+  1. coarse model alone, judged at 30 min: family D passes, ≥ 60% of rain in storms > 5h20, volume ±5%, no
+     memorisation;
+  2. fine model on **real** 2008–2009 half-hour totals, against a microcanonical cascade: families B and C pass,
+     and rain carries across fine-window joins within 0.05 of inside (real 0.84);
+  3. full chain judged by v17's rule (≥ 10 unbroken runs > 5h20 per year, ≥ 15% of rain in them, volume
+     0.95–1.05, wet spell 0.90–1.10), plus Gate A ≥ 12/18 and sewer overflow 0.85–1.15 under BC and EFD.
+* **Predictions:** (1) the coarse model puts 60–71% of rain in long storms at 30 min, volume within 5%; (2) the
+  fine model passes B and C on real totals and the cascade fails C; (3) the full chain reaches ≥ 10 long runs per
+  year, Gate A ≥ 12, sewer 0.9–1.1.
+
+**Verdict:** **plan and predictions recorded before any code; awaiting go-ahead to build stage 1 and the fine
+model's two-channel wrapper.**
+
+---
+
+## October 14, 2026 — Guided Continuation of v14: Pilot Result (negative)
 
 ### 🔍 Overview
 The cluster pilot of `code_plan/GUIDANCE_PLAN.md` (commit `b485765`): 20 settings, 256 chains × 20 days each,

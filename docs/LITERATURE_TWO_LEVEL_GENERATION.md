@@ -1,6 +1,6 @@
 # Literature: coarse-then-fine generation of long 5-minute rainfall records
 
-**Written:** 2026-10-15. **Question:** before building a two-resolution diffusion generator (coarse 30-min model
+**Written:** 2026-10-14. **Question:** before building a two-resolution diffusion generator (coarse 30-min model
 over 32 h, then a fine model that disaggregates to 5 min), has this, or the gap it addresses, been done before?
 **Method:** 11 web searches (extended mode) on diffusion and deep-learning rainfall disaggregation, multi-resolution
 and cascaded diffusion for time series, diffusion weather generators, generative rain for drainage, and long-range

@@ -1,6 +1,6 @@
 # Two-Resolution Generator: Coarse Storms, Fine Texture
 
-**Written:** 2026-10-15, before any code or run. **Status:** proposed.
+**Written:** 2026-10-14, before any code or run. **Status:** proposed.
 **Question:** can a generator that sees 32 hours at once at 30-minute resolution, and then fills in 5-minute detail
 with a v14-like model, reproduce long storms and sewer loading while keeping v14's 5-minute calibration?
 **Why this design:** the window-horizon pilot says the sewer needs about a one-day horizon (one-day real windows
@@ -46,7 +46,7 @@ coarse series**: nothing is chained, so no seam decision can compound.
 | Fine input channel | each 5-minute step carries its half-hour's total ÷ 6, in v14's model units | same units as the rain channel; never noised |
 | Fine training | v14's recipe and loss, 5h20 windows from 2000–2007 at every offset, fine-tuned from v14 (epochs: section 5) | |
 | Fine windows at generation | start every 60 steps (10 half-hours), 64-step window, last 4 steps discarded | windows aligned to half-hours, so every half-hour lies inside one window |
-| Mass matching | the six values of each half-hour scaled to the coarse total; dry coarse half-hour → six zeros | rain conserved exactly |
+| Mass matching | fine values below the 5-minute wet threshold (0.005 mm) set to zero, then the six values of each half-hour scaled to the coarse total; a scaled value still below 0.005 mm is added to the half-hour's largest step; dry coarse half-hour → six zeros | rain conserved exactly; no sub-gauge drizzle (the cascade's known fault) |
 | Edge case | coarse wet, fine all zero → the total goes to the one step where the fine model's raw value is largest; counted and reported | |
 | Split | train 2000–2007, never touch 2008–2009 except as held-out reference | as v14 |
 
@@ -59,7 +59,8 @@ changed); a small generator for 30-minute series (independent pieces, calendar t
 
 **How it is judged.** Both the generated and the real series are compared at 30-minute resolution. For the existing
 metric code, each half-hour total is spread evenly over its six 5-minute steps (real and generated alike), so only
-structure at 30 minutes and longer is compared. Bands are resampled from the real years, as in `sitetransfer`.
+structure at 30 minutes and longer is compared. Bands are resampled from the real years spread the same way, as in
+`sitetransfer`. Spreading lengthens storms, so the real targets are recomputed at 30 minutes (below).
 
 | Comparator | Why |
 | :--- | :--- |
@@ -70,7 +71,8 @@ structure at 30 minutes and longer is compared. Bands are resampled from the rea
 **Stop rule.** Continue only if the coarse model:
 1. passes family D (long-scale structure: deep storms, rain in storms > 5h20, top storms, long runs, variance
    across scales, daily totals) under resampled bands; **and**
-2. has at least 50% of rain in storms longer than 5h20 (2-hour gap; real 65%, v14 25%, v17 53%); **and**
+2. has at least 60% of rain in storms longer than 5h20 (2-hour gap), measured at 30 minutes, where real has 71% and
+   v14 44% (at 5 minutes: real 65%, v14 25%, v17 53%); 60% closes at least 60% of v14's gap; **and**
 3. keeps volume within ±5% of real; **and**
 4. shows no memorisation (no generated 32-hour window closer to a training window than the closest 5% of held-out
    real windows, the test of `eval_suite.py`).
@@ -94,7 +96,9 @@ Same test with a **microcanonical cascade** (classical, fitted on 2000–2007 by
 the standard tool for this step.
 
 **Stop rule.** Continue only if the fine model passes families B (intensity and extremes) and C (short-scale
-timing) against real 2008–2009 under resampled bands. If the cascade passes and the fine model does not, the full
+timing) against real 2008–2009 under resampled bands, **and** rain carries across the joins between fine windows
+(every 5 h) as often as inside them: P(wet | wet) at joins within 0.05 of the inside value (real 0.84). Fine windows
+do not see their neighbours, so a fine model that starts or ends windows dry would break long storms at every join. If the cascade passes and the fine model does not, the full
 chain uses the cascade, and the paper reports that diffusion adds value at the coarse level only.
 
 ---
@@ -135,7 +139,7 @@ About 3–4 days of code, then ~1 day of cluster time. Each stop rule is applied
 
 ## 7. Predictions (written before any run)
 
-1. Stage 1 passes: the coarse model puts 50–65% of rain in storms longer than 5h20, volume within 5%.
+1. Stage 1 passes: the coarse model puts 60–71% of rain in storms longer than 5h20 (at 30 minutes), volume within 5%.
 2. Stage 2: the fine model passes families B and C on real coarse input; the cascade fails C (autocorrelation too low,
    too many tiny intensities, as reported in the cascade literature).
 3. Stage 3: ≥ 10 unbroken runs > 5h20 per year, Gate A ≥ 12, sewer overflow 0.9–1.1.
@@ -143,4 +147,4 @@ About 3–4 days of code, then ~1 day of cluster time. Each stop rule is applied
 ## 8. Not covered
 
 Singapore (the recipe can be transferred later with `sitetransfer`), multiple gauges, time-of-day conditioning,
-storms longer than 32 hours (5% of Astlingen's rain).
+storms longer than 32 hours (4.6% of Astlingen's rain in 2000–2007).
