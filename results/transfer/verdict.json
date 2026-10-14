@@ -1,0 +1,12 @@
+{
+ "home": "astlingen",
+ "site": "singapore",
+ "recipe": {
+  "status": "DOES NOT TRANSFER",
+  "why": "families B, C pass at home but not here",
+  "lost": [
+   "B",
+   "C"
+  ]
+ }
+}

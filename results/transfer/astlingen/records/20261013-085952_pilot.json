@@ -1,0 +1,56 @@
+{
+ "command": "pilot",
+ "site": "astlingen",
+ "params": {
+  "variants": {
+   "w64": {
+    "window": 64,
+    "match_time_of_day": true
+   },
+   "w64_anytime": {
+    "window": 64,
+    "match_time_of_day": false
+   },
+   "w288": {
+    "window": 288,
+    "match_time_of_day": true
+   }
+  },
+  "seeds": [
+   0,
+   1,
+   2
+  ],
+  "years": 10
+ },
+ "argv": [
+  "/home/t/tanyawar/thesis/ImagenFew/sitetransfer/__main__.py",
+  "pilot",
+  "--site",
+  "astlingen"
+ ],
+ "git": {
+  "commit": "5757410d7237afc165d49300df96e32ce1e75fcc",
+  "branch": "use-asinh",
+  "dirty": true,
+  "diff_sha256": "a2a5df1fbe18f7490f329e2998121ccb0c722bc65fb8bf55abf4d0fd33c76071"
+ },
+ "host": "xcnc23",
+ "slurm_job_id": "936656",
+ "started": "2026-10-13T08:59:52",
+ "inputs": {},
+ "outputs": {},
+ "results": {},
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "sklearn": "1.7.2",
+  "hmmlearn": "0.3.3",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-13T08:59:52",
+ "status": "failed",
+ "traceback": "Traceback (most recent call last):\n  File \"/home/t/tanyawar/thesis/ImagenFew/sitetransfer/pipeline.py\", line 271, in run_pilot\n    x, mask = site.reference()\n  File \"/home/t/tanyawar/thesis/ImagenFew/sitetransfer/site.py\", line 125, in reference\n    return self.select_years(self.params[\"reference_years\"])\n  File \"/home/t/tanyawar/thesis/ImagenFew/sitetransfer/site.py\", line 114, in select_years\n    x, mask, years = self.load_record(clean=clean)\n  File \"/home/t/tanyawar/thesis/ImagenFew/sitetransfer/site.py\", line 99, in load_record\n    raise SiteError(f\"{path} missing\" + (\"\" if self.is_home else\nsitetransfer.site.SiteError: /home/t/tanyawar/thesis/ImagenFew/data/rainfall/real_rainfall_data.csv missing\n"
+}

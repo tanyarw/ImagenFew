@@ -1,0 +1,39 @@
+{
+ "command": "evaluate",
+ "site": "singapore",
+ "params": {},
+ "argv": [
+  "/home/t/tanyawar/thesis/ImagenFew/sitetransfer/__main__.py",
+  "evaluate",
+  "--site",
+  "singapore"
+ ],
+ "git": {
+  "commit": "5757410d7237afc165d49300df96e32ce1e75fcc",
+  "branch": "use-asinh",
+  "dirty": true,
+  "diff_sha256": "4442e2969c2cf7a1384fa32f38cca5be13c6a7b54a5be60c520762bf1065448a"
+ },
+ "host": "xcnc23",
+ "slurm_job_id": "936656",
+ "started": "2026-10-13T08:59:48",
+ "inputs": {
+  "results/transfer/singapore/bands.json": "fb51fa79b868708612e1a844dedf6469fd501bae1d69b1c0c9549dadc1098938",
+  "results/generated_data/singapore/rainfall_synthetic_10y_sg_v14_nobridge_cal.csv": "dce3cc632bad4de446dddc92ec3a0706bb7c66b116483f76eafc4ab1b219af41"
+ },
+ "outputs": {
+  "results/transfer/singapore/evaluation.json": "cd9f38e95dbdc6e7c4e5c3f704e9ab7edbbc18361383d2f228f4d21354563830"
+ },
+ "results": {},
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "sklearn": "1.7.2",
+  "hmmlearn": "0.3.3",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-13T08:59:51",
+ "status": "ok"
+}

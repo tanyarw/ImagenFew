@@ -1,0 +1,40 @@
+{
+ "command": "evaluate",
+ "site": "singapore",
+ "params": {},
+ "argv": [
+  "/Users/tanyawarrier/Desktop/projects/ImagenFew/sitetransfer/__main__.py",
+  "evaluate",
+  "--site",
+  "singapore"
+ ],
+ "git": {
+  "commit": "b30e9434b4b8be5d2155814d04bef0cb020cd005",
+  "branch": "use-asinh",
+  "dirty": true,
+  "diff_sha256": "a2a5df1fbe18f7490f329e2998121ccb0c722bc65fb8bf55abf4d0fd33c76071"
+ },
+ "host": "Tanyas-MacBook-Air.local",
+ "slurm_job_id": null,
+ "started": "2026-10-14T12:05:57",
+ "inputs": {
+  "results/transfer/singapore/bands.json": "fb51fa79b868708612e1a844dedf6469fd501bae1d69b1c0c9549dadc1098938",
+  "results/generated_data/singapore/rainfall_synthetic_10y_sg_v14_nobridge_cal.csv": "dce3cc632bad4de446dddc92ec3a0706bb7c66b116483f76eafc4ab1b219af41",
+  "results/generated_data/singapore/rainfall_synthetic_10y_sg_lgar_occ_len64.csv": "3e25de796a15c542e2d6124927a95bd9f1db33acdb5aa5738ce848ee892977e8"
+ },
+ "outputs": {
+  "results/transfer/singapore/evaluation.json": "10c7d6a91fc771acf19a9b2a894442d164fcfd810a8cfff8470da67461f2ff00"
+ },
+ "results": {},
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "sklearn": "1.7.2",
+  "hmmlearn": "0.3.3",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-14T12:05:59",
+ "status": "ok"
+}

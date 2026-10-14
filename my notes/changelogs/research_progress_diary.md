@@ -3,6 +3,81 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 14, 2026 — Singapore Transfer: Results
+
+### 🔍 Overview
+`sg_v14` = the v14 recipe trained on the Singapore four-gauge series (config `regime_training/config_sg_v14.yaml`,
+698 epochs, seed 0, commit `5757410`, job 936655; pre-training checks on the compute node: 17 tests OK, 5
+skipped; 14/14 invariants). 10 years generated on the calendar timeline without bridges. Scored with
+`python -m sitetransfer evaluate --site singapore` and `verdict` (`results/transfer/verdict.md`), bands
+resampled at both sites. The cluster's evaluation job scored Singapore but stopped at Astlingen
+(`data/rainfall/real_rainfall_data.csv` is not on the cluster); the verdict was run on the laptop.
+
+### 📊 Findings
+**Recipe verdict (plan 8.4): DOES NOT TRANSFER.** Families B (extremes) and C (short-scale timing) pass at
+Astlingen and fail at Singapore.
+
+| Family | v14 at Astlingen | sg_v14 at Singapore | latent Gaussian AR at Singapore | real 2023–24 |
+| :--- | :---: | :---: | :---: | :---: |
+| A amount and occurrence | pass 3/3 | pass 2/3 | pass 3/3 | pass 3/3 |
+| B intensity and extremes | pass 4/7 | **fail 3/7** | pass 5/7 | pass 5/7 |
+| C short-scale timing | pass 3/6 | **fail 1/6** | pass 4/6 | pass 3/6 |
+| D long-scale (predicted) | fail 0/6 | pass 4/6 | fail 2/6 | pass 4/6 |
+| E monthly | pass | pass | fail | fail |
+| E daily (predicted) | pass 1/2 | fail 0/2 | fail 0/2 | pass 1/2 |
+
+**What fails, and how:** too few wet steps and far too heavy ones.
+
+| | real (reference) | sg_v14 | ratio | band |
+| :--- | :---: | :---: | :---: | :---: |
+| Volume | ~2,400 mm/yr | 2,651 | 1.11 | 0.84–1.27 |
+| Dry steps | 94.9% | 95.8% | +0.9 pp | −1.0 to +0.8 |
+| P99 / P99.9 wet | 3.70 / 5.95 mm | 4.99 / 8.93 | 1.35 / 1.50 | 0.87–1.13 / 0.90–1.15 |
+| Largest 5-min value | 8.3 mm | 15.7 | 1.89 | 0.92–1.11 |
+| Design rain 15 min – 3 h (2–10 yr) | 1 | 1.3–1.9 | | |
+| Storm duration / depth | 51.5 min | 46.7 min / depth ×1.24 | 0.91 / 1.24 | 0.95–1.05 / 0.90–1.12 |
+
+* At Astlingen v14 already overshot the largest 5-minute value (×1.14); at Singapore the overshoot is ×1.89
+  and reaches the 99th percentile. Likely cause, not tested: the asinh transform compresses heavy rain, so a
+  small model-space error becomes a large mm error (Sept 30: 9× coarser at 1 mm, 26× at 3 mm at Astlingen),
+  and Singapore's heavy rain sits much further up the compressed range. One training run only.
+* 16% of the model's raw wet values fall below the 0.05 mm threshold and are set to zero (0.8% of steps),
+  part of the occurrence shortfall.
+
+**Predictions written before training (Oct 12):**
+
+| Prediction | Result |
+| :--- | :--- |
+| 1. Recipe transfers | **wrong**: B and C fail |
+| 2. Daily cycle fails (r < 0.3, peak÷trough < 2) | **right**: r −0.01, peak÷trough 1.7 (real 7.4) |
+| 3. Long-scale as the 5h20 pilot (10–20% of rain in long storms; ≤ 0.5 unbroken runs; ≤ 12 deep storms / yr) | **mostly right**: 12.9% (pilot 14.6–15.6%), 0.1 runs (pilot 0.1–0.2); deep storms 17.3 / yr (wrong: heavy storms) |
+| 4. Volume within 10% | **wrong, narrowly**: +10.7% |
+| 5. v14 passes no more B or C checks than the latent Gaussian AR | **right**: B 3 vs 5, C 1 vs 4 |
+
+**Findings (plan 8.5):**
+* **The window horizon transfers.** At both sites v14 sits on the perfect-5h20-window line for long-scale
+  structure (Singapore: 12.9% of rain in long storms vs the pilot's 14.6–15.6%, real 40.8%; Astlingen: 24.6%
+  vs 25–31%, real 64.7%). The loss is a property of the window, at both sites.
+* **The missing time-of-day input shows at Singapore** exactly as predicted; Astlingen's weak daily cycle hid it.
+* **"Diffusion wins extremes" does not hold at Singapore.** The latent Gaussian AR overshoots 3–24 h extremes
+  (×1.6–2.0), as at Astlingen; sg_v14 overshoots 15 min–3 h (×1.3–1.9).
+* Real held-out years (2023–24) fail 9 of 25 individual checks under the Singapore bands (five reference
+  years make some bands very narrow, e.g. lag-1 autocorrelation ±0.007), but pass every family except the
+  monthly cycle: the family rule absorbs that.
+
+### ✅ Decision
+* **The recipe does not transfer without retuning**: its intensity calibration depends on the site. Its
+  structural behaviour does transfer (the window-horizon loss), and so does its blind spot (time of day).
+* For the paper this supports the window-horizon claim at a second, very different climate, and adds two
+  documented limitations: no time-of-day input, and site-dependent intensity calibration.
+* Not done (one change each, if pursued): an asinh-scale check at Singapore (a larger s puts heavy rain less
+  far up the compressed range); a second training seed; time-of-day conditioning.
+
+**Verdict:** **does not transfer as a recipe (extremes ×1.3–1.9 too heavy, storms too short), but the
+window-horizon finding transfers and the predicted daily-cycle failure appears.**
+
+---
+
 ## October 13, 2026 — v17 (Trained Continuation): Results
 
 ### 🔍 Overview
