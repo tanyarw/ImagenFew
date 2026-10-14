@@ -3,6 +3,43 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 15, 2026 — Guided Continuation of v14: Pilot Result (negative)
+
+### 🔍 Overview
+The cluster pilot of `code_plan/GUIDANCE_PLAN.md` (commit `b485765`): 20 settings, 256 chains × 20 days each,
+v14 frozen. Summary job output (`results/guidance/pilot.json` on the cluster; to be synced).
+
+### 📊 Findings
+| Setting | Continuation (≥ 0.70) | Wet steps (indep. 8.57%) | mm/yr (indep. 716) | P99.9 (indep. 1.70) |
+| :--- | :---: | :---: | :---: | :---: |
+| pasting (w 0) | 0.602 | 8.47% | 687 | 1.84 |
+| plain 0.003 / 0.0125 / 0.025 / 0.05 / 0.1 | 0.611 / 0.609 / 0.633 / 0.688 / 0.834 | 8.33 / 7.88 / 7.50 / 7.53 / 11.52 | 658 / 612 / 633 / 951 / 3,205 | 1.68–1.77 |
+| wet 0.003 / 0.0125 / 0.025 / 0.05 / 0.1 | 0.613 / 0.626 / 0.679 / 0.770 / 0.922 | 8.42 / 8.31 / 8.46 / 10.06 / 20.81 | 669 / 675 / 807 / 1,569 / 6,778 | 1.67–1.77 |
+| rainy 0.003 / 0.0125 / 0.025 / 0.05 / 0.1 | 0.616 / 0.646 / 0.700 / 0.806 / 0.940 | 8.72 / 9.61 / 11.02 / 15.49 / 34.80 | 714 / 847 / 1,152 / 2,546 / 11,427 | 1.70–1.82 |
+
+1. **No setting passes** the four rules; the 2-hour-context follow-up correctly did not run.
+2. **Guidance buys continuation only by flooding the series.** Below 0.70 the totals stay near the reference but
+   continuation barely moves from pasting (0.60 → ≤ 0.68); the first setting to reach 0.70 (rainy 0.025) is +61%
+   in rain and +2.5 pp in wet steps. A continued storm leaves a wet end, which triggers guidance at the next seam:
+   positive feedback rather than storms connecting at the real rate.
+3. **Plain guidance first dries, then floods** (wet 7.5% at 0.025–0.05; 11.5% at 0.1): the dry-drift trap at
+   middle strengths. The heavy tail (P99.9) stays calibrated in every setting; only occurrence breaks.
+4. Predictions: (1) pasting 0.55–0.65: **right** (0.60); (2) plain overshoots at its strongest: **right**;
+   (3) a rainy-seams setting passes: **wrong**; (4) 2 h vs 80 min: **not tested**.
+
+### ✅ Decision
+* **Stopped, as the plan's rule says; reported as a negative result.** The helper-model fallback (plan section 7)
+  was reserved for corrections too weak at high noise; here they are strong enough and run away, so it does not
+  apply.
+* For the paper: pasting (E2, too weak), guidance (runaway at the needed strength) and trained continuation
+  (v17, retraining spoils calibration) all fail to carry storms while keeping calibration. The window horizon is
+  not removed by a sampling-time trick; continuation must be learned without losing calibration.
+
+**Verdict:** **inference-time guidance cannot carry storms across v14's pieces without flooding the series:
+negative result; v14 stays the deliverable.**
+
+---
+
 ## October 14, 2026 — Guided Continuation of v14: Plan, Code and Predictions Before the Pilot
 
 ### 🔍 Overview
