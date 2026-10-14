@@ -182,3 +182,6 @@ results/generated_data/*.ctx_state.npz
 results/evaluation/eval_cache.pkl
 # Downloaded third-party data (e.g. KOSTRA-DWD-2020 grids), re-fetched by the scripts
 data/external/
+# Two-resolution generator: generated arrays (regenerable from the models; summaries are in the stage JSONs)
+results/tworesolution/coarse/*.npz
+results/tworesolution/disaggregated/*.npz

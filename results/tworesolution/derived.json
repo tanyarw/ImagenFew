@@ -1,0 +1,29 @@
+{
+ "derived": {
+  "tau5_mm": 0.005,
+  "tau30_mm": 0.0075,
+  "asinh_scale30_mm": 0.10250000000000001,
+  "dry_half_hours_pct": 86.1494006849315,
+  "half_hours_set_dry": 139,
+  "half_hours_set_dry_pct_of_wet": 0.7109247135842881,
+  "mm_set_dry_pct": 0.012243217235631288,
+  "coarse_windows": 140097,
+  "coarse_steps_per_epoch": 68,
+  "fine_windows": 140149,
+  "fine_steps_per_epoch": 68,
+  "mm_per_year_5min": 709.5765625,
+  "mm_per_year_two_level": 709.4896875000001
+ },
+ "inputs": {
+  "data/rainfall/splits/train_years_labelled.csv": "2ad64cacbb979d090f5a8a2e420f1492b53ca9df227ecede5f92a289ec14d288",
+  "data/rainfall/splits/val_years_labelled.csv": "722dcb7323a7318dd3a25592aa0b081437d71f820aa4c6de67afec6950160040",
+  "data/rainfall/splits/test_years_labelled.csv": "a3f3fd816a8be55bf34434207e6e2231492d89e5a8bcd8b41656afca953744c8",
+  "data/rainfall/splits/seasonal_transition_matrix_train_len64.pkl": "a1c5f0defc11f97d33a9fd7321499b599bd3046535b20afd46ff08354dcc4e0c"
+ },
+ "outputs": {
+  "data/rainfall/splits_30min/train_years_labelled.csv": "ed858cd1482d4d5d0af547a72c5c22214764344ac324b2b5b00d848a6c2a223c",
+  "data/rainfall/splits_30min/val_years_labelled.csv": "0e95eb77fdeb55313691dfda836c431b0e6cebe9c5fb05d2accc2810aed19016",
+  "data/rainfall/splits_30min/test_years_labelled.csv": "cba951d88f32a0f519d96c98c467e2428da06540cf86761c2eaa83e7661c7232"
+ },
+ "plan": "code_plan/TWO_RESOLUTION_PLAN.md, section 2"
+}

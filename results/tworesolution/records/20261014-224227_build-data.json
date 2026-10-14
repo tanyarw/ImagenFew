@@ -1,0 +1,46 @@
+{
+ "command": "build-data",
+ "site": "astlingen",
+ "params": {},
+ "argv": [
+  "/Users/tanyawarrier/Desktop/projects/ImagenFew/tworesolution/__main__.py",
+  "build-data"
+ ],
+ "git": {
+  "commit": "11e371816c38391188e107c9a2381443650f6a2a",
+  "branch": "use-asinh",
+  "dirty": true,
+  "diff_sha256": "41d9e8d6467a0b94c5d9b46d604e6755f128b71bac87279852851c96fcee328b"
+ },
+ "host": "Tanyas-MacBook-Air.local",
+ "slurm_job_id": null,
+ "started": "2026-10-14T22:42:28",
+ "inputs": {},
+ "outputs": {
+  "results/tworesolution/derived.json": "19d72e6fde360b554e9920240768255d0e569cb37548532c55738e9bcb2290b2"
+ },
+ "results": {
+  "tau5_mm": 0.005,
+  "tau30_mm": 0.0075,
+  "asinh_scale30_mm": 0.10250000000000001,
+  "dry_half_hours_pct": 86.1494006849315,
+  "half_hours_set_dry": 139,
+  "half_hours_set_dry_pct_of_wet": 0.7109247135842881,
+  "mm_set_dry_pct": 0.012243217235631288,
+  "coarse_windows": 140097,
+  "coarse_steps_per_epoch": 68,
+  "fine_windows": 140149,
+  "fine_steps_per_epoch": 68,
+  "mm_per_year_5min": 709.5765625,
+  "mm_per_year_two_level": 709.4896875000001
+ },
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-14T22:42:28",
+ "status": "ok"
+}
