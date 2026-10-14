@@ -129,7 +129,7 @@ Plus the standard evaluation (families A–E, resampled bands) and diffusion vs 
 | :---: | :--- | :--- |
 | 1 | laptop | plan and predictions in the diary |
 | 2 | laptop (< 30 min of running) | 30-min data and splits; coarse config; coarse generator; `tworesolution/` package with the two-channel wrapper and its identity test; cascade; evaluation at 30 min; SLURM jobs; smoke tests |
-| 3 | cluster | coarse training (~2–3 h, 500 epochs × 68 steps) and fine training (~8–11 h) **in parallel** |
+| 3 | cluster | coarse training and fine training (each ~2–3 h, 500 epochs × 68 steps) **in parallel** |
 | 4 | cluster | stage 1 evaluation (minutes); stage 2 perfect-coarse test (minutes) |
 | 5 | cluster | stage 3 generation (~1 h) and evaluation; sewer check |
 
@@ -148,3 +148,56 @@ About 3–4 days of code, then ~1 day of cluster time. Each stop rule is applied
 
 Singapore (the recipe can be transferred later with `sitetransfer`), multiple gauges, time-of-day conditioning,
 storms longer than 32 hours (4.6% of Astlingen's rain in 2000–2007).
+
+---
+
+## 9. Comparators already measured (no trained model needed; laptop, 2026-10-14)
+
+From the stage 3 and stage 1 code run on the real record, v14 and the perfect-window generator (one seed):
+
+| At 5 minutes | Unbroken runs > 5h20 / yr | Rain in them | Gate A | Rain in 2-h-gap storms > 5h20 |
+| :--- | :---: | :---: | :---: | :---: |
+| real 2000–2007 | 14.3 | 21.4% | — | 64.7% |
+| perfect 32-hour windows | 12.3 | 17.1% | 15 / 18 | 60.7% |
+| perfect 5h20 windows | 2.8 | 3.6% | 12 / 18 | 30.6% |
+| v14 | 1.4 | 1.9% | 14 / 18 | 24.6% |
+
+The v14 row reproduces the v17 diary entry exactly. **A perfect 32-hour generator meets v17's rule** (≥ 10 runs,
+≥ 15% of rain in them), so the stage 3 targets are reachable by this design; a perfect 5h20 generator is not.
+At 30 minutes (stage 1), rain in storms longer than 5h20: real 2000–2007 71.2%, real 2008–2009 65.5%, perfect
+32-hour windows 66.3%, v14 43.6%; the stage 1 bar of 60% lies below what a perfect 32-hour generator reaches.
+
+## 10. Settled while coding (2026-10-14, before any cluster run)
+
+1. **How the totals enter the fine model.** Not as a second input channel: the network's first layer resizes one
+   stored weight bank to the number of input channels, so a second channel would also change the weights on the
+   rain channel. The totals enter through their own 3×3 convolution, initialised to zero and added after the first
+   layer (as ControlNet's "zero convolution"). Checked with the real v14 weights: before training, the fine model
+   samples exactly as v14 (difference 0) whatever totals it is given. The totals are not scaled by the network's
+   noise-dependent input factor.
+2. **Starting point:** v14's EMA weights, the ones v14 generates with.
+3. **Window layout.** Training and generation windows both start 2 steps before a half-hour; the middle 60 steps
+   (10 half-hours) are kept, and the 2 steps at each end let the model see both neighbours' totals. Training uses
+   these 140,149 windows rather than every offset (section 2): at other offsets a window's edge half-hours are
+   partial, so their totals would not match the rain inside the window.
+4. **Fine training length:** 500 epochs × 68 steps, the same number of passes as the coarse model and v14: about
+   2–3 h, not 8–11 h (section 6).
+5. **Fine target:** the 5-minute record with half-hours whose total is below 0.0075 mm set dry (139 half-hours,
+   0.7% of wet ones, 0.01% of rain), so every half-hour's six values sum to its total exactly.
+6. **Members:** 4 per level (generation seeds 42–45; training seed 0). Numeric rules use the member mean, as v17's
+   rule did; a family must pass in at least 3 of the 4 members.
+7. **Memorisation rule (stage 1, item 4), restated:** the share of generated 32-hour windows closer to a training
+   window than the closest 5% of held-out real windows must be ≤ 10%. Held-out real windows give 5% by
+   construction, so "no generated window" (section 3) would fail even for real rain. Perfect 32-hour windows, which
+   copy real years, give 31%.
+8. **Stage 2 bands:** two independent 2-year samples of whole years from 2000–2007, matching the size of 2008–2009.
+   **Join check:** rain continuing across window joins is compared with the other half-hour boundaries (within 0.05).
+9. **Cascade:** 4 position × 2 volume classes per level; each wet box takes a split observed in 2000–2007 in its
+   class. The same mass matching is applied to both disaggregators, so they are compared on structure only.
+10. **Coarse pieces** are joined end to end without smoothing, as in the window pilot.
+11. **Stop rules in code:** stage 3 refuses to run unless stage 1 passed and stage 2 selected a disaggregator.
+12. **Data:** built from the 5-minute split files, which both machines have; a cluster rebuild must reproduce the
+    hashes recorded in the committed `results/tworesolution/derived.json`.
+
+Code: package `tworesolution/` (README.md there); one change outside it, an optional reference size for
+`sitetransfer.checks.resampled_bands` (default unchanged).

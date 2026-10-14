@@ -3,6 +3,47 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 14, 2026 — Two-Resolution Generator: Code and Smoke Test Before Sending
+
+### 🔍 Overview
+Code for `code_plan/TWO_RESOLUTION_PLAN.md`: package `tworesolution/` (data at both resolutions, the fine model's
+extra input, the production sampler, mass matching, the cascade comparator, the three stage verdicts, SLURM
+jobs). The coarse model is trained by the existing `regime_training/train_regime.py` with a generated config
+(v14's, four keys changed). What was settled while coding is in plan section 10; predictions are unchanged
+(previous entry).
+
+### 📊 Findings (laptop, no cluster run yet)
+* **The fine model starts as v14 exactly.** The totals enter through a zero-initialised layer, not a second
+  channel (the first layer resizes its weights to the channel count, which would have changed v14). With the
+  real v14 weights, the untrained fine model samples identically to v14 (difference 0) whatever totals it gets.
+  The sampler reproduces `DiffusionProcess.impute` exactly, and the training step reproduces
+  `ImagenFew.forward` exactly (unit tests, 22 in all).
+* **Before training the fine model ignores the totals, as v14 would:** on 2008 windows it makes 0.59 of the rain
+  it is given and puts 39% of it in the wet half-hours. Training should bring both close to 1; the training log
+  reports both every 25 epochs.
+* **Comparators, measured with the stage code (no trained model involved):**
+
+  | At 5 minutes | Unbroken runs > 5h20 / yr | Rain in them | Gate A |
+  | :--- | :---: | :---: | :---: |
+  | real 2000–2007 | 14.3 | 21.4% | — |
+  | perfect 32-hour windows | 12.3 | 17.1% | 15 / 18 |
+  | perfect 5h20 windows | 2.8 | 3.6% | 12 / 18 |
+  | v14 | 1.4 | 1.9% | 14 / 18 |
+
+  v14 reproduces the v17 entry exactly. A perfect 32-hour generator meets v17's rule, so stage 3 is reachable by
+  this design.
+* **Smoke test** (2-batch models, CPU, scratch folder): every command ran end to end; stage 3 refused while stage 1
+  had failed; the cluster rebuild of the 30-minute data reproduced the recorded hashes.
+
+### ✅ Decision
+* **Send `tworesolution/slurm/submit.sh train`:** coarse and fine models train in parallel (about 2–3 h each);
+  stage 1 runs after the coarse model, stage 2 after the fine model. Stage 3 is sent only after both verdicts
+  are read.
+
+**Verdict:** **code ready and checked against v14 and the production sampler; nothing trained yet.**
+
+---
+
 ## October 14, 2026 — Two-Resolution Generator: Plan and Predictions Before Any Code
 
 ### 🔍 Overview
