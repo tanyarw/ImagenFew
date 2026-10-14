@@ -109,9 +109,11 @@ def load_derived():
 def build(refresh=False):
     """30-minute split files, and derived.json the first time (or with refresh).
 
-    Once derived.json exists (it is committed), a rebuild, as on the cluster, must reproduce it: the split files
-    must hash as recorded and the 30-minute files written must hash as recorded, so both machines train on
-    byte-identical data. Deterministic: rerunning writes the same files."""
+    Once derived.json exists (it is committed), a rebuild, as on the cluster, must reproduce it: the 5-minute
+    split files must hash as recorded (byte-identical input) and the derived settings must agree. The half-hour
+    totals are written rounded to 10 decimals (the gauge grid is 0.0025 mm), so that last-digit differences in
+    floating-point addition between machines (ARM laptop, x86 cluster: found 2026-10-14) do not change the files;
+    a different output hash is reported, not fatal, and `check` compares the values numerically."""
     d = derive()
     path = OUT / "derived.json"
     saved = json.loads(path.read_text()) if path.exists() and not refresh else None
@@ -126,7 +128,7 @@ def build(refresh=False):
         if not np.array_equal(states[::FACTOR], lab):
             raise ValueError(f"{name}: seasonal phases in the split file are not the calendar profile")
         dst = SPLITS30 / f"{name}_years_labelled.csv"
-        pd.DataFrame({"date": slot_starts(len(x), first_year)[::FACTOR], "avg_rainfall": x30,
+        pd.DataFrame({"date": slot_starts(len(x), first_year)[::FACTOR], "avg_rainfall": np.round(x30, 10),
                       "hmm_state": lab}).to_csv(dst, index=False)
         inputs[rel(src)] = sha256_file(src)
         outputs[rel(dst)] = sha256_file(dst)
@@ -135,10 +137,16 @@ def build(refresh=False):
         write_json(path, {"derived": d, "inputs": inputs, "outputs": outputs,
                           "plan": "code_plan/TWO_RESOLUTION_PLAN.md, section 2"})
         return d
-    bad = [k for k, h in {**inputs, **outputs}.items() if {**saved["inputs"], **saved["outputs"]}.get(k) != h]
+    bad = [k for k, h in inputs.items() if saved["inputs"].get(k) != h]
     if bad:
         raise ValueError(f"these files differ from the ones {rel(path)} was built from: {bad} (sync the split files "
                          f"from the laptop, or rebuild with --refresh and commit derived.json)")
+    off = [k for k in d if not np.isclose(d[k], saved["derived"][k])]
+    if off:
+        raise ValueError(f"the data give different settings from {rel(path)}: {off}")
+    for k, h in outputs.items():
+        if saved["outputs"].get(k) != h:
+            print(f"note: {k} is not byte-identical to the laptop's (last-digit rounding); values checked by `check`")
     return saved["derived"]
 
 

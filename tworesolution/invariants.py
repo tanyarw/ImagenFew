@@ -30,7 +30,7 @@ def check_data():
         x5c, x30 = two_level(x, saved["tau5_mm"], saved["tau30_mm"])
         df = pd.read_csv(D.SPLITS30 / f"{name}_years_labelled.csv")
         out += [_ok(f"{name}: 30-minute file = half-hour totals of the split", np.allclose(df["avg_rainfall"], x30,
-                                                                                          rtol=0, atol=1e-12)),
+                                                                                          rtol=0, atol=1e-9)),
                 _ok(f"{name}: 30-minute phases = calendar every 6th step", np.array_equal(
                     df["hmm_state"], np.tile(profile5[::FACTOR], len(x30) // STEPS_PER_YEAR_30))),
                 _ok(f"{name}: six 5-minute values of each half-hour sum to its total",
