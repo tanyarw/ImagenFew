@@ -142,21 +142,23 @@ def _concat(pick):
 
 
 def _draw(args):
-    seed, n_years = args
+    seed, n_years, n_ref = args
     rng = np.random.default_rng(seed)
     k = len(_POOL["years_x"])
     sx, sm = _concat(rng.integers(0, k, n_years))           # the stand-in for a generated series
-    rx, rm = _concat(rng.integers(0, k, k))                 # the stand-in for the reference
+    rx, rm = _concat(rng.integers(0, k, n_ref or k))        # the stand-in for the reference
     R = M.reference(rx, _POOL["P"], mask=rm)
     m = M.hydro(sx, R, _POOL["P"], mask=sm)
     return {c.name: check_value(c, m, R) for c in CHECKS}
 
 
-def resampled_bands(x, mask, params, n_draws=200, n_years=10, seed=0, workers=1):
-    """95% range of every check over n_draws two-sample resamples of whole reference years."""
+def resampled_bands(x, mask, params, n_draws=200, n_years=10, seed=0, workers=1, n_ref=None):
+    """95% range of every check over n_draws two-sample resamples of whole reference years.
+
+    n_ref: years in the reference stand-in; None (default) = as many as there are reference years."""
     years_x = [x[k * STEPS_PER_YEAR:(k + 1) * STEPS_PER_YEAR] for k in range(len(x) // STEPS_PER_YEAR)]
     years_m = [mask[k * STEPS_PER_YEAR:(k + 1) * STEPS_PER_YEAR] for k in range(len(x) // STEPS_PER_YEAR)]
-    jobs = [(seed * 1_000_003 + i, n_years) for i in range(n_draws)]
+    jobs = [(seed * 1_000_003 + i, n_years, n_ref) for i in range(n_draws)]
     if workers > 1:
         with ProcessPoolExecutor(workers, initializer=_init,
                                  initargs=(years_x, years_m, params.storm_depth_mm)) as ex:
