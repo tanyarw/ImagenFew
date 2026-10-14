@@ -1,7 +1,7 @@
 """The guidance pilot (code_plan/GUIDANCE_PLAN.md, section 4): settings, chained generation, scoring, the rules.
 
-Every setting generates the same 32 chains: 8 start dates spread over the calendar year, 4 chains each, 20
-days per chain, calendar seasonal phases, plan seed 42. All settings consume the random stream identically
+Every setting generates the same 256 chains: 8 start dates spread over the calendar year, 32 chains each, 20
+days per chain (with 32 chains the run-to-run noise of total rain was ~16%, wider than the 10% rule), calendar seasonal phases, plan seed 42. All settings consume the random stream identically
 (guidance adds gradients, not random draws), so settings with the same context length are paired.
 """
 import argparse
@@ -54,7 +54,7 @@ def load_v14(device):
     return model, scaler, net, t_steps
 
 
-def pilot_offsets(starts=8, chains_per_start=4):
+def pilot_offsets(starts=8, chains_per_start=32):
     days = [int(round(k * 365 / starts)) for k in range(starts)]
     return np.repeat(np.array(days) * STEPS_PER_DAY, chains_per_start)
 
@@ -118,7 +118,12 @@ def score(out, seams):
         ok = [bool(wet[i, p:p + k].all()) for i in range(M) for p in s if wet[i, p - 1] and p + k <= n]
         surv[h] = float(np.mean(ok)) if ok else float("nan")
     pos = out[out > 0]
+    per_chain_mm = out.sum(axis=1) / (n / STEPS_PER_YEAR)
+    per_chain_wet = 100 * wet.mean(axis=1)
     return {"continuation": float(here[prev].mean()) if prev.any() else float("nan"),
+            "chains": int(M),
+            "mm_per_year_se_pct": float(100 * per_chain_mm.std(ddof=1) / np.sqrt(M) / max(per_chain_mm.mean(), 1e-12)),
+            "wet_share_se_pp": float(per_chain_wet.std(ddof=1) / np.sqrt(M)),
             "wet_seams": int(prev.sum()),
             "continuation_inside": float(wet[:, inside][wet[:, inside - 1]].mean()),
             "wet_share_pct": float(100 * wet.mean()),
@@ -137,11 +142,13 @@ def judge(m, ref):
 
 
 def choose(results):
-    """Smallest passing strength; at equal strength prefer rainy, then wet, then plain (fewest interventions)."""
+    """The passing setting that carries rain across seams best (highest continuation); ties: the smaller
+    strength, then rainy before wet before plain (fewest interventions). Rule changed on 2026-10-14, before any
+    pilot ran, from "smallest passing strength", which could pick a setting that barely clears 0.70."""
     order = {"rainy": 0, "wet": 1, "plain": 2}
-    passing = [(r["w"], order[r["variant"]], name) for name, r in results.items()
+    passing = [(-round(r["continuation"], 3), r["w"], order[r["variant"]], name) for name, r in results.items()
                if r["w"] > 0 and r.get("pass") and all(r["pass"].values())]
-    return min(passing)[2] if passing else None
+    return min(passing)[3] if passing else None
 
 
 def task_paths(name):

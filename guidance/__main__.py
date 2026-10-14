@@ -61,7 +61,8 @@ def summary():
         out = {"rules": P.RULES, "reference": "independent", "chosen": chosen,
                "verdict": "a setting passes" if chosen else "NO SETTING PASSES: stop (negative result)",
                "results": {k: {kk: v[kk] for kk in ("variant", "w", "context_cols", "continuation", "continuation_inside",
-                                                     "wet_share_pct", "mm_per_year", "p999_mm",
+                                                     "wet_share_pct", "mm_per_year", "p999_mm", "chains",
+                                                     "mm_per_year_se_pct", "wet_share_se_pp",
                                                      "storm_survival_after_wet_seam", "pass") if kk in v}
                            for k, v in res.items()}}
         path = write_json(P.OUT / "pilot.json", out)
@@ -103,7 +104,7 @@ def main(argv=None):
     ap.add_argument("--index", type=int)
     ap.add_argument("--days", type=int, default=20)
     ap.add_argument("--starts", type=int, default=8)
-    ap.add_argument("--chains-per-start", type=int, default=4)
+    ap.add_argument("--chains-per-start", type=int, default=32)
     ap.add_argument("--device", default="cuda")
     a = ap.parse_args(argv)
     if a.command == "tasks":

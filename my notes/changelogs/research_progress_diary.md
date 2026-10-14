@@ -10,7 +10,7 @@ Can v14, unchanged, carry storms across its 5h20 pieces if each new piece is *st
 of the previous one while it is generated (reconstruction guidance, Ho et al. 2022; DPS, Chung et al. 2023;
 TSDiff, Kollovieh et al. 2023)? No training: v14's weights stay frozen and keep its calibration, which v17 lost.
 Plan: `code_plan/GUIDANCE_PLAN.md` (sections 1–9, and section 10 for changes made today). Code: package
-`guidance/`. Pilot sent to the cluster (20 GPU array tasks, then a summary, then a 2-hour-context follow-up).
+`guidance/`. Pilot to be sent to the cluster (20 GPU array tasks, then a summary, then a 2-hour-context follow-up).
 
 ### 📊 Findings (laptop checks, before the pilot)
 * **One real storm, one piece, 32 samples** (17 April 2008, 80 min of rain at 0.06–0.10 mm then 0.10–0.15 mm):
@@ -38,8 +38,11 @@ Plan: `code_plan/GUIDANCE_PLAN.md` (sections 1–9, and section 10 for changes m
 
 ### ✅ Decision
 * Pilot rules (fixed): continuation ≥ 0.70; wet share within ±1 pp, volume within ±10%, P99.9 within ±15% of
-  independent pieces; choose the smallest passing strength, rainy seams first on ties; if none passes, stop and
-  report a negative result.
+  independent pieces; choose the passing setting with the highest continuation (ties: smaller strength, then
+  rainy seams); if none passes, stop and report a negative result. 256 chains × 20 days per setting.
+* Review before sending (same day): the first draft used 32 chains, whose noise (~16% on total rain between two
+  runs) was wider than the rules, and chose the smallest passing strength; both changed before anything ran
+  (plan section 10).
 
 ---
 

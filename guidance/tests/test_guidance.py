@@ -31,10 +31,11 @@ class Weights(unittest.TestCase):
         ok = {"continuation": 0.75, "wet_share_pct": 9.5, "mm_per_year": 720.0, "p999_mm": 1.6}
         self.assertTrue(all(P.judge(ok, ref).values()))
         self.assertFalse(P.judge(ok | {"mm_per_year": 600.0}, ref)["volume within 10%"])
-        res = {"a": {"w": 0.1, "variant": "plain", "pass": {"x": True}},
-               "b": {"w": 0.1, "variant": "rainy", "pass": {"x": True}},
-               "c": {"w": 0.05, "variant": "wet", "pass": {"x": False}}}
-        self.assertEqual(P.choose(res), "b")
+        res = {"a": {"w": 0.1, "variant": "plain", "continuation": 0.80, "pass": {"x": True}},
+               "b": {"w": 0.1, "variant": "rainy", "continuation": 0.80, "pass": {"x": True}},
+               "c": {"w": 0.05, "variant": "wet", "continuation": 0.90, "pass": {"x": False}},
+               "d": {"w": 0.025, "variant": "plain", "continuation": 0.72, "pass": {"x": True}}}
+        self.assertEqual(P.choose(res), "b")         # best continuation among passing; tie -> rainy
 
 
 @unittest.skipUnless(HAVE_V14, "v14 checkpoint not present")

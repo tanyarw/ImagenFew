@@ -21,8 +21,13 @@ echo "job ${SLURM_JOB_ID:-} | $(hostname -s) | $(date) | commit $(git rev-parse 
 
 python -m sitetransfer pilot --site "${SITE}"
 python -m sitetransfer evaluate --site "${SITE}"
-python -m sitetransfer pilot --site astlingen
-python -m sitetransfer evaluate --site astlingen
-python -m sitetransfer verdict --site "${SITE}"
-cat results/transfer/verdict.md
+if [ -f data/rainfall/real_rainfall_data.csv ]; then
+    python -m sitetransfer pilot --site astlingen
+    python -m sitetransfer evaluate --site astlingen
+    python -m sitetransfer verdict --site "${SITE}"
+    cat results/transfer/verdict.md
+else
+    echo "data/rainfall/real_rainfall_data.csv is not on this machine (data/ is not in git): Astlingen and the"
+    echo "verdict are skipped; run 'python -m sitetransfer evaluate --site astlingen && python -m sitetransfer verdict' on the laptop"
+fi
 echo "done $(date)"

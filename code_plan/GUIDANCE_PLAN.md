@@ -14,7 +14,7 @@ with the end of the previous one while it is being generated?
 * **The method is established** (reconstruction guidance, Ho et al. 2022, "Video Diffusion Models"; the same idea
   as Diffusion Posterior Sampling, Chung et al. 2023; for time series, TSDiff, Kollovieh et al. 2023). The new
   part is its use on zero-heavy rainfall and its test against the window-horizon diagnostic and the sewer.
-* **Two cluster jobs, each gated.** A pilot (13 settings, one short GPU array job) picks a setting by rules
+* **Two cluster jobs, each gated.** A pilot (20 settings, one short GPU array job; section 10) picks a setting by rules
   written here; only if one passes, a full 10-year run (a second array job), then the usual evaluation.
 * **What success buys the paper:** calibrated synthetic rain with long storms, no retraining, nothing copied from
   the record: the fix that v16 attempted by hand and v17 attempted by retraining.
@@ -72,8 +72,7 @@ on the calendar timeline): the built-in comparison.
 
 ## 4. Pilot (cluster, one GPU array job)
 
-* **Size.** 32 chains × 20 days per setting: about 1.75 chain-years, enough seams with rain to measure
-  continuation. On a GPU a piece takes about the same time for 8 or 32 chains (the network is tiny), so the
+* **Size.** 256 chains × 20 days per setting (32 chains in the first draft; section 10). On a GPU a piece takes about the same time for 8 or 32 chains (the network is tiny), so the
   extra chains cost almost nothing.
 * **Days.** The same 20 days and labels for every setting; chains start on 8 dates spread across the year
   (4 chains each), so every season is represented.
@@ -170,3 +169,9 @@ Singapore (guidance is tested on the home site only).
 * **Known history noise** is 0: the context is the previous piece's output exactly (E2 used 0.05).
 * Code: package `guidance/` (README there); with w = 0 the sampler reproduces `generate_context.sample_block`
   bit for bit (unit test).
+* **Sample size raised to 256 chains** (32 per start date). Measured on real Astlingen rain at the 8 pilot dates,
+  20-day totals vary with CV 0.64: with 32 chains the noise of the difference between two runs is ~16% for
+  total rain and ~1.3 pp for wet steps, wider than the ±10% / ±1 pp rules; with 256 chains ~5.7% and ~0.45 pp.
+  Each task now reports the standard errors of its totals.
+* **Choice rule changed** (before any pilot ran): the passing setting with the highest continuation, not the
+  smallest passing strength; ties go to the smaller strength, then rainy, wet, plain.
