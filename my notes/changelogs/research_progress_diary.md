@@ -117,6 +117,11 @@ regression-tested), so the full evaluation cache was not refreshed; sewer check 
    0.55–0.70, "like v14"). Per mm of rain, both v17 modes overflow about the same (chained 0.82 / 0.88 =
    0.93; control 1.07 / 1.17 = 0.92; v14 0.67): the retrained model's heavier storms raise overflow whether
    or not storms continue, so the sewer number cannot be credited to continuation.
+6. **EFD controller (added Oct 14).** Overflow ratios match BC (chained 0.73–0.95, control 1.10). EFD's
+   saving over BC: real 3.6%, v14 5.9%, v16 3.0%, **v17 chained 2.3–3.6% (mean 2.8%)**, control 4.5%. With
+   storms continued, the controller's room to act moves from v14's overstated 5.9% to about real's level.
+   (Running `gate_b_sewer.py` with one controller replaces a series' rows for both controllers; the BC rows
+   were restored from the Oct 13 commit. Run both controllers together: `--controllers BC EFD`.)
 
 ### ✅ Decision
 * **Reported as a partial result:** trained continuation carries storms across blocks (the mechanism the
