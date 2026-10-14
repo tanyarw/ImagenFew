@@ -1,0 +1,2 @@
+# Regenerable pilot series stay out of git; JSON summaries and run records are tracked.
+*.npz

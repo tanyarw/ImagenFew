@@ -3,6 +3,46 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 14, 2026 — Guided Continuation of v14: Plan, Code and Predictions Before the Pilot
+
+### 🔍 Overview
+Can v14, unchanged, carry storms across its 5h20 pieces if each new piece is *steered* to agree with the end
+of the previous one while it is generated (reconstruction guidance, Ho et al. 2022; DPS, Chung et al. 2023;
+TSDiff, Kollovieh et al. 2023)? No training: v14's weights stay frozen and keep its calibration, which v17 lost.
+Plan: `code_plan/GUIDANCE_PLAN.md` (sections 1–9, and section 10 for changes made today). Code: package
+`guidance/`. Pilot sent to the cluster (20 GPU array tasks, then a summary, then a 2-hour-context follow-up).
+
+### 📊 Findings (laptop checks, before the pilot)
+* **One real storm, one piece, 32 samples** (17 April 2008, 80 min of rain at 0.06–0.10 mm then 0.10–0.15 mm):
+
+  | Strength w | Rain at the first new step | Still raining after 30 min | Mean of next 30 min (real 0.118 mm) |
+  | :---: | :---: | :---: | :---: |
+  | 0 (pasting) | 88% | 38% | 0.020 |
+  | 0.1 | 100% | 56% | 0.108 |
+  | 0.5 | 100% | 94% | 0.361 |
+
+  Guidance works mechanically; the strength decides between too little and invented rain. The corrections act
+  only at high noise (where the piece's layout is decided), as intended.
+* **With w = 0 the new sampler is `generate_context.sample_block` bit for bit** (unit test), so any difference
+  in the pilot comes from guidance alone.
+* **A smoke run caught a scaling error before the pilot:** weighting wet steps 10x multiplied the whole correction,
+  and the wet-weighted versions came out 10–35 times too wet. Weights are now rescaled to a mean of 1; after the fix
+  the totals were 262–508 mm/yr against 411 for independent pieces (8 chains × 3 days, noisy). The grid was widened
+  down to six strengths, 0.003–0.1.
+
+### 🔮 Predictions (before the pilot)
+1. Pasting alone (w = 0): continuation 0.55–0.65 (E2 without resampling: 0.58–0.61).
+2. Plain guidance raises continuation but changes the totals; the strongest settings fail on volume (too wet).
+3. At least one rainy-seams setting passes all four rules, at w between 0.006 and 0.05.
+4. Two hours of context does not beat 80 minutes by 0.03 (the window pilot showed 80 min carries enough).
+
+### ✅ Decision
+* Pilot rules (fixed): continuation ≥ 0.70; wet share within ±1 pp, volume within ±10%, P99.9 within ±15% of
+  independent pieces; choose the smallest passing strength, rainy seams first on ties; if none passes, stop and
+  report a negative result.
+
+---
+
 ## October 14, 2026 — Singapore Transfer: Results
 
 ### 🔍 Overview
