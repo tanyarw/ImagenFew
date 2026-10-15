@@ -1,0 +1,63 @@
+# ==================================================================================================
+# v19: the v14 recipe with a one-day window. WRITTEN BY `python -m oneday config`; do not edit.
+# Template: regime_training/config_v14.yaml (sha256 8463eb71c689b131...). Only these keys differ:
+#   attn_resolution: [12, 6, 3]
+#   delay: 24
+#   embedding: 24
+#   img_resolution: 24
+#   run_dir: ImagenFew/Rainfall_v19/
+#   seq_len: 288
+# Epochs and batch size: v14's recipe (500 epochs, batch 2048).
+# Initial weights: models_ckpt/ImagenFew/ImagenFew_288_807epochs.ckpt (sha256 3fd96271c481d301...).
+# Plan: code_plan/ONE_DAY_WINDOW_PLAN.md.
+# ==================================================================================================
+epochs: 500
+batch_size: 2048
+learning_rate: 0.0001
+weight_decay: 1.0e-05
+intensity_weight_alpha: 0.0
+intensity_weight_gamma: 0.5
+intensity_weight_normalize: true
+fft_weight: 1.0
+grad_clip: 1.0
+train_csv: data/rainfall/splits/train_years_labelled.csv
+test_csv: data/rainfall/splits/val_years_labelled.csv
+seq_len: 288
+n_classes: 4
+regime_col: hmm_state
+data_col: avg_rainfall
+data_transform: asinh
+asinh_scale: 0.035
+use_stft: false
+delay: 24
+embedding: 24
+handler: models.ImagenFew.handler
+img_resolution: 24
+input_channels: 1
+unet_channels: 32
+ch_mult:
+- 1
+- 2
+- 2
+- 4
+attn_resolution:
+- 12
+- 6
+- 3
+diffusion_steps: 36
+dynamic_size:
+- 128
+- 128
+beta1: 1.0e-05
+betaT: 0.01
+deterministic: false
+finetune: true
+pretrain: false
+ema: true
+ema_warmup: 100
+ft_method: all
+lora_dim: 4
+dropout: 0.1
+logging_iter: 25
+run_id: null
+run_dir: ImagenFew/Rainfall_v19/

@@ -85,26 +85,34 @@ def _family_members(rows, family):
 
 # ── memorisation (eval_suite.WindowRef's test, at 30 minutes) ───────────────────────────────────────
 
-def wet_windows(x30, length=L):
-    n = len(x30) // length
-    W = np.asarray(x30[:n * length]).reshape(n, length)
-    return np.log1p(W[W.max(1) > 0] / 0.1)
+def wet_windows(x, length=L, agg=1, min_total=0.0):
+    """Non-overlapping windows with rain (at least `min_total` mm in all), summed over `agg` steps, as
+    log1p(mm / 0.1) (eval_suite.wet_windows)."""
+    n = len(x) // length
+    W = np.asarray(x[:n * length]).reshape(n, length)
+    W = W[(W.max(1) > 0) & (W.sum(1) >= min_total)]
+    if agg > 1:
+        W = W.reshape(len(W), length // agg, agg).sum(2)
+    return np.log1p(W / 0.1)
 
 
 class Memorisation:
-    """Is a generated 32-hour window closer to a training window than genuinely new real windows get?
+    """Is a generated window closer to a training window than genuinely new real windows get?
 
     too_close_pct: share of generated windows nearer to their nearest 2000-2007 window than the closest 5% of
-    the 2008-2009 windows are; real held-out windows give 5% by construction, a copying generator far more."""
+    the 2008-2009 windows are; real held-out windows give 5% by construction, a copying generator far more.
+    Default: 32-hour windows of half-hour totals (stage 1); oneday/ uses one-day windows of 15-minute totals with
+    at least 1 mm (near-dry days are often identical to a training day, which would set the threshold to 0)."""
 
-    def __init__(self, train30, held30):
+    def __init__(self, train, held, length=L, agg=1, min_total=0.0):
         from sklearn.neighbors import NearestNeighbors
-        self.nn = NearestNeighbors(n_neighbors=1).fit(wet_windows(train30))
-        self.held = self.nn.kneighbors(wet_windows(held30))[0][:, 0]
+        self.length, self.agg, self.min_total = length, agg, min_total
+        self.nn = NearestNeighbors(n_neighbors=1).fit(wet_windows(train, length, agg, min_total))
+        self.held = self.nn.kneighbors(wet_windows(held, length, agg, min_total))[0][:, 0]
         self.threshold = float(np.percentile(self.held, 5))
 
-    def score(self, x30):
-        d = self.nn.kneighbors(wet_windows(x30))[0][:, 0]
+    def score(self, x):
+        d = self.nn.kneighbors(wet_windows(x, self.length, self.agg, self.min_total))[0][:, 0]
         return {"too_close_pct": float(100 * (d < self.threshold).mean()),
                 "nn_dist_ratio": float(np.median(d) / np.median(self.held))}
 
