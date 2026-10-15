@@ -3,6 +3,39 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 15, 2026 — v19 (One-Day Window): Plan, Code and Predictions Before the GPU Smoke Job
+
+### 🔍 Overview
+The user pretrained ImagenFew on 288-step series (24×24 network, 807 epochs, batch 1024;
+`models_ckpt/ImagenFew/ImagenFew_288_807epochs.ckpt`, sha256 `3fd96271c481d301…`). Every released checkpoint is
+8×8 (64 steps), so this is the first chance to train a learned **one-day** window at 5 minutes. v19 = the v14
+recipe with only the window changed (288 steps, delay = embedding = 24, attention 12/6/3). Plan
+`code_plan/ONE_DAY_WINDOW_PLAN.md`; package `oneday/` (commit `c1a5777`). Runs alongside the two-resolution coarse
+retrain. Agreed as the last experiment before writing up.
+
+### 📊 Findings (laptop, before any GPU run)
+* The checkpoint loads strictly except the label layer (32 pretraining datasets → 4 seasonal phases); training
+  (one CPU batch, 840,673 one-day windows), generation and evaluation all run end to end.
+* **The rule is reachable:** perfect one-day windows give 11.3–13.8 unbroken runs > 5h20 per year and 16–20% of
+  rain in them (rule ≥ 10 and ≥ 15%).
+* **Memorisation test fixed before use:** at the one-day scale, near-dry days are often identical to a training
+  day, which set the "too close" threshold to 0 and flagged nothing, even exact copies. Only days with at least
+  1 mm are now compared: held-out real 5.1%, v14 5.6%, copies of real days 100%.
+
+### ✅ Decision
+* **GPU smoke job first** (about 10 min): speed and memory at batch 2048 and 1024, and the partition time limit.
+  Epochs and batch size are then fixed by the plan's rule (section 3): v14's 500 epochs and batch 2048 if they fit;
+  never silently shortened.
+* **Rule** (means over 4 seeds): ≥ 10 unbroken runs > 5h20 per year, ≥ 15% of rain in them, volume 0.95–1.05, wet
+  spell 0.90–1.10, Gate A ≥ 12/18, too-close days ≤ 10%; sewer 0.85–1.15 (BC, EFD) on the laptop.
+* **Predictions:** (1) 8–13 unbroken runs per year, mean ≥ 10; (2) 13–20% of rain in them; (3) volume 0.92–1.02
+  (least certain); (4) wet spell 0.90–1.05, Gate A ≥ 12, Tier 6 ≥ 2/3, too-close ≤ 10%; (5) sewer (BC) 0.80–1.05;
+  (6) the statistical rule passes, at about 55% confidence.
+
+**Verdict:** **v19 set up; nothing trained; smoke job next.**
+
+---
+
 ## October 15, 2026 — Two-Resolution Generator: Coarse Model at v14's Step Count, Predictions Before Sending
 
 ### 🔍 Overview

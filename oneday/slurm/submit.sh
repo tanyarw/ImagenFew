@@ -34,7 +34,7 @@ case "${WHAT}" in
         CMD=(sbatch --parsable -p "${GPU_PARTITION}" oneday/slurm/smoke.sbatch)
         ;;
     train)
-        T="${TRAIN_TIME:?set TRAIN_TIME (e.g. 40:00:00) from the smoke result and the plan's rule}"
+        T="${TRAIN_TIME:?set TRAIN_TIME (e.g. 40:00:00) from the smoke result and the rule in the plan}"
         CMD=(sbatch --parsable -p "${GPU_PARTITION}" -t "${T}" oneday/slurm/train.sbatch)
         ;;
     *)
