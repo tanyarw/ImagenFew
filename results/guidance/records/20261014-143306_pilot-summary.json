@@ -1,0 +1,67 @@
+{
+ "command": "pilot-summary",
+ "site": "astlingen",
+ "params": {
+  "rules": {
+   "continuation_min": 0.7,
+   "wet_share_pp": 1.0,
+   "volume_ratio": [
+    0.9,
+    1.1
+   ],
+   "p999_ratio": [
+    0.85,
+    1.15
+   ]
+  }
+ },
+ "argv": [
+  "/home/t/tanyawar/thesis/ImagenFew/guidance/__main__.py",
+  "pilot-summary"
+ ],
+ "git": {
+  "commit": "b485765a0c3ca0b1eb97305b6be2fa1afb309362",
+  "branch": "use-asinh",
+  "dirty": false,
+  "diff_sha256": null
+ },
+ "host": "xcnc14",
+ "slurm_job_id": "943474",
+ "started": "2026-10-14T14:33:07",
+ "inputs": {
+  "results/guidance/pilot/independent.json": "e47e853c63c1130e4fbdfb94dd0ea87fc13eb24e888045441c2460586adb3b57",
+  "results/guidance/pilot/paste.json": "9ee6ea7932089352474d48c943e0b2b7d1493e71d4bd4a5bd6c63f95a151d100",
+  "results/guidance/pilot/plain_w0.003.json": "edf263c7c23e21922b4b1f3de7fdc651ee20f6273f0dcef67a19cc5c7d90eb70",
+  "results/guidance/pilot/plain_w0.006.json": "15aad6ace712f6188efb0606a47fe739d5042c1828301937e8780a7e8b0ea303",
+  "results/guidance/pilot/plain_w0.0125.json": "0167c33d81618256299fe648279248d4fa76cd442535a07da83c9f5d340719fb",
+  "results/guidance/pilot/plain_w0.025.json": "c1ab02d01649037302e078bf0bb692565c702f4400b5e329b973542e23c3bd3f",
+  "results/guidance/pilot/plain_w0.05.json": "f19845c91bab455db46252d8bf313a8923093b99daaaf1a73a85fbb37faf6508",
+  "results/guidance/pilot/plain_w0.1.json": "72134509c3b8198db8fb807639e294bc83a7a4cc67b2fe16eb52162d75907040",
+  "results/guidance/pilot/wet_w0.003.json": "34cc65964a854bd54b7f35073d96975b904b1031f37a50ae2a28bc3fd33bb74b",
+  "results/guidance/pilot/wet_w0.006.json": "4560463b44529e75aef9c39f6ee36c1c1cb515becdad1630bb7eb9f7edb22f35",
+  "results/guidance/pilot/wet_w0.0125.json": "81f74229594cfd98bd0faf98aa64eec6cb6e4706a49c4871552c39a94eb1e282",
+  "results/guidance/pilot/wet_w0.025.json": "cc7f8cd38d21d51971fcdc1d2c248e8e173e2529faed47a99789e302a2051e43",
+  "results/guidance/pilot/wet_w0.05.json": "4aa15a6c37038a687fce27c75432e2a178e4e84317668bbe6a46d45ad296e2c7",
+  "results/guidance/pilot/wet_w0.1.json": "9555b948893249a268e43798897af478a3fa5c8682823375a25f7b938e63279c",
+  "results/guidance/pilot/rainy_w0.003.json": "c75a4a07e0793a93924a4bbfc05e7759bed337a8f4f6792c95fb006300a7f5b6",
+  "results/guidance/pilot/rainy_w0.006.json": "015a456d64715790d391fc537280896d930d9bd65ab6b1f8aea9e51044953aac",
+  "results/guidance/pilot/rainy_w0.0125.json": "4d7cbda918f225d9a1abc89ba874473932d1f2ebb2347bf9e2a36310b8d4c34e",
+  "results/guidance/pilot/rainy_w0.025.json": "48493e0ee5136070ae08610f4d7e1e0d0adb7f4dadb2d685a461c29f7fda5d94",
+  "results/guidance/pilot/rainy_w0.05.json": "eb87fc689bfb675a46fb54267dd5eb787f4781dc17ff0c06942baae4aee6d16c",
+  "results/guidance/pilot/rainy_w0.1.json": "c521a5f995c8774a83106fc63cb0b37613988f7d80b227bc15d317f5f7c5a3d4"
+ },
+ "outputs": {
+  "results/guidance/pilot.json": "11e40464a0de7e4bdc7a1fe783389707abf10be81a0ff10138349e80ff0e349a"
+ },
+ "results": {
+  "chosen": null
+ },
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "torch": "2.6.0+cu124",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-14T14:33:07",
+ "status": "ok"
+}

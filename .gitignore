@@ -185,3 +185,5 @@ data/external/
 # Two-resolution generator: generated arrays (regenerable from the models; summaries are in the stage JSONs)
 results/tworesolution/coarse/*.npz
 results/tworesolution/disaggregated/*.npz
+# The user's own 24x24 pretrained checkpoint (58 MB): kept out of git, sha256 recorded in oneday/config.py
+models_ckpt/ImagenFew/ImagenFew_288_807epochs.ckpt

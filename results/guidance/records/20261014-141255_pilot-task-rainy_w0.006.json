@@ -1,0 +1,55 @@
+{
+ "command": "pilot-task-rainy_w0.006",
+ "site": "astlingen",
+ "params": {
+  "name": "rainy_w0.006",
+  "context_cols": 2,
+  "variant": "rainy",
+  "w": 0.006,
+  "days": 20,
+  "starts": 8,
+  "chains_per_start": 32,
+  "seed": 42,
+  "wet_weight": 10.0,
+  "device": "cuda"
+ },
+ "argv": [
+  "/home/t/tanyawar/thesis/ImagenFew/guidance/__main__.py",
+  "pilot-task",
+  "--index",
+  "15",
+  "--device",
+  "cuda"
+ ],
+ "git": {
+  "commit": "b485765a0c3ca0b1eb97305b6be2fa1afb309362",
+  "branch": "use-asinh",
+  "dirty": false,
+  "diff_sha256": null
+ },
+ "host": "xgph14",
+ "slurm_job_id": "943638",
+ "started": "2026-10-14T14:12:55",
+ "inputs": {},
+ "outputs": {
+  "results/guidance/pilot/rainy_w0.006.npz": "b2da6c477849a13d2e35bb6f7953dfad426c1893b4328d237083937deb35df6b",
+  "results/guidance/pilot/rainy_w0.006.json": "015a456d64715790d391fc537280896d930d9bd65ab6b1f8aea9e51044953aac"
+ },
+ "results": {
+  "continuation": 0.6255855855855856,
+  "wet_share_pct": 8.97365993923611,
+  "mm_per_year": 747.5858219925162,
+  "p999_mm": 1.8110267652273206
+ },
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "sklearn": "1.7.2",
+  "torch": "2.6.0+cu124",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-14T14:22:40",
+ "status": "ok"
+}

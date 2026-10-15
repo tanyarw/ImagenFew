@@ -1,0 +1,27 @@
+{
+ "continuation": 0.6018656716417911,
+ "chains": 256,
+ "mm_per_year_se_pct": 2.56923251965944,
+ "wet_share_se_pp": 0.13160394834909295,
+ "wet_seams": 2680,
+ "continuation_inside": 0.83015098418105,
+ "wet_share_pct": 8.46591525607639,
+ "mm_per_year": 687.10980042351,
+ "p999_mm": 1.838584193468224,
+ "storm_survival_after_wet_seam": {
+  "1h": 0.08097014925373135,
+  "2h": 0.034328358208955224,
+  "4h": 0.012429378531073447
+ },
+ "name": "paste",
+ "context_cols": 2,
+ "variant": "plain",
+ "w": 0.0,
+ "days": 20,
+ "starts": 8,
+ "chains_per_start": 32,
+ "seed": 42,
+ "wet_weight": 10.0,
+ "device": "cuda",
+ "correction_over_guess_by_step": []
+}
