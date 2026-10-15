@@ -36,8 +36,9 @@ def check_data():
                 _ok(f"{name}: six 5-minute values of each half-hour sum to its total",
                     np.allclose(aggregate(x5c), x30, rtol=0, atol=1e-12)),
                 _ok(f"{name}: wet totals >= tau30", (x30[x30 > 0] >= saved["tau30_mm"]).all())]
-    base, coarse, fine = D.config_dicts(saved)
-    for path, want in ((D.COARSE_CONFIG, coarse), (D.FINE_CONFIG, fine)):
+    c = D.config_dicts(saved)
+    for path, want in ((D.COARSE_CONFIG, c["coarse"]), (D.COARSE_LONG_CONFIG, c["coarse_long"]),
+                       (D.FINE_CONFIG, c["fine"])):
         have = yaml.safe_load(path.read_text()) if path.exists() else {}
         out.append(_ok(f"{path.name} is v14's config with only the allowed keys changed", not diff_keys(have, want),
                        f"differs in {diff_keys(have, want)}" if diff_keys(have, want) else ""))

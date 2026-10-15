@@ -14,6 +14,7 @@ import numpy as np
 from tworesolution import cascade
 from tworesolution import data as D
 from tworesolution import grid as G
+from tworesolution import evaluate as E
 from tworesolution.evaluate import Memorisation, join_continuation
 from tworesolution.mass import finish
 
@@ -158,6 +159,23 @@ class Diagnostics(unittest.TestCase):
         self.assertEqual(json.dumps(a, sort_keys=True), json.dumps(b, sort_keys=True))     # NaN-safe
 
 
+class Naming(unittest.TestCase):
+    """The first coarse run keeps its original file names; every output of another coarse run carries its tag."""
+
+    def test_tags(self):
+        self.assertEqual(E.tag(D.RUN_COARSE), "")
+        self.assertEqual(E.tag(D.RUN_COARSE_LONG), "_long")
+        self.assertEqual(E.coarse_path().name, "coarse30.npz")
+        self.assertEqual(E.coarse_path(D.RUN_COARSE_LONG).name, "coarse30_long.npz")
+        self.assertEqual(E.stage_path(1).name, "stage1.json")
+        self.assertEqual(E.stage_path(1, D.RUN_COARSE_LONG).name, "stage1_long.json")
+        self.assertEqual(E.stage_path(2, D.RUN_COARSE_LONG).name, "stage2.json")       # stage 2 has no coarse model
+        self.assertEqual(E.disaggregated_path("coarse", "fine", D.RUN_COARSE_LONG).name, "coarse_long_fine.npz")
+        self.assertEqual(E.disaggregated_path("heldout", "fine", D.RUN_COARSE_LONG).name, "heldout_fine.npz")
+        self.assertEqual(E.series_name("fine", D.RUN_COARSE_LONG), "twores_v1_long")
+        self.assertEqual(E.series_name("cascade"), "twores_cascade")
+
+
 @unittest.skipUnless(HAVE_DATA, "split files not present")
 class Data(unittest.TestCase):
     def test_rules_give_the_planned_settings(self):
@@ -165,6 +183,13 @@ class Data(unittest.TestCase):
         self.assertEqual(d["tau30_mm"], 0.0075)
         self.assertAlmostEqual(d["asinh_scale30_mm"], 0.1025)
         self.assertEqual(d["coarse_windows"], 140_097)
+
+    def test_long_run_matches_v14_steps(self):
+        c = D.config_dicts(D.load_derived())
+        self.assertEqual(D.v14_optimizer_steps(c["base"]), 205_000)                 # 410 steps x 500 epochs
+        self.assertEqual(c["coarse_long"]["epochs"], 3015)                            # 68 steps x 3015 >= 205,000
+        self.assertEqual({k for k in c["coarse_long"] if c["coarse_long"][k] != c["coarse"].get(k)},
+                         {"epochs", "run_dir"})
 
 
 @unittest.skipUnless(HAVE_TORCH, "torch not available")

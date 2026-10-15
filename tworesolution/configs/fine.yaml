@@ -4,7 +4,7 @@
 #   init_from: logs/ImagenFew/Rainfall_Regime/v14/best_regime_model.pt
 #   run_dir: ImagenFew/Rainfall_twores_fine/
 #   scaler_from: logs/ImagenFew/Rainfall_Regime/v14/scaler.pkl
-# Plan: code_plan/TWO_RESOLUTION_PLAN.md (sections 2 and 10).
+# Plan: code_plan/TWO_RESOLUTION_PLAN.md (sections 2, 10 and 11).
 # ==================================================================================================
 epochs: 500
 batch_size: 2048

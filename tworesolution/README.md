@@ -43,6 +43,9 @@ tworesolution/slurm/submit.sh train               # coarse and fine train in par
                                                   # stage 1 runs after the coarse model, stage 2 after the fine one
 # read results/tworesolution/stage1.json and stage2.json (their verdicts are printed at the end of the logs)
 tworesolution/slurm/submit.sh stage3              # refuses unless stages 1 and 2 allow it
+# follow-up (plan section 11): the coarse model for v14's 205,000 steps, then its stage 1 (outputs tagged _long)
+tworesolution/slurm/submit.sh retrain
+COARSE_RUN=twores_coarse30_long tworesolution/slurm/submit.sh stage3     # only if stage1_long.json passes
 ```
 
 The cluster needs, outside git: `data/rainfall/splits/{train,val,test}_years_labelled.csv` (already there for

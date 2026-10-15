@@ -201,3 +201,33 @@ At 30 minutes (stage 1), rain in storms longer than 5h20: real 2000–2007 71.2%
 
 Code: package `tworesolution/` (README.md there); one change outside it, an optional reference size for
 `sitetransfer.checks.resampled_bands` (default unchanged).
+
+## 11. Follow-up: the coarse model at v14's step count (2026-10-15, before sending)
+
+**Why.** Stage 1 stopped on storm occurrence (volume 0.93; 11–17% too few wet half-hours) while storm duration and
+depth sat on the perfect 32-hour line. The coarse model had 34,000 optimiser steps (500 passes, section 2) against
+v14's 205,000, and its loss was still falling at the last epoch (−1.8% over the last 100 epochs; best epoch = last).
+So "diffusion cannot learn occurrence at 30 minutes" and "training stopped early" cannot be told apart. The
+Singapore transfer run matched steps, not passes; this run does the same.
+
+**The one change:** epochs 500 → 3,015 (68 steps each: 205,020 ≥ v14's 205,000 = 410 × 500). Everything else as
+`twores_coarse30`: config `tworesolution/configs/coarse30_long.yaml`, run `twores_coarse30_long`, seed 0,
+`ImagenFew_64.ckpt`, about 11 h. Its outputs carry the tag `_long` (`stage1_long.json`, `coarse30_long.npz`);
+the first run's files are kept unchanged.
+
+**Rules, unchanged:** stage 1 exactly as section 3 and section 10. The fine model is not retrained (stage 2 passed).
+
+**What each outcome means (fixed now):**
+* stage 1 passes → stage 3 with this coarse model and the existing fine model, then the sewer check;
+* volume still below 0.95 with storm structure kept → the occurrence deficit is not a training-length effect; the
+  two-resolution result is reported as it stands and **no third coarse run is made**;
+* too-close windows above 10% → the longer model memorises; it is rejected whatever its volume.
+
+**Predictions:**
+1. Final training loss at least 5% below the 500-epoch run's 0.376.
+2. Volume (member mean) 0.95–1.00; wet half-hours 12.5–13.5% (real 13.9%, first run 11.4–12.3%).
+3. Storm structure unchanged: rain in storms longer than 5h20 62–68% at 30 minutes, P90 storm duration 8–9 h.
+4. Too-close windows rise but stay at or below 10% (first run 4.6%).
+5. Stage 1 passes. Confidence is modest, about even: the deficit may come from the light-rain end of the
+   distribution, which longer training need not fix.
+

@@ -10,7 +10,9 @@
 
 # ==============================================================================
 # Two-resolution generator: generate and judge one stage (code_plan/TWO_RESOLUTION_PLAN.md, sections 3-5).
-# Sent by tworesolution/slurm/submit.sh; argument: 1 | 2 | 3. Results in results/tworesolution/.
+# Sent by tworesolution/slurm/submit.sh; arguments: 1 | 2 | 3, then optionally the coarse run (default
+# twores_coarse30; twores_coarse30_long for the follow-up, whose outputs carry "_long"). Results in
+# results/tworesolution/.
 #
 #   1  10 years of coarse totals (4 members) -> stage1.json: does the coarse model carry long storms?
 #   2  the fine model and the cascade given the real 2008-09 totals -> stage2.json
@@ -19,7 +21,8 @@
 #      Refuses to run unless stages 1 and 2 passed (tworesolution/evaluate.py, stage3_methods).
 # ==============================================================================
 set -euo pipefail
-STAGE="${1:?usage: stage.sbatch 1|2|3}"
+STAGE="${1:?usage: stage.sbatch 1|2|3 [COARSE_RUN]}"
+RUN="${2:-twores_coarse30}"
 cd "${SLURM_SUBMIT_DIR:-.}"
 source .venv/bin/activate
 mkdir -p logs
@@ -31,8 +34,8 @@ python -m tworesolution check
 
 case "${STAGE}" in
     1)
-        python -m tworesolution generate-coarse
-        python -m tworesolution evaluate --stage 1 --workers 8
+        python -m tworesolution generate-coarse --coarse-run "${RUN}"
+        python -m tworesolution evaluate --stage 1 --workers 8 --coarse-run "${RUN}"
         ;;
     2)
         python -m tworesolution disaggregate --source heldout --method fine
@@ -40,11 +43,11 @@ case "${STAGE}" in
         python -m tworesolution evaluate --stage 2 --workers 8
         ;;
     3)
-        METHODS=$(python -m tworesolution stage3-methods)
+        METHODS=$(python -m tworesolution stage3-methods --coarse-run "${RUN}")
         for M in ${METHODS}; do
-            python -m tworesolution disaggregate --source coarse --method "${M}"
+            python -m tworesolution disaggregate --source coarse --method "${M}" --coarse-run "${RUN}"
         done
-        python -m tworesolution evaluate --stage 3
+        python -m tworesolution evaluate --stage 3 --coarse-run "${RUN}"
         ;;
     *)
         echo "unknown stage ${STAGE} (1 | 2 | 3)"; exit 1

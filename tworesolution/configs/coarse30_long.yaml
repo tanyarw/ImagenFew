@@ -1,0 +1,60 @@
+# ==================================================================================================
+# Coarse model (twores_coarse30_long): as twores_coarse30, trained for v14's 205,000 optimiser steps. WRITTEN BY `python -m tworesolution configs`; do not edit.
+# Template: regime_training/config_v14.yaml (sha256 8463eb71c689b131...). Only these keys differ:
+#   asinh_scale: 0.1025
+#   epochs: 3015
+#   run_dir: ImagenFew/Rainfall_twores_coarse30_long/
+#   test_csv: data/rainfall/splits_30min/val_years_labelled.csv
+#   train_csv: data/rainfall/splits_30min/train_years_labelled.csv
+# Plan: code_plan/TWO_RESOLUTION_PLAN.md (sections 2, 10 and 11).
+# ==================================================================================================
+epochs: 3015
+batch_size: 2048
+learning_rate: 0.0001
+weight_decay: 1.0e-05
+intensity_weight_alpha: 0.0
+intensity_weight_gamma: 0.5
+intensity_weight_normalize: true
+fft_weight: 1.0
+grad_clip: 1.0
+train_csv: data/rainfall/splits_30min/train_years_labelled.csv
+test_csv: data/rainfall/splits_30min/val_years_labelled.csv
+seq_len: 64
+n_classes: 4
+regime_col: hmm_state
+data_col: avg_rainfall
+data_transform: asinh
+asinh_scale: 0.1025
+use_stft: false
+delay: 8
+embedding: 8
+handler: models.ImagenFew.handler
+img_resolution: 8
+input_channels: 1
+unet_channels: 32
+ch_mult:
+- 1
+- 2
+- 2
+- 4
+attn_resolution:
+- 8
+- 4
+- 2
+diffusion_steps: 36
+dynamic_size:
+- 128
+- 128
+beta1: 1.0e-05
+betaT: 0.01
+deterministic: false
+finetune: true
+pretrain: false
+ema: true
+ema_warmup: 100
+ft_method: all
+lora_dim: 4
+dropout: 0.1
+logging_iter: 25
+run_id: null
+run_dir: ImagenFew/Rainfall_twores_coarse30_long/

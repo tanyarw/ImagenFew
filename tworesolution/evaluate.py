@@ -44,16 +44,29 @@ def member_name(base, k):
     return base if k == 0 else f"{base}_m{k}"
 
 
+def tag(coarse_run):
+    """'' for the first coarse model, '_long' for twores_coarse30_long: every output of a coarse run carries it."""
+    return "" if coarse_run == D.RUN_COARSE else "_" + coarse_run.removeprefix(D.RUN_COARSE).lstrip("_")
+
+
+def series_name(method, coarse_run=D.RUN_COARSE):
+    return SERIES[method] + tag(coarse_run)
+
+
 def series_csv(base, k):
     return GENERATED / f"rainfall_synthetic_10y_{member_name(base, k)}.csv"
 
 
-def disaggregated_path(source, method):
-    return OUT / "disaggregated" / f"{source}_{method}.npz"
+def disaggregated_path(source, method, coarse_run=D.RUN_COARSE):
+    return OUT / "disaggregated" / f"{source}{tag(coarse_run) if source == 'coarse' else ''}_{method}.npz"
 
 
-def coarse_path():
-    return OUT / "coarse" / "coarse30.npz"
+def coarse_path(coarse_run=D.RUN_COARSE):
+    return OUT / "coarse" / f"coarse30{tag(coarse_run)}.npz"
+
+
+def stage_path(stage, coarse_run=D.RUN_COARSE):
+    return OUT / f"stage{stage}{tag(coarse_run) if stage != 2 else ''}.json"
 
 
 def scored(a, R, P, bands):
@@ -115,7 +128,7 @@ def join_continuation(x5):
 
 # ── stage 1 ─────────────────────────────────────────────────────────────────────────────────────────
 
-def stage1(draws=1000, workers=1):
+def stage1(draws=1000, workers=1, coarse_run=D.RUN_COARSE):
     d = D.load_derived()
     t5, t30 = d["tau5_mm"], d["tau30_mm"]
     P = params()
@@ -124,7 +137,7 @@ def stage1(draws=1000, workers=1):
     R = M.reference(ref, P)
     bands = C.resampled_bands(ref, np.zeros(len(ref), bool), P, n_draws=draws, n_years=10, seed=0, workers=workers)
     mem = Memorisation(two_level(train5, t5, t30)[1], two_level(held5, t5, t30)[1])
-    coarse = np.load(coarse_path())["x30"]
+    coarse = np.load(coarse_path(coarse_run))["x30"]
     series = {f"coarse m{k}": spread(coarse[k]) for k in range(len(coarse))}
     series["real 2008-09 (held out)"] = view30(held5, t5, t30)
     series["perfect 32-h windows"] = perfect_window(ref, None, L * FACTOR, 10, seed=0)[0]
@@ -147,13 +160,13 @@ def stage1(draws=1000, workers=1):
     }
     verdict = "PASS: continue to stage 3" if all(tests.values()) else "STOP: the coarse model fails stage 1"
     means = {k: _mean(members, k) for k in ("rain_in_320min_pct", "volume_ratio", "too_close_pct")}
-    out = {"stage": 1, "rules": r, "tests": tests, "verdict": verdict,
+    out = {"stage": 1, "coarse_run": coarse_run, "rules": r, "tests": tests, "verdict": verdict,
            "member_means": means | {"family_D_members_passing": _family_members(members, "D")},
            "real_reference": {"rain_in_320min_pct": R["storm_scale"]["rain_in_320min_pct"],
                               "long_storms_yr": R["long_storms_yr"], "volume_mm_yr": R["stats"]["volume"]},
            "bands": {"n_draws": draws, "n_years": 10, "reference": "2000-2007, 30-minute view"},
            "memorisation_threshold": mem.threshold, "series": rows}
-    write_json(OUT / "stage1.json", out)
+    write_json(stage_path(1, coarse_run), out)
     print(f"{'':26s}{'volume':>8s}{'rain>5h20':>11s}{'runs>5h20/yr':>14s}{'family D':>10s}{'too close':>11s}")
     print(f"{'real 2000-07 (reference)':26s}{1:8.2f}{R['storm_scale']['rain_in_320min_pct']:10.1f}%"
           f"{R['long_storms_yr']:14.1f}")
@@ -210,7 +223,7 @@ def stage2(draws=1000, workers=1):
                     "acf1": R["stats"]["acf1_native"], "wet_spell_min": R["stats"]["wet_spell_min"]},
            "bands": {"n_draws": draws, "n_years": 2, "n_ref": 2, "reference": "2000-2007 years, two 2-year samples"},
            "series": rows}
-    write_json(OUT / "stage2.json", out)
+    write_json(stage_path(2), out)
     rj = out["real"]["join"]
     print(f"real 2008-09: P99.9 {R['stats']['p999_wet']:.3f} mm, lag-1 ACF {R['stats']['acf1_native']:.3f}, "
           f"continuation at window joins {rj['at_joins']:.3f} / other half-hours {rj['at_other_half_hours']:.3f}")
@@ -228,10 +241,13 @@ def stage2(draws=1000, workers=1):
 
 # ── stage 3 ─────────────────────────────────────────────────────────────────────────────────────────
 
-def stage3_methods():
+def stage3_methods(coarse_run=D.RUN_COARSE):
     """The stop rules of stages 1 and 2: the disaggregators stage 3 may use, or SystemExit."""
-    s1 = json.loads((OUT / "stage1.json").read_text())
-    s2 = json.loads((OUT / "stage2.json").read_text())
+    for k in (1, 2):
+        if not stage_path(k, coarse_run).exists():
+            raise SystemExit(f"{rel(stage_path(k, coarse_run))} missing: run stage {k} first")
+    s1 = json.loads(stage_path(1, coarse_run).read_text())
+    s2 = json.loads(stage_path(2).read_text())
     if not s1["verdict"].startswith("PASS"):
         raise SystemExit(f"stage 1 did not pass ({s1['verdict']}): the plan stops here")
     if not s2["stage3_uses"]:
@@ -239,8 +255,8 @@ def stage3_methods():
     return s2["stage3_uses"]
 
 
-def stage3():
-    uses = stage3_methods()
+def stage3(coarse_run=D.RUN_COARSE):
+    uses = stage3_methods(coarse_run)
     t5 = D.load_derived()["tau5_mm"]
     P = params()
     ref = clean(D.train_record(), t5)
@@ -250,8 +266,8 @@ def stage3():
         raise ValueError(f"{rel(ASTLINGEN_BANDS)} was not made for 10 years against 2000-2007")
     series = {}
     for method in uses:
-        x5 = np.load(disaggregated_path("coarse", method))["x5"]
-        series |= {member_name(SERIES[method], k): x5[k] for k in range(len(x5))}
+        x5 = np.load(disaggregated_path("coarse", method, coarse_run))["x5"]
+        series |= {member_name(series_name(method, coarse_run), k): x5[k] for k in range(len(x5))}
     series["perfect 32-h windows"] = perfect_window(ref, None, L * FACTOR, 10, seed=0)[0]
     series["perfect 5h20 windows"] = perfect_window(ref, None, L, 10, seed=0)[0]
     if V14.exists():
@@ -268,7 +284,7 @@ def stage3():
     r = RULES[3]
     result = {}
     for method in uses:
-        mem = [v for k, v in rows.items() if k.startswith(SERIES[method])]
+        mem = [v for k, v in rows.items() if k.startswith(series_name(method, coarse_run))]
         mean = {k: _mean(mem, k) for k in ("long_runs_yr", "long_run_rain_pct", "volume_ratio", "wet_spell_ratio",
                                             "gate_a")}
         t = {"unbroken runs > 5h20 >= 10 / yr": mean["long_runs_yr"] >= r["long_runs_yr_min"],
@@ -278,11 +294,12 @@ def stage3():
              "Gate A >= 12 / 18": mean["gate_a"] >= r["gate_a_min"]}
         result[method] = {"mean": mean, "tests": t, "statistics_pass": all(t.values())}
     verdict = "; ".join(f"{m}: statistics {'PASS' if res['statistics_pass'] else 'FAIL'}" for m, res in result.items())
-    out = {"stage": 3, "rules": r, "result": result, "uses": uses, "verdict": verdict + "; sewer pending",
+    out = {"stage": 3, "coarse_run": coarse_run, "rules": r, "result": result, "uses": uses,
+           "verdict": verdict + "; sewer pending",
            "real_reference": {"long_runs_yr": R["long_storms_yr"],
                               "rain_in_320min_pct": R["storm_scale"]["rain_in_320min_pct"]},
            "sewer": "pending: run scripts/gate_b_sewer.py on the laptop (README.md)", "series": rows}
-    write_json(OUT / "stage3.json", out)
+    write_json(stage_path(3, coarse_run), out)
     print(f"{'':24s}{'runs>5h20':>10s}{'their rain':>11s}{'volume':>8s}{'wet spell':>10s}{'Gate A':>8s}"
           f"{'rain>5h20 (2h gap)':>20s}")
     print(f"{'real 2000-07':24s}{R['long_storms_yr']:10.1f}{'':11s}{1:8.2f}{1:10.2f}{'':8s}"
@@ -294,7 +311,7 @@ def stage3():
         for k, ok in res["tests"].items():
             print(f"  {method:8s}{'PASS' if ok else 'fail'}  {k}")
     print(out["verdict"])
-    names = " ".join(k for k in rows if k.startswith(tuple(SERIES.values())))
+    names = " ".join(k for k in rows if k.startswith(tuple(series_name(m, coarse_run) for m in uses)))
     print(f"sewer (laptop, from flood-control): PYTHONPATH=. .venv/bin/python ../ImagenFew/scripts/gate_b_sewer.py "
           f"{names} --controllers BC EFD")
     return out

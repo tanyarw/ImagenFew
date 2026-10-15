@@ -5,7 +5,7 @@
 #   run_dir: ImagenFew/Rainfall_twores_coarse30/
 #   test_csv: data/rainfall/splits_30min/val_years_labelled.csv
 #   train_csv: data/rainfall/splits_30min/train_years_labelled.csv
-# Plan: code_plan/TWO_RESOLUTION_PLAN.md (sections 2 and 10).
+# Plan: code_plan/TWO_RESOLUTION_PLAN.md (sections 2, 10 and 11).
 # ==================================================================================================
 epochs: 500
 batch_size: 2048

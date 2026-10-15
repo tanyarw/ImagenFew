@@ -3,6 +3,30 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 15, 2026 — Two-Resolution Generator: Coarse Model at v14's Step Count, Predictions Before Sending
+
+### 🔍 Overview
+The one follow-up allowed after stage 1 stopped (plan section 11). The first coarse model had 34,000 optimiser
+steps against v14's 205,000 and its loss was still falling, so its occurrence deficit cannot yet be blamed on the
+design. One change: 500 → 3,015 epochs (205,020 steps), run `twores_coarse30_long`, about 11 h on the cluster,
+then stage 1 with unchanged rules. Outputs tagged `_long`; the first run's files are kept.
+
+### 📊 Findings
+None yet (no run). Laptop: configs regenerated (`coarse30_long.yaml` differs from `coarse30.yaml` in `epochs` and
+`run_dir` only), 24 unit tests pass, the stage 3 gate refuses both coarse runs until their stage 1 passes.
+
+### ✅ Decision
+* **Outcomes fixed in advance:** pass → stage 3 with the existing fine model, then the sewer; volume still below
+  0.95 → the deficit is not training length, report as is, **no third coarse run**; too-close windows above 10% →
+  rejected as memorising.
+* **Predictions:** (1) final loss at least 5% below 0.376; (2) volume 0.95–1.00, wet half-hours 12.5–13.5%;
+  (3) storm structure unchanged (62–68% of rain in storms longer than 5h20, P90 duration 8–9 h); (4) too-close
+  windows at most 10%; (5) stage 1 passes, at about even confidence.
+
+**Verdict:** **retrain sent with its stop rule and predictions written first.**
+
+---
+
 ## October 15, 2026 — Two-Resolution Generator: Stage 1 and Stage 2 Results
 
 ### 🔍 Overview

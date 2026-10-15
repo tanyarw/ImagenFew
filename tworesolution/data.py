@@ -33,11 +33,14 @@ V14_CONFIG = ROOT / "regime_training" / "config_v14.yaml"
 V14_RUN = RUNS / "v14"
 CONFIGS = Path(__file__).resolve().parent / "configs"
 COARSE_CONFIG = CONFIGS / "coarse30.yaml"
+COARSE_LONG_CONFIG = CONFIGS / "coarse30_long.yaml"
 FINE_CONFIG = CONFIGS / "fine.yaml"
 RUN_COARSE = "twores_coarse30"
+RUN_COARSE_LONG = "twores_coarse30_long"      # follow-up (plan section 11): v14's number of optimiser steps
 RUN_FINE = "twores_fine"
 SPLIT_YEARS = {"train": 2000, "val": 2008, "test": 2009}      # first year of each split file
 ALLOWED_CHANGES = {"coarse": {"train_csv", "test_csv", "asinh_scale", "run_dir"},
+                   "coarse_long": {"train_csv", "test_csv", "asinh_scale", "run_dir", "epochs"},
                    "fine": {"run_dir", "init_from", "scaler_from"}}
 
 
@@ -152,7 +155,14 @@ def build(refresh=False):
 
 # ── training configs: v14's, with only the listed keys changed ─────────────────────────────────────
 
+def v14_optimizer_steps(base):
+    """v14's optimiser steps: (5-minute training windows // batch) * epochs, as DataLoader(drop_last=True) ran."""
+    windows = len(site().years("train")) * STEPS_PER_YEAR_5 - base["seq_len"] + 1
+    return (windows // base["batch_size"]) * base["epochs"]
+
+
 def config_dicts(d):
+    """{name: config} for base (v14), coarse, coarse_long and fine."""
     base = yaml.safe_load(V14_CONFIG.read_text())
     coarse = dict(base) | {
         "train_csv": str(SPLITS30.relative_to(ROOT) / "train_years_labelled.csv"),
@@ -165,11 +175,16 @@ def config_dicts(d):
         "init_from": str((V14_RUN / "best_regime_model.pt").relative_to(ROOT)),
         "scaler_from": str((V14_RUN / "scaler.pkl").relative_to(ROOT)),
     }
-    for name, cfg in (("coarse", coarse), ("fine", fine)):
-        extra = set(diff_keys(base, cfg)) - ALLOWED_CHANGES[name]
+    coarse_long = dict(coarse) | {
+        "epochs": rules.matched_epochs(d["coarse_windows"], base["batch_size"], v14_optimizer_steps(base)),
+        "run_dir": f"ImagenFew/Rainfall_{RUN_COARSE_LONG}/",
+    }
+    cfgs = {"base": base, "coarse": coarse, "coarse_long": coarse_long, "fine": fine}
+    for name, cfg in cfgs.items():
+        extra = set(diff_keys(base, cfg)) - ALLOWED_CHANGES.get(name, set())
         if extra:
             raise ValueError(f"{name} config changes keys outside the allowed list: {sorted(extra)}")
-    return base, coarse, fine
+    return cfgs
 
 
 def _render(cfg, base, what):
@@ -178,14 +193,18 @@ def _render(cfg, base, what):
             f"# {what} WRITTEN BY `python -m tworesolution configs`; do not edit.",
             f"# Template: {rel(V14_CONFIG)} (sha256 {sha256_file(V14_CONFIG)[:16]}...). Only these keys differ:"]
     head += [f"#   {k}: {cfg[k]}" for k in changed]
-    head += ["# Plan: code_plan/TWO_RESOLUTION_PLAN.md (sections 2 and 10).", "# " + "=" * 98, ""]
+    head += ["# Plan: code_plan/TWO_RESOLUTION_PLAN.md (sections 2, 10 and 11).", "# " + "=" * 98, ""]
     return "\n".join(head) + yaml.safe_dump(cfg, sort_keys=False)
 
 
 def write_configs():
-    base, coarse, fine = config_dicts(load_derived())
+    c = config_dicts(load_derived())
     CONFIGS.mkdir(exist_ok=True)
-    COARSE_CONFIG.write_text(_render(coarse, base, f"Coarse model ({RUN_COARSE}): v14's recipe on 30-minute totals."))
-    FINE_CONFIG.write_text(_render(fine, base, f"Fine model ({RUN_FINE}): v14 fine-tuned with the half-hour totals "
-                                               "as an extra input (tworesolution/train_fine.py)."))
-    return COARSE_CONFIG, FINE_CONFIG
+    COARSE_CONFIG.write_text(_render(c["coarse"], c["base"],
+                                     f"Coarse model ({RUN_COARSE}): v14's recipe on 30-minute totals."))
+    COARSE_LONG_CONFIG.write_text(_render(c["coarse_long"], c["base"],
+                                          f"Coarse model ({RUN_COARSE_LONG}): as {RUN_COARSE}, trained for v14's "
+                                          f"{v14_optimizer_steps(c['base']):,} optimiser steps."))
+    FINE_CONFIG.write_text(_render(c["fine"], c["base"], f"Fine model ({RUN_FINE}): v14 fine-tuned with the half-hour "
+                                                         "totals as an extra input (tworesolution/train_fine.py)."))
+    return COARSE_CONFIG, COARSE_LONG_CONFIG, FINE_CONFIG

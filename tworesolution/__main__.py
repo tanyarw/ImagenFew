@@ -2,7 +2,7 @@
 
   build-data         30-minute split files (+ results/tworesolution/derived.json the first time; afterwards the
                      split files must hash as recorded there)
-  configs            tworesolution/configs/{coarse30,fine}.yaml from regime_training/config_v14.yaml
+  configs            tworesolution/configs/{coarse30,coarse30_long,fine}.yaml from regime_training/config_v14.yaml
   check [--torch]    invariants on data and configs; --torch: the fine model starts as v14 exactly
   train-fine         train the fine model (GPU)
   generate-coarse    10-year coarse series, 4 members -> results/tworesolution/coarse/
@@ -57,7 +57,7 @@ def generate_coarse(a):
         steps = a.steps or model.args.diffusion_steps
         x30 = np.stack([gen(model, scaler, D.calendar30(), n30, s, d["tau30_mm"], a.batch, a.device, steps)
                         for s in seeds])
-        path = E.coarse_path()
+        path = E.coarse_path(a.coarse_run)
         path.parent.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(path, x30=x30, seeds=seeds)
         rec.output(path)
@@ -76,8 +76,8 @@ def disaggregate(a):
         if a.source == "heldout":
             x30s = [two_level(D.heldout_record(), t5, t30)[1]] * a.members
         else:
-            rec.input(E.coarse_path())
-            x30s = np.load(E.coarse_path())["x30"][:a.members]
+            rec.input(E.coarse_path(a.coarse_run))
+            x30s = np.load(E.coarse_path(a.coarse_run))["x30"][:a.members]
         out, counts = [], []
         if a.method == "fine":
             from .sampling import disaggregate as fine
@@ -98,14 +98,14 @@ def disaggregate(a):
                 out.append(x5.reshape(-1))
                 counts.append(c)
         x5 = np.stack(out)
-        path = E.disaggregated_path(a.source, a.method)
+        path = E.disaggregated_path(a.source, a.method, a.coarse_run)
         path.parent.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(path, x5=x5, seeds=seeds)
         rec.output(path)
         if a.source == "coarse":
             dates = pd.date_range(start="2026-01-01", periods=x5.shape[1], freq="5min")     # as production
             for k, x in enumerate(x5):
-                csv = E.series_csv(E.SERIES[a.method], k)
+                csv = E.series_csv(E.series_name(a.method, a.coarse_run), k)
                 csv.parent.mkdir(parents=True, exist_ok=True)
                 pd.DataFrame({"date": dates, "avg_rainfall": x}).to_csv(csv, index=False)
                 rec.output(csv)
@@ -118,9 +118,9 @@ def disaggregate(a):
 
 def evaluate(a):
     with _record(f"evaluate-stage{a.stage}", vars(a)) as rec:
-        out = E.stage1(a.draws, a.workers) if a.stage == 1 else E.stage2(a.draws, a.workers) if a.stage == 2 \
-            else E.stage3()
-        rec.output(E.OUT / f"stage{a.stage}.json")
+        out = E.stage1(a.draws, a.workers, a.coarse_run) if a.stage == 1 else \
+            E.stage2(a.draws, a.workers) if a.stage == 2 else E.stage3(a.coarse_run)
+        rec.output(E.stage_path(a.stage, a.coarse_run))
         rec.result(verdict=out.get("verdict"))
 
 
@@ -149,7 +149,9 @@ def main(argv=None):
     ap.add_argument("--batch-size", type=int, default=None, help="train-fine: override (smoke tests)")
     ap.add_argument("--limit-batches", type=int, default=None, help="train-fine: batches per epoch (smoke tests)")
     ap.add_argument("--overwrite", action="store_true", help="train-fine: replace an existing run")
-    ap.add_argument("--coarse-run", default=D.RUN_COARSE, help="generation: coarse run folder (smoke tests)")
+    ap.add_argument("--coarse-run", default=D.RUN_COARSE, help=f"coarse run for generate-coarse, disaggregate "
+                    f"--source coarse, evaluate --stage 1|3 and stage3-methods ({D.RUN_COARSE} or "
+                    f"{D.RUN_COARSE_LONG}); its outputs carry the run's tag")
     ap.add_argument("--fine-run", default=D.RUN_FINE, help="generation: fine run folder (smoke tests)")
     a = ap.parse_args(argv)
     if a.command == "build-data":
@@ -175,11 +177,11 @@ def main(argv=None):
         a.seed = SEED if a.seed is None else a.seed
         generate_coarse(a)
     elif a.command == "stage3-methods":
-        print(" ".join(E.stage3_methods()))
+        print(" ".join(E.stage3_methods(a.coarse_run)))
     elif a.command == "disaggregate":
         if not (a.source and a.method):
             ap.error("disaggregate needs --source and --method")
-        if a.source == "coarse" and a.method not in E.stage3_methods():
+        if a.source == "coarse" and a.method not in E.stage3_methods(a.coarse_run):
             raise SystemExit(f"stage 2 did not select {a.method} for stage 3")
         a.seed = SEED if a.seed is None else a.seed
         disaggregate(a)
