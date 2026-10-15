@@ -1,0 +1,94 @@
+{
+ "command": "disaggregate-heldout-cascade",
+ "site": "astlingen",
+ "params": {
+  "command": "disaggregate",
+  "torch": false,
+  "refresh": false,
+  "device": "cuda",
+  "members": 4,
+  "seed": 42,
+  "years": 10.0,
+  "batch": 2048,
+  "steps": null,
+  "source": "heldout",
+  "method": "cascade",
+  "stage": null,
+  "draws": 1000,
+  "workers": 1,
+  "config": "/home/t/tanyawar/thesis/ImagenFew/tworesolution/configs/fine.yaml",
+  "run_id": "twores_fine",
+  "epochs": null,
+  "batch_size": null,
+  "limit_batches": null,
+  "overwrite": false,
+  "coarse_run": "twores_coarse30",
+  "fine_run": "twores_fine"
+ },
+ "argv": [
+  "/home/t/tanyawar/thesis/ImagenFew/tworesolution/__main__.py",
+  "disaggregate",
+  "--source",
+  "heldout",
+  "--method",
+  "cascade"
+ ],
+ "git": {
+  "commit": "139cbaf754f95e9af6595d66885eafb6efdfbc41",
+  "branch": "use-asinh",
+  "dirty": false,
+  "diff_sha256": null
+ },
+ "host": "xgph11",
+ "slurm_job_id": "946202",
+ "started": "2026-10-15T03:26:31",
+ "inputs": {},
+ "outputs": {
+  "results/tworesolution/disaggregated/heldout_cascade.npz": "f38347bd4a219e5f76154816bca90458e2e1f6b66dc11b2dac6f1bcaa22e061f"
+ },
+ "results": {
+  "mass_matching": [
+   {
+    "half_hours": 35040,
+    "wet_half_hours": 4476,
+    "empty": 198,
+    "moved_values": 0,
+    "moved_mm": 0.0,
+    "total_mm": 1416.565
+   },
+   {
+    "half_hours": 35040,
+    "wet_half_hours": 4476,
+    "empty": 195,
+    "moved_values": 1,
+    "moved_mm": 0.004999999999999999,
+    "total_mm": 1416.565
+   },
+   {
+    "half_hours": 35040,
+    "wet_half_hours": 4476,
+    "empty": 182,
+    "moved_values": 0,
+    "moved_mm": 0.0,
+    "total_mm": 1416.565
+   },
+   {
+    "half_hours": 35040,
+    "wet_half_hours": 4476,
+    "empty": 186,
+    "moved_values": 0,
+    "moved_mm": 0.0,
+    "total_mm": 1416.565
+   }
+  ]
+ },
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-15T03:26:32",
+ "status": "ok"
+}

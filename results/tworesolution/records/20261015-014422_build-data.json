@@ -1,0 +1,48 @@
+{
+ "command": "build-data",
+ "site": "astlingen",
+ "params": {
+  "refresh": false
+ },
+ "argv": [
+  "/home/t/tanyawar/thesis/ImagenFew/tworesolution/__main__.py",
+  "build-data"
+ ],
+ "git": {
+  "commit": "139cbaf754f95e9af6595d66885eafb6efdfbc41",
+  "branch": "use-asinh",
+  "dirty": false,
+  "diff_sha256": null
+ },
+ "host": "xgph14",
+ "slurm_job_id": "946201",
+ "started": "2026-10-15T01:44:22",
+ "inputs": {},
+ "outputs": {
+  "results/tworesolution/derived.json": "41e2c9ae7b67aa928af30359ed707f9b215f2294c3c9176840358647d625d109"
+ },
+ "results": {
+  "tau5_mm": 0.005,
+  "tau30_mm": 0.0075,
+  "asinh_scale30_mm": 0.10250000000000001,
+  "dry_half_hours_pct": 86.1494006849315,
+  "half_hours_set_dry": 139,
+  "half_hours_set_dry_pct_of_wet": 0.7109247135842881,
+  "mm_set_dry_pct": 0.012243217235631288,
+  "coarse_windows": 140097,
+  "coarse_steps_per_epoch": 68,
+  "fine_windows": 140149,
+  "fine_steps_per_epoch": 68,
+  "mm_per_year_5min": 709.5765625,
+  "mm_per_year_two_level": 709.4896875000001
+ },
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-15T01:44:24",
+ "status": "ok"
+}

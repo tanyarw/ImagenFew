@@ -1,0 +1,33 @@
+{
+ "command": "build-data",
+ "site": "astlingen",
+ "params": {
+  "refresh": false
+ },
+ "argv": [
+  "/home/t/tanyawar/thesis/ImagenFew/tworesolution/__main__.py",
+  "build-data"
+ ],
+ "git": {
+  "commit": "aeed8abede45e50f84fdaaa914e628d1073fda6f",
+  "branch": "use-asinh",
+  "dirty": false,
+  "diff_sha256": null
+ },
+ "host": "xlogin1",
+ "slurm_job_id": null,
+ "started": "2026-10-14T23:21:54",
+ "inputs": {},
+ "outputs": {},
+ "results": {},
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-14T23:21:56",
+ "status": "failed",
+ "traceback": "Traceback (most recent call last):\n  File \"/home/t/tanyawar/thesis/ImagenFew/tworesolution/__main__.py\", line 157, in main\n    d = D.build(a.refresh)\n  File \"/home/t/tanyawar/thesis/ImagenFew/tworesolution/data.py\", line 140, in build\n    raise ValueError(f\"these files differ from the ones {rel(path)} was built from: {bad} (sync the split files \"\nValueError: these files differ from the ones results/tworesolution/derived.json was built from: ['data/rainfall/splits_30min/train_years_labelled.csv'] (sync the split files from the laptop, or rebuild with --refresh and commit derived.json)\n"
+}

@@ -1,0 +1,61 @@
+{
+ "command": "evaluate-stage2",
+ "site": "astlingen",
+ "params": {
+  "command": "evaluate",
+  "torch": false,
+  "refresh": false,
+  "device": "cuda",
+  "members": 4,
+  "seed": null,
+  "years": 10.0,
+  "batch": 2048,
+  "steps": null,
+  "source": null,
+  "method": null,
+  "stage": 2,
+  "draws": 1000,
+  "workers": 8,
+  "config": "/home/t/tanyawar/thesis/ImagenFew/tworesolution/configs/fine.yaml",
+  "run_id": "twores_fine",
+  "epochs": null,
+  "batch_size": null,
+  "limit_batches": null,
+  "overwrite": false,
+  "coarse_run": "twores_coarse30",
+  "fine_run": "twores_fine"
+ },
+ "argv": [
+  "/home/t/tanyawar/thesis/ImagenFew/tworesolution/__main__.py",
+  "evaluate",
+  "--stage",
+  "2",
+  "--workers",
+  "8"
+ ],
+ "git": {
+  "commit": "139cbaf754f95e9af6595d66885eafb6efdfbc41",
+  "branch": "use-asinh",
+  "dirty": false,
+  "diff_sha256": null
+ },
+ "host": "xgph11",
+ "slurm_job_id": "946202",
+ "started": "2026-10-15T03:26:33",
+ "inputs": {},
+ "outputs": {
+  "results/tworesolution/stage2.json": "2f6adef836d99d3abaab5f4f3034b0e29bb2440fe1a43dec8427edf526b820ef"
+ },
+ "results": {
+  "verdict": "PASS: the fine model disaggregates; stage 3 uses it (cascade compared)"
+ },
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-15T03:26:49",
+ "status": "ok"
+}

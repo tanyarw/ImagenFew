@@ -3,6 +3,84 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 15, 2026 — Two-Resolution Generator: Stage 1 and Stage 2 Results
+
+### 🔍 Overview
+Cluster jobs 946199 (coarse model, 1 h 50), 946200 (fine model, 1 h 54), 946201 (stage 1), 946202 (stage 2),
+commit `139cbaf`. Both models: 500 epochs × 68 steps, seed 0. Plan `code_plan/TWO_RESOLUTION_PLAN.md`; verdicts
+`results/tworesolution/stage{1,2}.json`. Stage 3 was not run: stage 1's stop rule fired.
+
+### 📊 Findings
+**Stage 1 (coarse model, compared at 30 minutes; 4 members): STOP.**
+
+| Test | Rule | Result |
+| :--- | :---: | :---: |
+| Rain in storms > 5h20 (mean) | ≥ 60% | **64.1%** pass (real 71.2%, held-out 65.5%, perfect 32-h 66.3%, v14 43.6%) |
+| Volume (mean) | 0.95–1.05 | **0.93** fail (members 0.955, 0.946, 0.903, 0.905) |
+| Family D | ≥ 3 of 4 members | **1 of 4** fail (2/6, 3/6, 0/6, 1/6; perfect 32-h windows 5/6) |
+| Too-close windows (memorisation) | ≤ 10% | **4.6%** pass (held-out real 4.6%) |
+
+**The storm structure is right; storm occurrence is not.** 2-hour-gap storms at 30 minutes:
+
+| | Storms / yr | P90 duration | P99 duration | Storms > 5h20 | Mean depth | Wet half-hours | Of which < 0.03 mm |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| real 2000–07 | 366 | 9.5 h | 22.4 h | 24.4% | 1.94 mm | 13.9% | 26% |
+| real 2008–09 | 384 | 8.0 h | 18.7 h | 18.9% | 1.84 mm | 12.8% | 27% |
+| perfect 32-h windows | 396 | 8.5 h | 20.0 h | 21.8% | 1.78 mm | 13.6% | 27% |
+| coarse model (4 members) | 337–369 | 8.5 h | 18–20 h | 20.7–21.6% | 1.84–1.90 mm | 11.4–12.3% | 21–22% |
+| v14 | 491 | 5.5 h | 10.5 h | 14.1% | 1.42 mm | 13.3% | 24% |
+
+1. The coarse model sits on the perfect 32-hour generator's line for storm duration and depth: the long-storm
+   problem of every 5h20 model is gone at 30 minutes.
+2. It makes too few wet half-hours (−11 to −17%), mostly light ones: half-hours under 0.03 mm are 21–22% of wet
+   ones, against 26–27%. Fewer storms in two members (337–340 / yr). Intensity is right (storm volume ratio
+   1.02–1.07, P99 0.93–1.01). Every family D failure (deep storms 0.75–0.83, top storms, daily totals) follows
+   from the occurrence deficit.
+3. Not a threshold artefact: in one raw year (seed 42) only 0.8% of half-hours fall between 0.001 mm and the
+   0.0075 mm threshold (real 0.1%), against a 1.7-point shortfall in wet half-hours.
+4. **The coarse model was still improving:** its loss fell 1.8% over the last 100 epochs and the best epoch was
+   the last. It had 34,000 optimiser steps; v14 had 205,000. "Matched passes" (plan section 2) is a confound.
+5. On the 30-minute view the S2 check fails even for the perfect 32-hour generator (0.93) and real 2008–2009
+   (0.92): storms longer than 32 h cannot be made. Family D's "half of the checks" rule absorbs this one failure.
+
+**Stage 2 (given the real 2008–2009 half-hour totals; 4 members): PASS, fine model selected.**
+
+| | Family B | Family C | Lag-1 ACF (real 0.862) | Wet spell | Storm duration | P99.9 | Rain across joins / other half-hours |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| fine model | 7/7 (all 4) | 6/6 (all 4) | 0.86–0.87 | 0.96–0.98 | 1.02–1.05 | 0.82–0.92 | 0.80 / 0.84 |
+| cascade | 6–7/7 | 3/6 | 0.59–0.68 | 0.76–0.78 | 0.77–0.79 | 0.87–1.12 | 0.77 / 0.77 |
+
+6. The fine model learned to use the totals. The training monitor on 2008 windows: generated/conditioned rain
+   rose from 0.59 (v14) to 0.993, and the share of rain in wet half-hours from 0.39 to 0.99998. The fallback was
+   needed for 1.6–2.0% of wet half-hours; sub-gauge moves touched 0.04% of rain.
+7. The cascade shows its documented weaknesses: within-storm autocorrelation too low (lag-1 ACF −0.22) and storms
+   broken up (wet spell and storm duration −22%). It still "passes" family C 3/6, because the hourly and storm
+   count checks are almost fixed by the half-hour totals any disaggregator is given. Only lag-1 ACF, wet spell and
+   storm duration discriminate.
+8. **Seams at the fine level:** rain continues across window joins 0.80 against 0.84 elsewhere (gap 0.042, rule
+   ≤ 0.05). Any unbroken run longer than 5h20 crosses at least one join, so about 5% of those runs break there.
+9. **Fine model tail:** P99.9 is 8–18% low in every member (within the wide 2-year bands).
+
+**Predictions:** (1) 60–71% of rain in long storms, volume within 5%: **half right** (64.1% yes; volume 0.93
+no), so "stage 1 passes" is **wrong**. (2) The fine model passes B and C: **right**; the cascade fails C: **wrong
+by the family rule** (3/6), **right in substance** (fails all three within-half-hour timing checks). (3) Stage 3:
+**not tested**.
+
+### ✅ Decision
+* **Stopped at stage 1, as the rule says; stage 3 not run.** Reported as a partial result: a 32-hour coarse diffusion
+  model reproduces the storm duration and depth structure of a perfect 32-hour generator, which no 5h20 model did,
+  but it under-generates storm occurrence (volume 0.93). The fine model disaggregates real totals far better than
+  the classical cascade.
+* **Open, not decided:** one follow-up removes the confound in finding 4: retrain the coarse model to v14's step
+  count (about 3,000 epochs, about 11 h), stop rule unchanged, prediction written before sending.
+* Lesson for disaggregation tests: score only the checks that the given totals do not fix (lag-1 ACF, wet spell,
+  storm duration).
+
+**Verdict:** **two-resolution design: storm structure solved at 30 minutes, occurrence 7% short; stage 1 STOP by
+the pre-registered rule. The fine model beats the classical cascade on within-storm timing.**
+
+---
+
 ## October 14, 2026 — Two-Resolution Generator: Code and Smoke Test Before Sending
 
 ### 🔍 Overview
