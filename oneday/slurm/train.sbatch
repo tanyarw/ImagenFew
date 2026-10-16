@@ -12,7 +12,7 @@
 # v19: train the v14 recipe with a one-day window, generate 4 ten-year members, evaluate
 # (code_plan/ONE_DAY_WINDOW_PLAN.md). Sent by oneday/slurm/submit.sh train, with --time from the smoke result.
 #
-#   model    logs/ImagenFew/Rainfall_Regime/v19/      from models_ckpt/ImagenFew/ImagenFew_288_807epochs.ckpt
+#   model    logs/ImagenFew/Rainfall_Regime/v19/      from models_ckpt/ImagenFew/ImagenFew_288_1200epochs.ckpt
 #   series   results/generated_data/rainfall_synthetic_10y_v19_nobridge_cal[_m1.._m3].csv
 #            (as v14_nobridge_cal: calendar timeline, no bridge blocks, 4-step overlap; seeds 42-45)
 #   verdict  results/oneday/evaluation.json (statistics; the sewer check runs on the laptop)
@@ -23,7 +23,7 @@ cd "${SLURM_SUBMIT_DIR:-.}"
 source .venv/bin/activate
 mkdir -p logs
 RUN_DIR="logs/ImagenFew/Rainfall_Regime/v19"
-CKPT="models_ckpt/ImagenFew/ImagenFew_288_807epochs.ckpt"
+CKPT="models_ckpt/ImagenFew/ImagenFew_288_1200epochs.ckpt"
 CAL="data/rainfall/splits/seasonal_transition_matrix_train_len288.pkl"
 echo "job ${SLURM_JOB_ID:-} | $(hostname -s) | GPU ${CUDA_VISIBLE_DEVICES:-} | $(date)"
 echo "commit $(git rev-parse HEAD) $([ -z "$(git status --porcelain --untracked-files=no)" ] || echo '(UNCOMMITTED CHANGES)')"

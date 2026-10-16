@@ -22,6 +22,10 @@ Generating 4 ten-year members takes about 1.5 min; training checks under 1 min.
 * **By the plan's rule (section 3), unchanged from the committed config:** batch 2048 (26.4 GB ≤ 90% of 39.5 GB)
   and 500 epochs (27 h ≤ 85% of 72 h): v14's recipe, 205,000 steps. Job time 36 h (27 h plus margin).
 
+* **Starting checkpoint switched before training** to the user's 1,200-epoch pretraining
+  (`ImagenFew_288_1200epochs.ckpt`, sha256 `8268872cb24da3de…`, 486,360 EMA updates against 335,820): same
+  architecture, so the smoke result holds; the 807-epoch caveat no longer applies (plan section 9).
+
 **Verdict:** **v19 trains with v14's recipe in full; no deviation.**
 
 ---

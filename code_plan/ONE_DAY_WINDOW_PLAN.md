@@ -100,3 +100,11 @@ This is the last experiment before writing up. No v20.
 Smoke job 951333: batch 2048 runs at 0.475 s per step with 26.4 GB peak (of 39.5 GB); 500 epochs = 27.0 h. The
 `gpu-long` limit is 3 days. By section 3: **batch 2048, 500 epochs** (v14's recipe, no deviation); job time 36 h.
 
+## 9. Starting checkpoint switched to the 1,200-epoch pretraining (2026-10-16, before training)
+
+The user's pretraining continued to 1,200 epochs: `models_ckpt/ImagenFew/ImagenFew_288_1200epochs.ckpt` (sha256
+`8268872cb24da3de…`, not in git), 486,360 EMA updates against 335,820 for the 807-epoch file. Same architecture
+(identical keys and shapes; different weights), so the smoke measurement (section 8) still applies. v19 starts
+from it instead of the 807-epoch file (sections 1–2), which removes the caveat that the pretraining stopped
+early. Nothing else changes; the rules and predictions (sections 4–6) stand as written.
+

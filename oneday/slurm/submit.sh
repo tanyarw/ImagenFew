@@ -19,7 +19,7 @@ if [ -n "$(git status --porcelain --untracked-files=no)" ] && [ "${ALLOW_DIRTY:-
     echo "tracked files have uncommitted changes: commit and pull first (ALLOW_DIRTY=1 to override)"; exit 1
 fi
 for f in data/rainfall/splits/train_years_labelled.csv data/rainfall/splits/val_years_labelled.csv \
-         data/rainfall/splits/test_years_labelled.csv models_ckpt/ImagenFew/ImagenFew_288_807epochs.ckpt \
+         data/rainfall/splits/test_years_labelled.csv models_ckpt/ImagenFew/ImagenFew_288_1200epochs.ckpt \
          regime_training/config_v19.yaml; do
     [ -f "${f}" ] || { echo "ERROR: ${f} missing (see oneday/README.md)"; exit 1; }
 done

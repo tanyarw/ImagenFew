@@ -15,7 +15,7 @@ Tests: `python -m unittest discover -s oneday/tests -t .`
 
 1. Copy the checkpoint to the cluster (it is not in git):
    ```bash
-   rsync -avz models_ckpt/ImagenFew/ImagenFew_288_807epochs.ckpt \
+   rsync -avz models_ckpt/ImagenFew/ImagenFew_288_1200epochs.ckpt \
        tanyawar@xlogin1:/home/t/tanyawar/thesis/ImagenFew/models_ckpt/ImagenFew/
    ```
 2. Cluster: `git pull && oneday/slurm/submit.sh smoke` (~10 min); paste the end of `logs/v19_smoke_<id>.out`.

@@ -8,7 +8,7 @@
 #   run_dir: ImagenFew/Rainfall_v19/
 #   seq_len: 288
 # Epochs and batch size: v14's recipe (500 epochs, batch 2048).
-# Initial weights: models_ckpt/ImagenFew/ImagenFew_288_807epochs.ckpt (sha256 3fd96271c481d301...).
+# Initial weights: models_ckpt/ImagenFew/ImagenFew_288_1200epochs.ckpt (sha256 8268872cb24da3de...).
 # Plan: code_plan/ONE_DAY_WINDOW_PLAN.md.
 # ==================================================================================================
 epochs: 500
