@@ -1,0 +1,58 @@
+{
+ "command": "smoke",
+ "site": "astlingen",
+ "params": {},
+ "argv": [
+  "/home/t/tanyawar/thesis/ImagenFew/oneday/__main__.py",
+  "smoke"
+ ],
+ "git": {
+  "commit": "95e24ff4974a87b5f2f60711e3fa8b9fecf79f41",
+  "branch": "use-asinh",
+  "dirty": false,
+  "diff_sha256": null
+ },
+ "host": "xgpg3",
+ "slurm_job_id": "951333",
+ "started": "2026-10-15T20:58:33",
+ "inputs": {},
+ "outputs": {
+  "results/oneday/smoke.json": "c50b7776c254cf8ed1a87a8888622dc7eb30fed7bc44b5fa3f0b4596a48f659e"
+ },
+ "results": {
+  "gpu": "NVIDIA A100-PCIE-40GB",
+  "gpu_memory_gb": 39.4925537109375,
+  "partition": "gpu",
+  "partition_time_limit": "3:00:00",
+  "batch": {
+   "2048": {
+    "s_per_step": 0.4748639941215515,
+    "peak_memory_gb": 26.370316982269287,
+    "steps_per_epoch": 410,
+    "hours_500_epochs": 27.040866331921684
+   },
+   "1024": {
+    "s_per_step": 0.2633050799369812,
+    "peak_memory_gb": 13.266355037689209,
+    "steps_per_epoch": 820,
+    "hours_500_epochs": 29.98752299282286
+   }
+  },
+  "sampling": {
+   "s_per_block": 0.0059914062730968,
+   "minutes_4_members_10_years": 1.4786790682002902,
+   "minutes_training_checks_500_epochs": 0.39942708487312
+  }
+ },
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "sklearn": "1.7.2",
+  "torch": "2.6.0+cu124",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-15T20:59:08",
+ "status": "ok"
+}

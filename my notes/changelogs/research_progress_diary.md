@@ -3,6 +3,64 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 16, 2026 — v19 (One-Day Window): Smoke Result and the Training Settings
+
+### 🔍 Overview
+GPU smoke job 951333 (commit `95e24ff`, A100-PCIE-40GB): tests and checks passed; speed and memory measured
+(`results/oneday/smoke.json`). It ran on partition `gpu` (limit 3 h), so the `gpu-long` limit was read separately:
+3 days (`sinfo`, user).
+
+### 📊 Findings
+| Batch | Time per step | Peak memory | Steps per epoch | 500 epochs |
+| :---: | :---: | :---: | :---: | :---: |
+| 2048 | 0.475 s | 26.4 GB of 39.5 | 410 | 27.0 h |
+| 1024 | 0.263 s | 13.3 GB | 820 | 30.0 h |
+
+Generating 4 ten-year members takes about 1.5 min; training checks under 1 min.
+
+### ✅ Decision
+* **By the plan's rule (section 3), unchanged from the committed config:** batch 2048 (26.4 GB ≤ 90% of 39.5 GB)
+  and 500 epochs (27 h ≤ 85% of 72 h): v14's recipe, 205,000 steps. Job time 36 h (27 h plus margin).
+
+**Verdict:** **v19 trains with v14's recipe in full; no deviation.**
+
+---
+
+## October 15, 2026 — Two-Resolution Generator: Coarse Model at v14's Step Count, Result
+
+### 🔍 Overview
+Run `twores_coarse30_long` (job 948671, 11 h, commit `99af78e`): 3,015 epochs, 205,020 steps; stage 1 job 948672,
+rules unchanged (`results/tworesolution/stage1_long.json`).
+
+### 📊 Findings
+| | 500 epochs (34k steps) | 3,015 epochs (205k steps) | Rule / real |
+| :--- | :---: | :---: | :---: |
+| Final training loss | 0.376 | ~0.30 | — |
+| Volume (member mean) | 0.93 (0.90–0.955) | **0.89** (0.87–0.91) | 0.95–1.05 |
+| Dry half-hours | 87.7–88.6% | 87.5–88.3% | real 86.1% |
+| Storm count ratio | 0.86–0.94 | 0.86–0.94 | 1 |
+| Rain in storms > 5h20 (30 min) | 64.1% | 65.9% | ≥ 60% (perfect 32-h 66.3%) |
+| Family D, members passing | 1 of 4 | 2 of 4 | ≥ 3 of 4 |
+| Too-close windows | 4.6% | 4.1% | ≤ 10% |
+
+1. Six times the training lowered the loss by 20% and kept the storm structure (now 65.9% of rain in long storms,
+   on the perfect 32-hour line), but **made the volume worse**: the occurrence deficit is unchanged and the wet
+   tail is slightly lower (P99 0.88–0.99, before 0.93–1.01). No memorisation.
+2. **Predictions:** (1) loss at least 5% lower: **right** (−20%); (2) volume 0.95–1.00: **wrong** (0.89);
+   (3) storm structure unchanged: **right**; (4) too-close ≤ 10%: **right**; (5) stage 1 passes: **wrong**.
+
+### ✅ Decision
+* **STOP, as fixed in advance:** the occurrence deficit is not a training-length effect. The two-resolution
+  result is reported as it stands; **no third coarse run**.
+* For the thesis: a 30-minute, 32-hour diffusion model learns storm duration and depth (the long-storm problem of
+  every 5h20 model is gone at that scale) but under-generates how often rain starts, by 7–11%, however long it is
+  trained.
+
+**Verdict:** **coarse model at v14's step count: storm structure kept, volume 0.89; stage 1 STOP; the
+two-resolution line closes here.**
+
+---
+
 ## October 15, 2026 — v19 (One-Day Window): Plan, Code and Predictions Before the GPU Smoke Job
 
 ### 🔍 Overview

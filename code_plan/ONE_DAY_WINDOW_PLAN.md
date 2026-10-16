@@ -94,3 +94,9 @@ This is the last experiment before writing up. No v20.
 | epochs and batch size by section 3; config and diary addendum committed | laptop | minutes |
 | training, 4 members, evaluation | cluster | measured by the smoke job |
 | sewer, BC and EFD | laptop | ~1 h |
+
+## 8. Settings fixed by the smoke job (2026-10-16)
+
+Smoke job 951333: batch 2048 runs at 0.475 s per step with 26.4 GB peak (of 39.5 GB); 500 epochs = 27.0 h. The
+`gpu-long` limit is 3 days. By section 3: **batch 2048, 500 epochs** (v14's recipe, no deviation); job time 36 h.
+

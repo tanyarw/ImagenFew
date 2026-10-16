@@ -1,0 +1,1145 @@
+{
+ "stage": 1,
+ "coarse_run": "twores_coarse30_long",
+ "rules": {
+  "family_D_members_min": 3,
+  "rain_in_320min_pct_min": 60.0,
+  "volume_ratio": [
+   0.95,
+   1.05
+  ],
+  "too_close_pct_max": 10.0
+ },
+ "tests": {
+  "family D passes in >= 3 of 4 members": false,
+  "rain in storms > 5h20 >= 60% (mean)": true,
+  "volume within 5% (mean)": false,
+  "too-close windows <= 10% (mean)": true
+ },
+ "verdict": "STOP: the coarse model fails stage 1",
+ "member_means": {
+  "rain_in_320min_pct": 65.86110801510053,
+  "volume_ratio": 0.8908840473347683,
+  "too_close_pct": 4.12744623982569,
+  "family_D_members_passing": 2
+ },
+ "real_reference": {
+  "rain_in_320min_pct": 71.24169792813106,
+  "long_storms_yr": 46.625,
+  "volume_mm_yr": 709.4896875
+ },
+ "bands": {
+  "n_draws": 1000,
+  "n_years": 10,
+  "reference": "2000-2007, 30-minute view"
+ },
+ "memorisation_threshold": 0.07232066157962612,
+ "series": {
+  "coarse m0": {
+   "volume_ratio": 0.9108427208887632,
+   "rain_in_320min_pct": 64.47868078651734,
+   "long_storms_yr": 40.7,
+   "storms_ge_depth_yr": 11.5,
+   "families": {
+    "A": {
+     "passed": 0,
+     "of": 3,
+     "pass": false
+    },
+    "B": {
+     "passed": 5,
+     "of": 7,
+     "pass": true
+    },
+    "C": {
+     "passed": 5,
+     "of": 6,
+     "pass": true
+    },
+    "D": {
+     "passed": 2,
+     "of": 6,
+     "pass": false
+    },
+    "E_monthly": {
+     "passed": 1,
+     "of": 1,
+     "pass": true
+    },
+    "E_daily": {
+     "passed": 1,
+     "of": 2,
+     "pass": true
+    }
+   },
+   "checks": {
+    "T1 volume": {
+     "value": 0.9108427208887632,
+     "pass": false
+    },
+    "T1 zero fraction": {
+     "value": 1.354594748858446,
+     "pass": false
+    },
+    "T1 dry spell": {
+     "value": 1.083253533627209,
+     "pass": false
+    },
+    "T1 wet spell": {
+     "value": 0.9619889738883224,
+     "pass": true
+    },
+    "T2 P99 wet": {
+     "value": 0.8834847438300729,
+     "pass": false
+    },
+    "T2 P99.9 wet": {
+     "value": 0.9167539983963351,
+     "pass": true
+    },
+    "T2 max": {
+     "value": 1.0552103662126717,
+     "pass": true
+    },
+    "T2 JSD hourly": {
+     "value": 0.049935511114841326,
+     "pass": true
+    },
+    "T2 KS hourly": {
+     "value": 0.01717180365296811,
+     "pass": false
+    },
+    "T3 lag-1 ACF": {
+     "value": 0.007274747880096855,
+     "pass": true
+    },
+    "T3 hourly ACF": {
+     "value": 0.011764989207094761,
+     "pass": true
+    },
+    "T3 storm duration": {
+     "value": 0.9619889738883223,
+     "pass": true
+    },
+    "T3 storm count": {
+     "value": 0.9378481266279303,
+     "pass": false
+    },
+    "T3 storm volume": {
+     "value": 0.9712049264988499,
+     "pass": true
+    },
+    "T4 daily max": {
+     "value": 0.8289204389530156,
+     "pass": true
+    },
+    "T4 IDF (all cells)": {
+     "value": {
+      "15min_T2": 0.9774298918028648,
+      "15min_T5": 0.9797627205670462,
+      "15min_T10": 0.9807017514435719,
+      "1h_T2": 0.9856759705336516,
+      "1h_T5": 0.9617334357217141,
+      "1h_T10": 0.950929832501978,
+      "3h_T2": 0.9144108688721015,
+      "3h_T5": 0.8390276143202225,
+      "3h_T10": 0.8035275768869777,
+      "6h_T2": 0.9105183495745899,
+      "6h_T5": 0.8988941006331979,
+      "6h_T10": 0.8927487377105322,
+      "24h_T2": 0.9225707434837015,
+      "24h_T5": 0.9008321706966814,
+      "24h_T10": 0.8912495486883898
+     },
+     "pass": true
+    },
+    "T5 monthly cycle": {
+     "value": 0.8267638802185067,
+     "pass": true
+    },
+    "T5 diurnal cycle": {
+     "value": -0.19621989146383834,
+     "pass": false
+    },
+    "S1 deep storms": {
+     "value": 0.71875,
+     "pass": false
+    },
+    "S2 rain in storms > 320 min": {
+     "value": 0.9050693998276644,
+     "pass": false
+    },
+    "S3 top storm depths": {
+     "value": 0.8718153675395206,
+     "pass": true
+    },
+    "D unbroken runs > 5h20": {
+     "value": 0.8729222520107239,
+     "pass": true
+    },
+    "D variance across scales": {
+     "value": 0.11451879443373753,
+     "pass": false
+    },
+    "D daily totals": {
+     "value": 0.223475228800191,
+     "pass": false
+    },
+    "E daily peak/trough": {
+     "value": 0.9107600926992755,
+     "pass": true
+    }
+   },
+   "too_close_pct": 3.50373348650201,
+   "nn_dist_ratio": 1.1500352445463247
+  },
+  "coarse m1": {
+   "volume_ratio": 0.9117121045393011,
+   "rain_in_320min_pct": 65.68832797704982,
+   "long_storms_yr": 42.9,
+   "storms_ge_depth_yr": 11.9,
+   "families": {
+    "A": {
+     "passed": 0,
+     "of": 3,
+     "pass": false
+    },
+    "B": {
+     "passed": 6,
+     "of": 7,
+     "pass": true
+    },
+    "C": {
+     "passed": 4,
+     "of": 6,
+     "pass": true
+    },
+    "D": {
+     "passed": 3,
+     "of": 6,
+     "pass": true
+    },
+    "E_monthly": {
+     "passed": 1,
+     "of": 1,
+     "pass": true
+    },
+    "E_daily": {
+     "passed": 1,
+     "of": 2,
+     "pass": true
+    }
+   },
+   "checks": {
+    "T1 volume": {
+     "value": 0.9117121045393011,
+     "pass": false
+    },
+    "T1 zero fraction": {
+     "value": 1.7998002283105023,
+     "pass": false
+    },
+    "T1 dry spell": {
+     "value": 1.1263019246913566,
+     "pass": false
+    },
+    "T1 wet spell": {
+     "value": 0.9598696362464688,
+     "pass": true
+    },
+    "T2 P99 wet": {
+     "value": 0.9914894802935902,
+     "pass": true
+    },
+    "T2 P99.9 wet": {
+     "value": 0.9970892769033113,
+     "pass": true
+    },
+    "T2 max": {
+     "value": 0.7766354424854808,
+     "pass": true
+    },
+    "T2 JSD hourly": {
+     "value": 0.04820612910816215,
+     "pass": true
+    },
+    "T2 KS hourly": {
+     "value": 0.023290525114155303,
+     "pass": false
+    },
+    "T3 lag-1 ACF": {
+     "value": 0.012229761022330532,
+     "pass": false
+    },
+    "T3 hourly ACF": {
+     "value": 0.017090602117683203,
+     "pass": true
+    },
+    "T3 storm duration": {
+     "value": 0.9598696362464687,
+     "pass": true
+    },
+    "T3 storm count": {
+     "value": 0.906431576838309,
+     "pass": false
+    },
+    "T3 storm volume": {
+     "value": 1.0058256219619035,
+     "pass": true
+    },
+    "T4 daily max": {
+     "value": 0.8890724144038079,
+     "pass": true
+    },
+    "T4 IDF (all cells)": {
+     "value": {
+      "15min_T2": 0.9888263822211355,
+      "15min_T5": 0.8723604080122321,
+      "15min_T10": 0.8254794935079105,
+      "1h_T2": 1.0328441026763,
+      "1h_T5": 1.0509211004538994,
+      "1h_T10": 1.0590779941548902,
+      "3h_T2": 0.9962786302395794,
+      "3h_T5": 0.9136981165459949,
+      "3h_T10": 0.8748086928297333,
+      "6h_T2": 1.0052344750034192,
+      "6h_T5": 0.9767183837856961,
+      "6h_T10": 0.9616428524070847,
+      "24h_T2": 1.0119789742615541,
+      "24h_T5": 0.9267193357777388,
+      "24h_T10": 0.8891358708392384
+     },
+     "pass": true
+    },
+    "T5 monthly cycle": {
+     "value": 0.8557353699708115,
+     "pass": true
+    },
+    "T5 diurnal cycle": {
+     "value": 0.20426575293661708,
+     "pass": false
+    },
+    "S1 deep storms": {
+     "value": 0.74375,
+     "pass": false
+    },
+    "S2 rain in storms > 320 min": {
+     "value": 0.9220488827107476,
+     "pass": false
+    },
+    "S3 top storm depths": {
+     "value": 0.9125546619472449,
+     "pass": true
+    },
+    "D unbroken runs > 5h20": {
+     "value": 0.920107238605898,
+     "pass": true
+    },
+    "D variance across scales": {
+     "value": 0.08320899282669225,
+     "pass": true
+    },
+    "D daily totals": {
+     "value": 0.21622292505274093,
+     "pass": false
+    },
+    "E daily peak/trough": {
+     "value": 1.0058898925589643,
+     "pass": true
+    }
+   },
+   "too_close_pct": 4.075774971297359,
+   "nn_dist_ratio": 1.1027593067040626
+  },
+  "coarse m2": {
+   "volume_ratio": 0.8662149614197506,
+   "rain_in_320min_pct": 66.59816050460645,
+   "long_storms_yr": 41.4,
+   "storms_ge_depth_yr": 13.6,
+   "families": {
+    "A": {
+     "passed": 0,
+     "of": 3,
+     "pass": false
+    },
+    "B": {
+     "passed": 4,
+     "of": 7,
+     "pass": true
+    },
+    "C": {
+     "passed": 5,
+     "of": 6,
+     "pass": true
+    },
+    "D": {
+     "passed": 2,
+     "of": 6,
+     "pass": false
+    },
+    "E_monthly": {
+     "passed": 1,
+     "of": 1,
+     "pass": true
+    },
+    "E_daily": {
+     "passed": 1,
+     "of": 2,
+     "pass": true
+    }
+   },
+   "checks": {
+    "T1 volume": {
+     "value": 0.8662149614197506,
+     "pass": false
+    },
+    "T1 zero fraction": {
+     "value": 2.1719463470319624,
+     "pass": false
+    },
+    "T1 dry spell": {
+     "value": 1.1807528772006295,
+     "pass": false
+    },
+    "T1 wet spell": {
+     "value": 0.9710977214473523,
+     "pass": true
+    },
+    "T2 P99 wet": {
+     "value": 0.9052463299743003,
+     "pass": false
+    },
+    "T2 P99.9 wet": {
+     "value": 0.9018399917949038,
+     "pass": true
+    },
+    "T2 max": {
+     "value": 0.9277416914145745,
+     "pass": true
+    },
+    "T2 JSD hourly": {
+     "value": 0.05276453952567607,
+     "pass": true
+    },
+    "T2 KS hourly": {
+     "value": 0.028496004566210043,
+     "pass": false
+    },
+    "T3 lag-1 ACF": {
+     "value": 0.00835412245244882,
+     "pass": true
+    },
+    "T3 hourly ACF": {
+     "value": 0.016959650391291454,
+     "pass": true
+    },
+    "T3 storm duration": {
+     "value": 0.9710977214473522,
+     "pass": true
+    },
+    "T3 storm count": {
+     "value": 0.868282909236626,
+     "pass": false
+    },
+    "T3 storm volume": {
+     "value": 0.9976183478968931,
+     "pass": true
+    },
+    "T4 daily max": {
+     "value": 0.7797581101140648,
+     "pass": true
+    },
+    "T4 IDF (all cells)": {
+     "value": {
+      "15min_T2": 0.8368916833771856,
+      "15min_T5": 0.7866906765810829,
+      "15min_T10": 0.7664833231147602,
+      "1h_T2": 0.7974323615978426,
+      "1h_T5": 0.7486624444309193,
+      "1h_T10": 0.7266559677454122,
+      "3h_T2": 0.8038312823519432,
+      "3h_T5": 0.7429289239502672,
+      "3h_T10": 0.7142483367842611,
+      "6h_T2": 0.8379576769182356,
+      "6h_T5": 0.8816390940210898,
+      "6h_T10": 0.9047320407075208,
+      "24h_T2": 0.8105409149947704,
+      "24h_T5": 0.7907135957186485,
+      "24h_T10": 0.7819734770401013
+     },
+     "pass": false
+    },
+    "T5 monthly cycle": {
+     "value": 0.9080926914666563,
+     "pass": true
+    },
+    "T5 diurnal cycle": {
+     "value": -0.1428573317193856,
+     "pass": false
+    },
+    "S1 deep storms": {
+     "value": 0.85,
+     "pass": false
+    },
+    "S2 rain in storms > 320 min": {
+     "value": 0.9348199501335717,
+     "pass": false
+    },
+    "S3 top storm depths": {
+     "value": 0.7373189512117557,
+     "pass": true
+    },
+    "D unbroken runs > 5h20": {
+     "value": 0.8879356568364611,
+     "pass": true
+    },
+    "D variance across scales": {
+     "value": 0.1421066778017565,
+     "pass": false
+    },
+    "D daily totals": {
+     "value": 0.2600850781302849,
+     "pass": false
+    },
+    "E daily peak/trough": {
+     "value": 0.8865356471615539,
+     "pass": true
+    }
+   },
+   "too_close_pct": 4.471299093655589,
+   "nn_dist_ratio": 1.1440248500740748
+  },
+  "coarse m3": {
+   "volume_ratio": 0.8747664024912581,
+   "rain_in_320min_pct": 66.67926279222849,
+   "long_storms_yr": 42.5,
+   "storms_ge_depth_yr": 14.2,
+   "families": {
+    "A": {
+     "passed": 0,
+     "of": 3,
+     "pass": false
+    },
+    "B": {
+     "passed": 4,
+     "of": 7,
+     "pass": true
+    },
+    "C": {
+     "passed": 4,
+     "of": 6,
+     "pass": true
+    },
+    "D": {
+     "passed": 3,
+     "of": 6,
+     "pass": true
+    },
+    "E_monthly": {
+     "passed": 1,
+     "of": 1,
+     "pass": true
+    },
+    "E_daily": {
+     "passed": 1,
+     "of": 2,
+     "pass": true
+    }
+   },
+   "checks": {
+    "T1 volume": {
+     "value": 0.8747664024912581,
+     "pass": false
+    },
+    "T1 zero fraction": {
+     "value": 2.172517123287662,
+     "pass": false
+    },
+    "T1 dry spell": {
+     "value": 1.1910929866533353,
+     "pass": false
+    },
+    "T1 wet spell": {
+     "value": 0.979549210674066,
+     "pass": true
+    },
+    "T2 P99 wet": {
+     "value": 0.9117544904394342,
+     "pass": false
+    },
+    "T2 P99.9 wet": {
+     "value": 0.9577889919682047,
+     "pass": true
+    },
+    "T2 max": {
+     "value": 0.9430548116297477,
+     "pass": true
+    },
+    "T2 JSD hourly": {
+     "value": 0.049370231321847195,
+     "pass": true
+    },
+    "T2 KS hourly": {
+     "value": 0.028404680365296864,
+     "pass": false
+    },
+    "T3 lag-1 ACF": {
+     "value": 0.012460606492807558,
+     "pass": false
+    },
+    "T3 hourly ACF": {
+     "value": 0.01553291503803373,
+     "pass": true
+    },
+    "T3 storm duration": {
+     "value": 0.9795492106740659,
+     "pass": true
+    },
+    "T3 storm count": {
+     "value": 0.8607493488278902,
+     "pass": false
+    },
+    "T3 storm volume": {
+     "value": 1.0162847101568597,
+     "pass": true
+    },
+    "T4 daily max": {
+     "value": 0.942643675391484,
+     "pass": true
+    },
+    "T4 IDF (all cells)": {
+     "value": {
+      "15min_T2": 0.827095716855566,
+      "15min_T5": 0.8179037943278062,
+      "15min_T10": 0.8142037803358972,
+      "1h_T2": 0.8211039051713671,
+      "1h_T5": 0.940068389034339,
+      "1h_T10": 0.9937487988569224,
+      "3h_T2": 0.810173537784695,
+      "3h_T5": 0.8268888522886153,
+      "3h_T10": 0.8347605513035372,
+      "6h_T2": 0.8135949754465044,
+      "6h_T5": 0.8406537285310477,
+      "6h_T10": 0.8549588125650963,
+      "24h_T2": 0.8251297295604563,
+      "24h_T5": 0.8305849180615127,
+      "24h_T10": 0.8329896301786216
+     },
+     "pass": false
+    },
+    "T5 monthly cycle": {
+     "value": 0.8949015654163334,
+     "pass": true
+    },
+    "T5 diurnal cycle": {
+     "value": 0.2655255992219787,
+     "pass": false
+    },
+    "S1 deep storms": {
+     "value": 0.8875,
+     "pass": true
+    },
+    "S2 rain in storms > 320 min": {
+     "value": 0.9359583605025082,
+     "pass": false
+    },
+    "S3 top storm depths": {
+     "value": 0.7696127830551314,
+     "pass": true
+    },
+    "D unbroken runs > 5h20": {
+     "value": 0.9115281501340483,
+     "pass": true
+    },
+    "D variance across scales": {
+     "value": 0.11214925846636109,
+     "pass": false
+    },
+    "D daily totals": {
+     "value": 0.24388927097437205,
+     "pass": false
+    },
+    "E daily peak/trough": {
+     "value": 0.9932516373253301,
+     "pass": true
+    }
+   },
+   "too_close_pct": 4.4589774078478,
+   "nn_dist_ratio": 1.0977222884177325
+  },
+  "real 2008-09 (held out)": {
+   "volume_ratio": 0.9982985129716914,
+   "rain_in_320min_pct": 65.53793860500994,
+   "long_storms_yr": 40.5,
+   "storms_ge_depth_yr": 16.0,
+   "families": {
+    "A": {
+     "passed": 2,
+     "of": 3,
+     "pass": true
+    },
+    "B": {
+     "passed": 4,
+     "of": 7,
+     "pass": true
+    },
+    "C": {
+     "passed": 5,
+     "of": 6,
+     "pass": true
+    },
+    "D": {
+     "passed": 3,
+     "of": 6,
+     "pass": true
+    },
+    "E_monthly": {
+     "passed": 1,
+     "of": 1,
+     "pass": true
+    },
+    "E_daily": {
+     "passed": 1,
+     "of": 2,
+     "pass": true
+    }
+   },
+   "checks": {
+    "T1 volume": {
+     "value": 0.9982985129716914,
+     "pass": true
+    },
+    "T1 zero fraction": {
+     "value": 1.0766267123287747,
+     "pass": false
+    },
+    "T1 dry spell": {
+     "value": 1.0521203261570164,
+     "pass": true
+    },
+    "T1 wet spell": {
+     "value": 0.9589671869365889,
+     "pass": true
+    },
+    "T2 P99 wet": {
+     "value": 1.0385728061716488,
+     "pass": true
+    },
+    "T2 P99.9 wet": {
+     "value": 0.9007569386038687,
+     "pass": true
+    },
+    "T2 max": {
+     "value": 0.8540223761321258,
+     "pass": true
+    },
+    "T2 JSD hourly": {
+     "value": 0.07306349807374242,
+     "pass": false
+    },
+    "T2 KS hourly": {
+     "value": 0.01297089041095889,
+     "pass": false
+    },
+    "T3 lag-1 ACF": {
+     "value": -0.0005093340491184595,
+     "pass": true
+    },
+    "T3 hourly ACF": {
+     "value": 0.04059015632615039,
+     "pass": false
+    },
+    "T3 storm duration": {
+     "value": 0.9589671869365889,
+     "pass": true
+    },
+    "T3 storm count": {
+     "value": 0.9617311160088159,
+     "pass": true
+    },
+    "T3 storm volume": {
+     "value": 1.0380224746336901,
+     "pass": true
+    },
+    "T4 daily max": {
+     "value": 1.0234259895884492,
+     "pass": true
+    },
+    "T4 IDF (all cells)": {
+     "value": {
+      "15min_T2": 1.0189543270956372,
+      "15min_T5": 1.0570509099854197,
+      "15min_T10": 1.0723858836332525,
+      "1h_T2": 0.8232954377821746,
+      "1h_T5": 0.8026707063404356,
+      "1h_T10": 0.7933641973696699,
+      "3h_T2": 0.9583336104192048,
+      "3h_T5": 0.8874470359686782,
+      "3h_T10": 0.8540646082469309,
+      "6h_T2": 1.04128290035464,
+      "6h_T5": 1.2191065628488642,
+      "6h_T10": 1.3131161584601,
+      "24h_T2": 1.1558264638392026,
+      "24h_T5": 1.2717970719935505,
+      "24h_T10": 1.3229182984375596
+     },
+     "pass": false
+    },
+    "T5 monthly cycle": {
+     "value": 0.7663566519274702,
+     "pass": true
+    },
+    "T5 diurnal cycle": {
+     "value": 0.536774394598035,
+     "pass": true
+    },
+    "S1 deep storms": {
+     "value": 1.0,
+     "pass": true
+    },
+    "S2 rain in storms > 320 min": {
+     "value": 0.9199379087107792,
+     "pass": false
+    },
+    "S3 top storm depths": {
+     "value": 1.9012433180762587,
+     "pass": false
+    },
+    "D unbroken runs > 5h20": {
+     "value": 0.868632707774799,
+     "pass": true
+    },
+    "D variance across scales": {
+     "value": 0.05228354775922964,
+     "pass": true
+    },
+    "D daily totals": {
+     "value": 0.1906635273972596,
+     "pass": false
+    },
+    "E daily peak/trough": {
+     "value": 1.8500042777833783,
+     "pass": false
+    }
+   },
+   "too_close_pct": 4.603580562659847,
+   "nn_dist_ratio": 0.9999999999999998
+  },
+  "perfect 32-h windows": {
+   "volume_ratio": 0.9941159292748707,
+   "rain_in_320min_pct": 66.30218413049603,
+   "long_storms_yr": 44.2,
+   "storms_ge_depth_yr": 16.3,
+   "families": {
+    "A": {
+     "passed": 3,
+     "of": 3,
+     "pass": true
+    },
+    "B": {
+     "passed": 6,
+     "of": 7,
+     "pass": true
+    },
+    "C": {
+     "passed": 4,
+     "of": 6,
+     "pass": true
+    },
+    "D": {
+     "passed": 5,
+     "of": 6,
+     "pass": true
+    },
+    "E_monthly": {
+     "passed": 1,
+     "of": 1,
+     "pass": true
+    },
+    "E_daily": {
+     "passed": 2,
+     "of": 2,
+     "pass": true
+    }
+   },
+   "checks": {
+    "T1 volume": {
+     "value": 0.9941159292748707,
+     "pass": true
+    },
+    "T1 zero fraction": {
+     "value": 0.2233162100456525,
+     "pass": true
+    },
+    "T1 dry spell": {
+     "value": 0.9627847504929705,
+     "pass": true
+    },
+    "T1 wet spell": {
+     "value": 0.9447685522050004,
+     "pass": false
+    },
+    "T2 P99 wet": {
+     "value": 1.0125361620057858,
+     "pass": true
+    },
+    "T2 P99.9 wet": {
+     "value": 0.9676215306980968,
+     "pass": true
+    },
+    "T2 max": {
+     "value": 1.0,
+     "pass": true
+    },
+    "T2 JSD hourly": {
+     "value": 0.018929757427261745,
+     "pass": true
+    },
+    "T2 KS hourly": {
+     "value": 0.003042237442922424,
+     "pass": true
+    },
+    "T3 lag-1 ACF": {
+     "value": -0.003220628353300725,
+     "pass": true
+    },
+    "T3 hourly ACF": {
+     "value": 0.0192970545084874,
+     "pass": true
+    },
+    "T3 storm duration": {
+     "value": 0.9447685522050003,
+     "pass": false
+    },
+    "T3 storm count": {
+     "value": 1.041394510118213,
+     "pass": true
+    },
+    "T3 storm volume": {
+     "value": 0.9546007009025087,
+     "pass": true
+    },
+    "T4 daily max": {
+     "value": 0.7391218937236027,
+     "pass": false
+    },
+    "T4 IDF (all cells)": {
+     "value": {
+      "15min_T2": 0.9655905693900042,
+      "15min_T5": 0.9449729903847158,
+      "15min_T10": 0.936673820045924,
+      "1h_T2": 0.9303491287657326,
+      "1h_T5": 0.9477177810099129,
+      "1h_T10": 0.9555550475642524,
+      "3h_T2": 0.868871181659974,
+      "3h_T5": 0.9111236813085082,
+      "3h_T10": 0.9310215396337792,
+      "6h_T2": 0.8767512667729798,
+      "6h_T5": 0.9304543126474059,
+      "6h_T10": 0.9588453690171419,
+      "24h_T2": 0.8098904145437693,
+      "24h_T5": 0.822233825875497,
+      "24h_T10": 0.8276749487239776
+     },
+     "pass": true
+    },
+    "T5 monthly cycle": {
+     "value": 0.8129710260427521,
+     "pass": true
+    },
+    "T5 diurnal cycle": {
+     "value": 0.7688462059356611,
+     "pass": true
+    },
+    "S1 deep storms": {
+     "value": 1.01875,
+     "pass": true
+    },
+    "S2 rain in storms > 320 min": {
+     "value": 0.9306654116719953,
+     "pass": false
+    },
+    "S3 top storm depths": {
+     "value": 0.7509312189640966,
+     "pass": true
+    },
+    "D unbroken runs > 5h20": {
+     "value": 0.9479892761394102,
+     "pass": true
+    },
+    "D variance across scales": {
+     "value": 0.05744296337100317,
+     "pass": true
+    },
+    "D daily totals": {
+     "value": 0.08201626712328772,
+     "pass": true
+    },
+    "E daily peak/trough": {
+     "value": 1.0198191708011066,
+     "pass": true
+    }
+   },
+   "too_close_pct": 30.844155844155846,
+   "nn_dist_ratio": 0.6029423015991505
+  },
+  "v14": {
+   "volume_ratio": 0.9823366224950251,
+   "rain_in_320min_pct": 43.55554414113152,
+   "long_storms_yr": 35.109218173721416,
+   "storms_ge_depth_yr": 7.802048483049203,
+   "families": {
+    "A": {
+     "passed": 2,
+     "of": 3,
+     "pass": true
+    },
+    "B": {
+     "passed": 4,
+     "of": 7,
+     "pass": true
+    },
+    "C": {
+     "passed": 1,
+     "of": 6,
+     "pass": false
+    },
+    "D": {
+     "passed": 0,
+     "of": 6,
+     "pass": false
+    },
+    "E_monthly": {
+     "passed": 1,
+     "of": 1,
+     "pass": true
+    },
+    "E_daily": {
+     "passed": 1,
+     "of": 2,
+     "pass": true
+    }
+   },
+   "checks": {
+    "T1 volume": {
+     "value": 0.9823366224950251,
+     "pass": true
+    },
+    "T1 zero fraction": {
+     "value": 0.5343176429399676,
+     "pass": true
+    },
+    "T1 dry spell": {
+     "value": 0.9197147755223732,
+     "pass": false
+    },
+    "T1 wet spell": {
+     "value": 0.8786082812601126,
+     "pass": false
+    },
+    "T2 P99 wet": {
+     "value": 0.9951497666345225,
+     "pass": true
+    },
+    "T2 P99.9 wet": {
+     "value": 1.0467392043734232,
+     "pass": true
+    },
+    "T2 max": {
+     "value": 1.3099057197655835,
+     "pass": true
+    },
+    "T2 JSD hourly": {
+     "value": 0.048810121287225026,
+     "pass": true
+    },
+    "T2 KS hourly": {
+     "value": 0.014859479919901442,
+     "pass": false
+    },
+    "T3 lag-1 ACF": {
+     "value": -0.006833710462138987,
+     "pass": true
+    },
+    "T3 hourly ACF": {
+     "value": 0.0537300085250667,
+     "pass": false
+    },
+    "T3 storm duration": {
+     "value": 0.8786082812601125,
+     "pass": false
+    },
+    "T3 storm count": {
+     "value": 1.0942564492355125,
+     "pass": false
+    },
+    "T3 storm volume": {
+     "value": 0.8977206606196577,
+     "pass": false
+    },
+    "T4 daily max": {
+     "value": 0.7275833339554072,
+     "pass": false
+    },
+    "T4 IDF (all cells)": {
+     "value": {
+      "15min_T2": 1.109574807533897,
+      "15min_T5": 1.1422139033168706,
+      "15min_T10": 1.1553520809631188,
+      "1h_T2": 0.9710210871700267,
+      "1h_T5": 1.0647107210230369,
+      "1h_T10": 1.106986346302514,
+      "3h_T2": 0.9471273615370763,
+      "3h_T5": 0.9218328094309962,
+      "3h_T10": 0.9099209126581523,
+      "6h_T2": 0.8614640387091046,
+      "6h_T5": 0.8684652142210086,
+      "6h_T10": 0.8721665083538901,
+      "24h_T2": 0.7388626729219255,
+      "24h_T5": 0.7200707246646363,
+      "24h_T10": 0.7117870098728124
+     },
+     "pass": false
+    },
+    "T5 monthly cycle": {
+     "value": 0.9650350983744339,
+     "pass": true
+    },
+    "T5 diurnal cycle": {
+     "value": -0.11263762817349075,
+     "pass": false
+    },
+    "S1 deep storms": {
+     "value": 0.4876280301905752,
+     "pass": false
+    },
+    "S2 rain in storms > 320 min": {
+     "value": 0.6113771205322835,
+     "pass": false
+    },
+    "S3 top storm depths": {
+     "value": 0.6599356082071539,
+     "pass": false
+    },
+    "D unbroken runs > 5h20": {
+     "value": 0.753012722224588,
+     "pass": false
+    },
+    "D variance across scales": {
+     "value": 0.17094859359138548,
+     "pass": false
+    },
+    "D daily totals": {
+     "value": 0.48502143138805365,
+     "pass": false
+    },
+    "E daily peak/trough": {
+     "value": 0.9192332926245959,
+     "pass": true
+    }
+   },
+   "too_close_pct": 2.3142509135200973,
+   "nn_dist_ratio": 1.0239352007185814
+  }
+ }
+}

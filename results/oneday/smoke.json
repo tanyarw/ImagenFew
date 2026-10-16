@@ -1,0 +1,25 @@
+{
+ "gpu": "NVIDIA A100-PCIE-40GB",
+ "gpu_memory_gb": 39.4925537109375,
+ "partition": "gpu",
+ "partition_time_limit": "3:00:00",
+ "batch": {
+  "2048": {
+   "s_per_step": 0.4748639941215515,
+   "peak_memory_gb": 26.370316982269287,
+   "steps_per_epoch": 410,
+   "hours_500_epochs": 27.040866331921684
+  },
+  "1024": {
+   "s_per_step": 0.2633050799369812,
+   "peak_memory_gb": 13.266355037689209,
+   "steps_per_epoch": 820,
+   "hours_500_epochs": 29.98752299282286
+  }
+ },
+ "sampling": {
+  "s_per_block": 0.0059914062730968,
+  "minutes_4_members_10_years": 1.4786790682002902,
+  "minutes_training_checks_500_epochs": 0.39942708487312
+ }
+}

@@ -1,0 +1,64 @@
+{
+ "command": "evaluate-stage1",
+ "site": "astlingen",
+ "params": {
+  "command": "evaluate",
+  "torch": false,
+  "refresh": false,
+  "device": "cuda",
+  "members": 4,
+  "seed": null,
+  "years": 10.0,
+  "batch": 2048,
+  "steps": null,
+  "source": null,
+  "method": null,
+  "stage": 1,
+  "draws": 1000,
+  "workers": 8,
+  "config": "/home/t/tanyawar/thesis/ImagenFew/tworesolution/configs/fine.yaml",
+  "run_id": "twores_fine",
+  "epochs": null,
+  "batch_size": null,
+  "limit_batches": null,
+  "overwrite": false,
+  "coarse_run": "twores_coarse30_long",
+  "fine_run": "twores_fine"
+ },
+ "argv": [
+  "/home/t/tanyawar/thesis/ImagenFew/tworesolution/__main__.py",
+  "evaluate",
+  "--stage",
+  "1",
+  "--workers",
+  "8",
+  "--coarse-run",
+  "twores_coarse30_long"
+ ],
+ "git": {
+  "commit": "95e24ff4974a87b5f2f60711e3fa8b9fecf79f41",
+  "branch": "use-asinh",
+  "dirty": false,
+  "diff_sha256": null
+ },
+ "host": "xgpg3",
+ "slurm_job_id": "948672",
+ "started": "2026-10-15T23:40:54",
+ "inputs": {},
+ "outputs": {
+  "results/tworesolution/stage1_long.json": "6c0dee8e49444137730007e9530eec284251e178ca36d6e6b12889e03db39096"
+ },
+ "results": {
+  "verdict": "STOP: the coarse model fails stage 1"
+ },
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "sklearn": "1.7.2",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-15T23:42:29",
+ "status": "ok"
+}

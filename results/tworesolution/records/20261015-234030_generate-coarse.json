@@ -1,0 +1,74 @@
+{
+ "command": "generate-coarse",
+ "site": "astlingen",
+ "params": {
+  "command": "generate-coarse",
+  "torch": false,
+  "refresh": false,
+  "device": "cuda",
+  "members": 4,
+  "seed": 42,
+  "years": 10.0,
+  "batch": 2048,
+  "steps": null,
+  "source": null,
+  "method": null,
+  "stage": null,
+  "draws": 1000,
+  "workers": 1,
+  "config": "/home/t/tanyawar/thesis/ImagenFew/tworesolution/configs/fine.yaml",
+  "run_id": "twores_fine",
+  "epochs": null,
+  "batch_size": null,
+  "limit_batches": null,
+  "overwrite": false,
+  "coarse_run": "twores_coarse30_long",
+  "fine_run": "twores_fine"
+ },
+ "argv": [
+  "/home/t/tanyawar/thesis/ImagenFew/tworesolution/__main__.py",
+  "generate-coarse",
+  "--coarse-run",
+  "twores_coarse30_long"
+ ],
+ "git": {
+  "commit": "95e24ff4974a87b5f2f60711e3fa8b9fecf79f41",
+  "branch": "use-asinh",
+  "dirty": false,
+  "diff_sha256": null
+ },
+ "host": "xgpg3",
+ "slurm_job_id": "948672",
+ "started": "2026-10-15T23:40:30",
+ "inputs": {
+  "logs/ImagenFew/Rainfall_Regime/twores_coarse30_long/best_regime_model.pt": "5cc0b20815a850e17761ee675cfe2d493d005bf361a20fcb7e731bfdbc1d55ec"
+ },
+ "outputs": {
+  "results/tworesolution/coarse/coarse30_long.npz": "c11708e79cb5307d9cd90b7158a8ce47a9f35f0ecacacef48f5c5928299ed2a1"
+ },
+ "results": {
+  "mm_per_year": [
+   646.2335174050182,
+   646.850336139556,
+   614.5705822855234,
+   620.6377415390219
+  ],
+  "dry_pct": [
+   87.50399543378995,
+   87.94920091324201,
+   88.32134703196347,
+   88.32191780821917
+  ]
+ },
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "sklearn": "1.7.2",
+  "torch": "2.6.0+cu124",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-15T23:40:52",
+ "status": "ok"
+}
