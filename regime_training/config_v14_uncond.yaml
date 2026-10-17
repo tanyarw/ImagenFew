@@ -1,0 +1,74 @@
+# ==============================================================================
+# v14_uncond — v14 without the seasonal-state label (conditioning ablation)
+# ==============================================================================
+# IDENTICAL to config_v14.yaml (split, seq_len = 64, asinh transform, delay
+# embedding, EDM schedule, loss weights, base checkpoint, epochs) except that the
+# model is trained WITHOUT class conditioning (n_classes = 0, regime_col = null).
+# This is to v14 what v12 is to v10: it asks what the seasonal label buys under
+# the asinh transform.
+#
+# Usage:
+#   sbatch scripts/submit_job_v14_uncond.sh
+# ==============================================================================
+
+# --- Training ---
+epochs: 500
+batch_size: 2048
+learning_rate: 0.0001    # 1e-4
+weight_decay: 0.00001    # 1e-5
+
+# --- Loss: matching v7/v8 exact baseline ---
+# alpha = 0.0 reproduces v7/v8 unweighted loss baseline
+intensity_weight_alpha: 0.0
+intensity_weight_gamma: 0.5
+intensity_weight_normalize: true
+fft_weight: 1.0
+grad_clip: 1.0
+
+# --- Data: Clean Chronological Holdout Datasets ---
+train_csv: data/rainfall/splits/train_years_labelled.csv
+test_csv: data/rainfall/splits/val_years_labelled.csv
+seq_len: 64
+n_classes: 0   # 0: unconditional ablation of v14 (no seasonal-state label)
+
+# --- Column names ---
+regime_col: null
+data_col: avg_rainfall
+
+# --- Rainfall -> model-space transform (the ONLY change vs v10) ---
+data_transform: asinh    # 'standard' = v10 behaviour
+asinh_scale: 0.035       # s in mm/5min = median wet step (>= 0.005 mm), 2000-2007 train split
+
+# --- Transform (Delay Embedding) ---
+use_stft: false
+delay: 8
+embedding: 8
+
+# --- Model Architecture (must match base checkpoint) ---
+handler: models.ImagenFew.handler
+img_resolution: 8
+input_channels: 1
+unet_channels: 32
+ch_mult: [1, 2, 2, 4]
+attn_resolution: [8, 4, 2]
+diffusion_steps: 36
+dynamic_size: [128, 128]
+
+# --- Diffusion Sampler ---
+beta1: 0.00001      # 1e-5
+betaT: 0.01         # 1e-2
+deterministic: false
+
+# --- Fine-tuning ---
+finetune: true
+pretrain: false
+ema: true
+ema_warmup: 100
+ft_method: all       # fine-tune all parameters
+lora_dim: 4          # ignored when ft_method != 'lora'
+dropout: 0.10
+
+# --- Logging & Monitoring ---
+logging_iter: 25       # Log metrics, evaluate regimes, and update plots every 25 epochs
+run_id: null           # auto-generated if null
+run_dir: ImagenFew/Rainfall_v14_uncond/

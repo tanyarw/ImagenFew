@@ -3,6 +3,39 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 17, 2026 — v14_uncond (Conditioning Ablation of v14): Setup and Predictions Before Sending
+
+### 🔍 Overview
+The only label ablation so far is v10 vs v12 (Sept 30), which used the old StandardScaler, not the deliverable's asinh
+transform. Measured on v14, its 4 seasonal-state vectors stayed near their random start (norms 9.8–11.7, cosine ~0).
+To decide whether the seasonal labelling can be claimed as a thesis contribution, **v14_uncond** is v14 with only the
+label removed (`n_classes: 0`, `regime_col: null`; `regime_training/config_v14_uncond.yaml`). It is generated as v12
+was (unconditional assembly, 4-step crossfade, no bridges, seed 42), so v14 vs v14_uncond repeats v10 vs v12 under
+asinh. One cluster job: `sbatch scripts/submit_job_v14_uncond.sh` (train 500 epochs from `ImagenFew_64.ckpt`, then
+10 years).
+
+### 📊 Findings (laptop smoke, before any GPU run)
+* Training runs: the checkpoint loads except the label layer (1,006 tensors loaded, 2 skipped: `map_label` and its
+  EMA copy). One CPU epoch of 2 batches: time term 0.771, FFT term 0.012 (ratio 64, as expected).
+* Generation from the smoke checkpoint runs end to end: 1 year, 1,762 blocks, no labels or bridges, 105,120 rows,
+  no missing values (CPU, 10 min). The values themselves are meaningless after 2 training batches (max 1.5e6 mm,
+  as asinh's inverse blows up an untrained output); only the pipeline was being tested.
+
+### ✅ Decision
+* **Rule, fixed before training.** Five metrics: Gate A tally, IDF cells in band, Tier 6, sewer |ln overflow / real|
+  (BC) and W1 daily totals. **The label helps** if v14 is better on ≥ 3 of them and worse on none by more than the
+  real-vs-real noise floor; **it hurts** if the reverse holds; otherwise **no measurable effect**. One seed each, so a
+  narrow "helps" or "hurts" needs a second seed before it goes in the thesis.
+* **Predictions:** (1) no measurable effect, about 70% (v12 ≈ v10, and v14's label vectors barely trained);
+  (2) Gate A within ±2 of v14's 14/18; (3) long storms > 320 min about 1/yr in both (the label carries no
+  storm-in-progress information); (4) sewer (BC) within 0.17 in |ln ratio| of v14's 0.66.
+* Thesis use: the 24-step ablation (v8 vs v11, label essential) stays; this run settles the 64-step claim for the
+  deliverable itself.
+
+**Verdict:** **v14_uncond set up; nothing trained; cluster job next.**
+
+---
+
 ## October 16, 2026 — v19 (One-Day Window): Smoke Result and the Training Settings
 
 ### 🔍 Overview
