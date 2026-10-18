@@ -15,7 +15,8 @@ bc_efd_check.py) on any ImagenFew version without changing that repository:
 
 Reproduces flood-control's saved v14 result exactly (2026 under BC: 188,327 m3).
 Results: results/reference/gate_b_sewer.json (one row per version, year and controller, plus
-flood-control's saved real and v14 rows for comparison). Needs flood-control's .venv (pyswmm):
+flood-control's saved real and v14 rows for comparison). A run replaces only the rows of the series and
+controllers it simulates; rows for other controllers of the same series are kept. Needs flood-control's .venv (pyswmm):
 
     cd ../flood-control && PYTHONPATH=. .venv/bin/python ../ImagenFew/scripts/gate_b_sewer.py arima_copula_occ_len64 \\
         --controllers BC EFD
@@ -116,6 +117,14 @@ def summary(rows):
     return t
 
 
+def kept_rows(old, sources, controllers):
+    """Stored rows to keep: all but flood-control's real / v14 rows (re-read from its saved file) and the
+    (series, controller) pairs simulated now. Until 2026-10-18 every row of a simulated series was dropped,
+    so a BC-only run deleted that series' EFD rows (and the reverse)."""
+    replaced = {(s, c) for s in sources for c in controllers}
+    return [r for r in old if r['source'] not in {'real', 'v14'} and (r['source'], r['controller']) not in replaced]
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('versions', nargs='+')
@@ -147,7 +156,7 @@ def main():
     ref = pd.read_csv(saved) if saved.exists() else pd.DataFrame()
     ref = ref[ref.source.isin(['real', 'v14'])] if len(ref) else ref     # both controllers: older runs may need them
     old = json.loads(OUT.read_text())['rows'] if OUT.exists() else []
-    keep = [r for r in old if r['source'] not in {v.split('=')[-1] for v in args.versions} | {'real', 'v14'}]
+    keep = kept_rows(old, {v.split('=')[-1] for v in args.versions}, args.controllers)
     all_rows = keep + (json.loads(ref.to_json(orient='records')) if len(ref) else []) + rows
     t = summary(all_rows)
     print(t.round(3).to_string())

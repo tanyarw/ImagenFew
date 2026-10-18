@@ -19,12 +19,13 @@ definitions are reused). Noise floor: real 2-year samples that are not in the re
 held-out years 2008-2009 (never trained on, except by v7) and leave-two-years-out chunks of
 2000-2007. A version is "as close as real" on a metric when it sits inside that spread.
 
-Results are cached in results/evaluation/eval_cache.pkl (refreshed when a data file changes).
+Results are cached in results/evaluation/eval_cache.pkl (refreshed when a data file or the scoring code changes).
 
     python scripts/eval_suite.py              # compute or refresh the cache (~10 min on a laptop)
     python scripts/eval_suite.py --refresh    # recompute everything
 """
 import argparse
+import hashlib
 import os
 import pickle
 import sys
@@ -557,9 +558,20 @@ def paired(a_years, b_years, metric):
 # Driver
 # ──────────────────────────────────────────────────────────────────────
 
+def code_hash():
+    """sha256 of the scoring code (this file and the Gate A definitions it imports). Part of the cache stamp
+    since 2026-10-18: before, editing a metric kept serving the old cached numbers until --refresh."""
+    h = hashlib.sha256()
+    for f in ('eval_suite.py', 'gate_a_scorecard.py'):
+        with open(os.path.join(ROOT, 'scripts', f), 'rb') as fh:
+            h.update(fh.read())
+    return h.hexdigest()
+
+
 def compute(refresh=False):
     names = [n for n in META.index if os.path.exists(data_path(n))]
     stamp = {n: os.path.getmtime(data_path(n)) for n in names}
+    stamp['__code__'] = code_hash()
     if os.path.exists(CACHE) and not refresh:
         with open(CACHE, 'rb') as f:
             cached = pickle.load(f)
