@@ -251,7 +251,8 @@ def main():
     # files still resume); the known-pixel mode is appended only when it is not the default.
     key = [cli.run, cli.mode, str(cli.years), str(cli.seed), str(M), str(K), str(cli.resample),
            str(cli.resample_min_sigma), str(cli.history_noise)]
-    key = np.array(key + ([cli.known_pixels] if clean_known else []))
+    key = np.array(key + ([cli.known_pixels] if clean_known else [])
+                   + ([cli.ckpt_name] if cli.ckpt_name != 'best_regime_model.pt' else []))   # weights, if not the default
     out = np.zeros((M, total), dtype=np.float32)
     ctx, pos, b = None, 0, 0
     if os.path.exists(state_path):

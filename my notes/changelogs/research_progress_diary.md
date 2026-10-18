@@ -36,6 +36,10 @@ Epoch of the weights every scored series was generated from (loss = training los
 
 * **Not affected:** the window-horizon oracle and continuation oracle (real data, no model), every classical
   baseline, and the real-data reference numbers.
+* **Two diagnostics also read the frozen file** (found in the follow-up audit the same day): the Sept 30 denoising
+  diagnostic (`diagnose_denoising_error.py`, default `--ckpt_name best_regime_model.pt`: v10 at epoch 75 against
+  v14 at 400, so its v10-vs-v14 heavy-rain comparison is provisional) and the block-assembly ablation
+  (`ablate_block_assembly.py`, v14 at 400).
 * **Correction to Sept 30:** "every run's best epoch is 460–500 of 500" was read from the `best_loss` column of
   `history.csv`, not from the saved file.
 * v14 itself is from epoch 400 (loss 0.4% above the last epoch), so its numbers will probably move little, but every
