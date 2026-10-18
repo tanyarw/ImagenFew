@@ -54,6 +54,8 @@ TOP_RATE = 1.25                 # Tier 6 "top-10": the largest 1.25 storms per y
 RNG = np.random.default_rng(0)
 
 # name, group, short label, what changed, block length (steps), plan key, clean 2000-2007 split
+# plan key 'markov64': Markov series made before 2026-10-18 (transition file's P_block); 'markov64s': after
+# (transitions at the generation stride, generate_hmm_v1.markov_chain_at_stride). Per-state scores need the right one.
 REGISTRY = [
     ('v1', 'early', 'v1', 'first 5-min model (unconditional)', None, None, False),
     ('v2', 'early', 'v2', 'v1 + negative-value thresholding', None, None, False),
@@ -503,9 +505,11 @@ def tstr(h_train_syn, test_xy, seed=0, n=40000):
 # Conditioning fidelity (Markov L=64 versions; seed-42 production timeline)
 # ──────────────────────────────────────────────────────────────────────
 
-def markov64_timeline(total):
+def markov64_timeline(total, matrix='block'):
+    """State of every step of a production Markov series (plan seed 42, 64-step blocks, 1 bridge).
+    matrix 'block': series generated before 2026-10-18 (plan 'markov64'); 'stride': after (plan 'markov64s')."""
     from regime_training.generate_context import state_timeline   # imports torch (local venv has it)
-    cli = Namespace(mode='markov', seed=42, overlap=4, transition_overlap=8, bridge_blocks=1,
+    cli = Namespace(mode='markov', seed=42, overlap=4, transition_overlap=8, bridge_blocks=1, markov_matrix=matrix,
                     transition_matrix_path='data/rainfall/splits/seasonal_transition_matrix_train_len64.pkl')
     return state_timeline(cli, total, 64)
 
@@ -582,7 +586,7 @@ def compute(refresh=False):
     R = reference(train)
     wref = WindowRef(train, held)
     test_xy = forecast_xy(to_hourly(held))
-    timeline = None
+    timeline = {}
     real_states = pd.read_csv(os.path.join(ROOT, 'data/rainfall/splits/train_years_labelled.csv'),
                               usecols=['hmm_state'])['hmm_state'].to_numpy()
 
@@ -615,10 +619,11 @@ def compute(refresh=False):
             out['windows'][nm] = wref.score(a)
             out['floor_gen'][nm] = chunked(a, train)
             out['per_year'][nm] = per_year(a, R)
-            if META.loc[nm, 'plan'] == 'markov64' and META.loc[nm, 'L'] == 64:
-                if timeline is None:
-                    timeline = markov64_timeline(10 * Y)
-                st = np.tile(timeline[:2 * Y], len(a) // (2 * Y)) if nm == 'v14_ctx' else timeline[:len(a)]
+            plan = META.loc[nm, 'plan']
+            if plan in ('markov64', 'markov64s') and META.loc[nm, 'L'] == 64:
+                if plan not in timeline:
+                    timeline[plan] = markov64_timeline(10 * Y, 'block' if plan == 'markov64' else 'stride')
+                st = np.tile(timeline[plan][:2 * Y], len(a) // (2 * Y)) if nm == 'v14_ctx' else timeline[plan][:len(a)]
                 out['states'][nm] = per_state(a, st)
         print(f'{nm:32s} {time.time() - t1:5.1f}s', flush=True)
 

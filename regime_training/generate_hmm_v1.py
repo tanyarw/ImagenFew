@@ -60,6 +60,32 @@ def calendar365_dates(n, freq="5min"):
     return slot_starts(n * k, 2026)[::k]
 
 
+def n_base_blocks(total_steps, seq_len, overlap, transition_overlap):
+    """Base blocks to plan: enough even if every join is a state change (transition_overlap). Until 2026-10-18
+    this was ceil(total / (seq_len - overlap)) + 10, which ran out in calendar mode without bridges
+    (v14_nobridge_cal: 276 steps, 23 h, short of 10 years). Bridge blocks only add length."""
+    worst_stride = seq_len - min(max(overlap, transition_overlap), seq_len - 1)
+    return int(np.ceil(max(total_steps - seq_len, 0) / worst_stride)) + 1 + 10
+
+
+def markov_chain_at_stride(labels_csv, regime_col, stride, n_states=4, smooth=1e-5):
+    """(P, pi) for one Markov step of `stride` 5-min steps, estimated from the training labels exactly as
+    scripts/fit_seasonal_labels.py estimates P_block (the state every `stride` steps, counts + 1e-5).
+
+    Why (2026-10-18): the transition files hold P_block for seq_len steps (64), but consecutive blocks are
+    placed seq_len - overlap steps apart (60), so every Markov step covered 6% less time than it was fitted
+    for and season phases came out 3-6% short. Estimating at the generation stride removes the mismatch."""
+    states = pd.read_csv(labels_csv, usecols=[regime_col])[regime_col].to_numpy().astype(int)
+    n = len(states) // stride
+    seq = states[:n * stride].reshape(n, stride)[:, 0]
+    C = np.full((n_states, n_states), smooth)
+    np.add.at(C, (seq[:-1], seq[1:]), 1.0)
+    P = C / C.sum(axis=1, keepdims=True)
+    w, v = np.linalg.eig(P.T)
+    pi = np.abs(np.real(v[:, np.argmin(np.abs(w - 1.0))]))
+    return P, pi / pi.sum()
+
+
 # ──────────────────────────────────────────────────────────────────────
 # CLI
 # ──────────────────────────────────────────────────────────────────────
@@ -115,6 +141,10 @@ def parse_args():
     p.add_argument("--device", type=str, default=None,
                    help="Device ('cuda' or 'cpu'). Defaults to 'cuda' (errors if unavailable).")
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--markov_matrix", default="stride", choices=["stride", "block"],
+                   help="Markov mode only. 'stride' (default since 2026-10-18): transitions estimated from the "
+                        "training labels at the step blocks actually advance by (seq_len - overlap). 'block': the "
+                        "transition file's P_block (seq_len steps), how every Markov series before then was made")
     return p.parse_args()
 
 
@@ -410,11 +440,7 @@ def main():
         raise ValueError(
             f"Overlap ({cli.overlap}) must be < seq_len ({args.seq_len})"
         )
-    # Enough blocks even if every join is a state change (transition_overlap). Until 2026-10-18 this used
-    # base_stride + 10 blocks, which ran out in calendar mode without bridges (v14_nobridge_cal: 276 steps,
-    # 23 h, short of 10 years). Bridge blocks only add length, so this is a safe upper bound in every mode.
-    worst_stride = args.seq_len - min(max(cli.overlap, cli.transition_overlap), args.seq_len - 1)
-    num_base_blocks = int(np.ceil(max(total_steps - args.seq_len, 0) / worst_stride)) + 1 + 10
+    num_base_blocks = n_base_blocks(total_steps, args.seq_len, cli.overlap, cli.transition_overlap)
 
     # ── Transition Matrix & State Sequence ────────────────────────────
     if cli.state is not None:
@@ -558,8 +584,14 @@ def main():
                 f"Run scripts/prepare_hmm_dataset.py first."
             )
 
-        P_mat = trans_data["P_block"]
-        pi_dist = trans_data["pi_block"]
+        if cli.markov_matrix == "stride":
+            P_mat, pi_dist = markov_chain_at_stride(os.path.join(PROJECT_ROOT, args.train_csv), args.regime_col,
+                                                    base_stride)
+            logging.info("Markov step = %d steps (seq_len - overlap); transitions estimated from %s",
+                         base_stride, args.train_csv)
+        else:
+            P_mat, pi_dist = trans_data["P_block"], trans_data["pi_block"]
+            logging.info("Markov step: the file's P_block (legacy, before 2026-10-18)")
 
         logging.info("Block-level transition matrix:\n%s", np.round(P_mat, 5))
         logging.info("Stationary distribution: %s", np.round(pi_dist, 4))

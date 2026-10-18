@@ -49,7 +49,16 @@ Epoch of the weights every scored series was generated from (loss = training los
   `gate_b_sewer.py` accepts the skipped day and aligns rain by date; SWMM then runs Feb 29 as a dry day, as for
   real leap years. Checked with SWMM on v14's rain: 2026 identical under both calendars; 2028 rain exactly the
   year's 105,120 steps (856.346 mm), overflow −0.04%. The `_final` series get both fixes; stored series keep
-  their old dates.
+  their old dates (`scripts/relabel_365_dates.py` rewrites the date column only, exactly, for series already made).
+* **Markov mode fixed (same day):** the transition files hold P_block for 64 steps, but blocks advance 60 (64 minus
+  the 4-step overlap), so season phases came out 3–6% short (0.94–0.97 of real over 50 seeds). Transitions are now
+  estimated from the training labels at the generation stride (`markov_chain_at_stride`; the same estimator
+  reproduces every stored P_block exactly): 0.98–1.03 of real. `--markov_matrix block` keeps the old behaviour;
+  `eval_suite` rebuilds per-state timelines with the matrix each series was made with (plan `markov64` before,
+  `markov64s` after). **Markov vs calendar for v14** (checked before the fix): Gate A 14 vs 14; sewer BC 0.66 vs
+  0.62 of real, difference +0.035 ± 0.156 (95%), within noise; Markov's +2.6% rain matches its season draw (seed 42
+  spent 25.6% of the time in the driest phase vs 32.3% real; +2.7% expected from the mix alone). Calendar stays the
+  deliverable (monthly r 0.97 vs −0.11).
 * **Correction to Sept 30:** "every run's best epoch is 460–500 of 500" was read from the `best_loss` column of
   `history.csv`, not from the saved file.
 * v14 itself is from epoch 400 (loss 0.4% above the last epoch), so its numbers will probably move little, but every

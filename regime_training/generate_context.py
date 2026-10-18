@@ -63,6 +63,8 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
 import regime_training.generate_hmm_v1 as gen  # noqa: E402  (plan builders; DiffusionProcess settings)
+
+LABELS_CSV = 'data/rainfall/splits/train_years_labelled.csv'   # training labels (Markov timeline)
 from models.ImagenFew.ImagenFew import ImagenFew  # noqa: E402
 
 STEPS_PER_YEAR = 105120
@@ -102,6 +104,9 @@ def parse_args():
     p.add_argument('--overlap', type=int, default=4)
     p.add_argument('--transition_overlap', type=int, default=8)
     p.add_argument('--bridge_blocks', type=int, default=1)
+    p.add_argument('--markov_matrix', default='stride', choices=['stride', 'block'],
+                   help="Markov timeline: 'stride' (default since 2026-10-18) or 'block' (the file's P_block, "
+                        "as before); see generate_hmm_v1.markov_chain_at_stride")
     return p.parse_args()
 
 
@@ -132,10 +137,17 @@ def state_timeline(cli, total, L):
         return clim[np.arange(total) % len(clim)]
 
     # Markov: rebuild the production plan for this seed and lay it out exactly as
-    # stitch_blocks_transition_aware does (including the time the bridge blocks take)
+    # stitch_blocks_transition_aware does (including the time the bridge blocks take). The block count and
+    # the transition matrix must be the generator's own (n_base_blocks; markov_matrix 'stride' since
+    # 2026-10-18, 'block' for series made before), or the timeline silently mislabels the series.
     stride = L - cli.overlap
-    n_base = int(np.ceil(total / stride)) + 10
-    states = gen.sample_markov_state_sequence(tm['P_block'], tm['pi_block'], n_base, seed=cli.seed)
+    n_base = gen.n_base_blocks(total, L, cli.overlap, cli.transition_overlap)
+    if getattr(cli, 'markov_matrix', 'stride') == 'stride':
+        P, pi = gen.markov_chain_at_stride(os.path.join(PROJECT_ROOT, getattr(cli, 'labels_csv', LABELS_CSV)),
+                                           'hmm_state', stride)
+    else:
+        P, pi = tm['P_block'], tm['pi_block']
+    states = gen.sample_markov_state_sequence(P, pi, n_base, seed=cli.seed)
     plan = gen.build_generation_plan(states, n_bridge=cli.bridge_blocks)
     timeline = np.zeros(total, dtype=int)
     pos = 0

@@ -19,8 +19,12 @@
 # Every scored series was generated from that file.
 #
 # Each task repeats the version's ORIGINAL generation command (same config, transition table,
-# assembly, overlaps, plan seed 42); the only change is final_regime_model.pt in place of
-# best_regime_model.pt. Outputs get a _final tag, so no existing series is overwritten:
+# assembly, overlaps, plan seed 42) with final_regime_model.pt in place of best_regime_model.pt.
+# Generator fixes of the same day also apply (so these series are compared with each other, not with
+# the originals, on anything but the weights): full length (calendar no-bridge series were 23 h short),
+# 365-day dates (no 29 February), and Markov series use transitions at the generation stride
+# (--markov_matrix stride; score them with plan key 'markov64s'). Outputs get a _final tag, so no
+# existing series is overwritten:
 #   markov / unconditional  -> results/generated_data/rainfall_synthetic_10y_<NAME>_final.csv
 #   calendar, no bridges     -> results/generated_data/rainfall_synthetic_10y_<NAME>_final_nobridge_cal.csv
 #   sg_v14                   -> results/generated_data/singapore/rainfall_synthetic_10y_sg_v14_final_nobridge_cal.csv
