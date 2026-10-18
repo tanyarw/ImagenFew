@@ -3,6 +3,68 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 18, 2026 — Series Regenerated From Final Weights: First Statistics and Sewer Results
+
+### 🔍 Overview
+Cluster batch 970182 (commit `3130bc8`, 16 tasks, no errors): every scored version regenerated from
+`final_regime_model.pt` (epoch 500; v15/v15_ctrl 200; sg_v14 698) with all of today's generator fixes (full
+length, 365-day dates, Markov transitions at the generation stride). Statistics scored with `eval_suite`'s own
+functions (the `_final` series are not yet in its REGISTRY); sewer (BC and EFD, 10 years each) on the laptop for
+the nine series that decide the open questions. Still to come: v17 chained, v19, Singapore, the remaining sewer runs.
+
+### 📊 Findings
+**Deliverable (v14, calendar, no bridges):** Gate A 14 → **13/18**, volume 0.983 → **0.933** (band 0.95–1.05),
+sewer BC 0.624 → **0.539** of real. All three pretrained v14 runs are 5–7% too dry on the calendar timeline
+(seeds 1, 2: volume 0.940, 0.947). The Markov series read ~3% wetter, but the new seed-42 Markov draw is itself
++2.5% wet from its season mix alone.
+
+| Sewer overflow / real (± 95%) | Markov BC | Markov EFD | Calendar BC | Calendar EFD |
+| :--- | :---: | :---: | :---: | :---: |
+| v14 | 0.576 ± 0.119 | 0.564 ± 0.115 | 0.539 ± 0.104 | 0.526 ± 0.108 |
+| v14 seed 1 | 0.628 ± 0.119 | 0.617 ± 0.118 | 0.566 ± 0.104 | 0.550 ± 0.106 |
+| v14 seed 2 | 0.603 ± 0.108 | 0.590 ± 0.105 | 0.570 ± 0.097 | 0.556 ± 0.098 |
+| **v14 from scratch** | **0.783 ± 0.153** | **0.772 ± 0.150** | **0.681 ± 0.113** | **0.666 ± 0.113** |
+| v14 without label | 0.581 ± 0.116 | 0.569 ± 0.120 | — | — |
+
+**Earlier conclusions, re-scored (Gate A, statistics only):**
+
+| Question | Before (frozen epoch) | Now (last epoch) | Reading |
+| :--- | :---: | :---: | :--- |
+| E3: v17 independent blocks | 6, volume 1.19, P99.9 1.26 (ep 50) | **13, 0.96, 0.98** | "retraining spoils calibration" **withdrawn** |
+| Transform: v10 vs v14 | 11 vs 14 | 13 vs 14 | gap narrows; v14 still better on extremes (IDF 12 vs 9) |
+| Label at 24 steps: v8 vs v11 | 5 vs 4 (v11 ep 1) | 6 vs 6 | "label essential" **not supported** |
+| Label at 64 steps: v10 vs v12 | 11 vs 8 | 13 vs 12; IDF 9 vs 7; daily max 0.79 vs 0.46 | label helps extremes |
+| E1: v15 vs v15_ctrl | 11 vs 14 (v15 ep 1) | 12 vs 14 | direction holds |
+
+**v14_uncond rule (Oct 17):** v14 (Markov) better on Gate A (14 vs 13), IDF cells (12 vs 6) and W1 daily
+(0.492 vs 0.501); Tier 6 tied (0 vs 0); sewer |ln ratio| 0.552 vs 0.543 (worse by 0.009). Only IDF differs by more
+than the real-vs-real noise floor (W1 daily spreads 0.15–0.25 across real 2-year samples; sewer ±0.12).
+Predictions: (1) no measurable effect: **wrong by the letter** (narrow "helps"); (2) Gate A within ±2: **right**;
+(3) ~1 long storm/yr in both: **roughly right** (1.7, 1.4); (4) sewer within 0.17 |ln| of v14's 0.66: **right** (0.13).
+
+**Pretraining (strengthening run 3):** Gate A, scratch vs the three pretrained runs: Markov 14 vs 14/13/13 →
+"no measurable effect"; calendar 14 vs 13/13/13 → "pretraining hurts" by the letter of the rule. Sewer, same years
+(same plan and generation seed): scratch higher, i.e. closer to real, by **+0.122 ± 0.040** (calendar) and
+**+0.181 ± 0.057** (Markov), in **10 of 10 years** on both. Scratch also has the real volume on the calendar
+(714 mm/yr), more storms ≥ 10 mm (8.8–10.2 vs 6.4–7.6/yr) and IDF 15/15 (Markov). Pre-registered sewer range
+0.55–0.70: the pretrained runs fit (0.54–0.63); scratch calendar 0.68 fits, scratch Markov 0.78 is above it.
+
+### ✅ Decision
+* **All results above are provisional until the remaining series are scored**; the frozen-epoch numbers in earlier
+  entries are superseded where they differ.
+* **Leading candidate: v14 trained from scratch** (best on volume, sewer and day-scale statistics). One training
+  seed: the deliverable is not switched until a second scratch seed confirms it (user's decision).
+* **Conditioning:** keep it. At 64 steps the label helps the extremes (IDF 12 vs 6, and v10 vs v12 the same way)
+  and is the only source of correct seasons (monthly r 0.96 calendar vs 0.28 without the label); it does not change
+  the sewer. By the Oct 17 rule this is a narrow "helps", which needs a second seed before it goes in the thesis.
+* Thesis wording: drop "label essential at 24 steps" and "retraining spoils calibration".
+
+**Verdict:** **with final weights the pretrained v14 is 6% too dry and under-floods (0.54 of real); training
+from scratch is better on every measure so far, in 10 of 10 sewer years; conditioning helps extremes and seasons,
+not the sewer.**
+
+---
+
 ## October 18, 2026 — Best-Checkpoint Bug: Scored Series Came From Early Epochs
 
 ### 🔍 Overview
