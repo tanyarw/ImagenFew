@@ -153,9 +153,11 @@ def run(cli):
             logging.info("epoch %4d/%d  loss %.6f (best %.6f)  cond |w| %.4f  generated/conditioned rain %.3f  "
                          "in wet half-hours %.3f", epoch, args.epochs, rec["loss"], best, rec["cond_weight_norm"],
                          rec["volume_ratio"], rec["in_wet_half_hours"])
-            if is_best:
-                save_fine(model, out / "best_fine_model.pt", epoch=epoch, loss=rec["loss"])
             pd.DataFrame(history + [rec]).to_csv(out / "history.csv", index=False)
+        # Every new lowest loss, not only logging epochs (same bug as train_regime.py, fixed 2026-10-18:
+        # twores_fine's best froze at epoch 400 of 500).
+        if is_best:
+            save_fine(model, out / "best_fine_model.pt", epoch=epoch, loss=rec["loss"])
         history.append(rec)
     save_fine(model, out / "final_fine_model.pt", epoch=args.epochs, loss=history[-1]["loss"])
     pd.DataFrame(history).to_csv(out / "history.csv", index=False)

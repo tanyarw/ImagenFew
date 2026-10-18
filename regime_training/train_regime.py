@@ -565,10 +565,13 @@ def main():
                 )
             model.train()
 
-            # Save best checkpoint
-            if is_best or (epoch % log_interval == 0 and avg_loss <= best_loss):
-                _save_ckpt(model, args, epoch, avg_loss,
-                           os.path.join(ckpt_dir, "best_regime_model.pt"))
+        # Save best checkpoint at EVERY new lowest loss. Until 2026-10-18 this sat inside the
+        # logging block above, so it only ran on logging epochs: a lower loss on any other epoch
+        # blocked every later save, and "best" froze early (v11 and v15 at epoch 1, v17 at 50).
+        # Generation now uses final_regime_model.pt; this keeps "best" honest for anyone who reads it.
+        if is_best:
+            _save_ckpt(model, args, epoch, avg_loss,
+                       os.path.join(ckpt_dir, "best_regime_model.pt"))
 
         history.append(epoch_record)
 

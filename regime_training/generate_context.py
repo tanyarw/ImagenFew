@@ -89,6 +89,9 @@ def parse_args():
                         'trained with known pixels). clean: known pixels kept clean, as a model trained '
                         'with known prefixes saw them (E3)')
     p.add_argument('--device', default='cuda')
+    p.add_argument('--ckpt_name', default='best_regime_model.pt',
+                   help='weights file in the run directory; final_regime_model.pt = the last epoch '
+                        '(best_regime_model.pt froze early in runs trained before 2026-10-18)')
     p.add_argument('--save_every', type=int, default=500, help='blocks between progress saves')
     p.add_argument('--output_dir', default='results/generated_data')
     p.add_argument('--output_name', default=None,
@@ -108,7 +111,7 @@ def load_model(cli, args):
     with open(os.path.join(run_dir, 'scaler.pkl'), 'rb') as f:
         scaler = pickle.load(f)
     model = ImagenFew(args, args.device).to(args.device)
-    ckpt = torch.load(os.path.join(run_dir, 'best_regime_model.pt'), map_location=args.device, weights_only=False)
+    ckpt = torch.load(os.path.join(run_dir, cli.ckpt_name), map_location=args.device, weights_only=False)
     cur = model.state_dict()
     model.load_state_dict({k: v for k, v in ckpt.get('model', ckpt).items()
                            if k in cur and v.shape == cur[k].shape}, strict=False)

@@ -3,6 +3,65 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 18, 2026 — Best-Checkpoint Bug: Scored Series Came From Early Epochs
+
+### 🔍 Overview
+Found while checking the synced strengthening runs (v14_s1, v14_s2, v14_scratch, all 500/500 epochs, commit
+`69b214c`): v14_s1's `best_regime_model.pt` is from **epoch 50**. Every generation script samples from that file.
+**Cause** (`train_regime.py`, since commit `c9784fc`, 2026-08-25): the lowest loss so far was updated every epoch,
+but the file was saved only on logging epochs (every 25). One low loss on a non-logging epoch blocked every later
+save, so "best" froze early. Before `c9784fc` both happened on logging epochs only, which worked. Confirmed by
+replaying the rule on each run's `history.csv`: it predicts the stored epoch exactly in every run checked. The same
+code was copied into `tworesolution/train_fine.py`.
+
+### 📊 Findings
+Epoch of the weights every scored series was generated from (loss = training loss at that epoch vs the last epoch):
+
+| Version | Run | "Best" epoch | Last epoch | Loss vs last | Results that rest on it |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| v8 | `ed17d299` | 50 | 500 | +3.3% | context-length series |
+| v9 | `160156d4` | **1** | 500 | **+74%** | context-length series |
+| v10 | `aebe363f` | 75 | 500 | +2.3% | transform ablation baseline, v10 vs v12 |
+| e1_v10ckpt24 | | 50 | 500 | +5.5% | checkpoint control |
+| v11 | | **1** | 500 | **+96%** | label ablation at 24 steps ("label essential") |
+| v12 | | 75 | 500 | +1.8% | label ablation at 64 steps |
+| v13 | | 450 | 500 | −0.4% | transform ablation |
+| **v14** | | 400 | 500 | +0.4% | **the deliverable**; E2, guidance, v16, two-resolution fine init |
+| v15 | | **1** | 200 | +1.6% | E1 (8×8 attention): v14 plus 1 epoch with new, untrained heads |
+| v15_ctrl | | 125 | 200 | −0.6% | E1 control |
+| v17 | | **50** | 500 | **+7.1%** | E3: "retraining spoils calibration", sewer 0.82 |
+| sg_v14 | | **25** | 698 | **+16%** | Singapore "does not transfer" verdict |
+| v14_s1 / v14_s2 / v14_scratch | | 50 / 500 / 400 | 500 | +6.1% / 0 / 0 | strengthening runs 2–3 (not yet scored) |
+| twores_coarse30_long / twores_fine | | 2650 / 400 | 3015 / 500 | −1.3% / +3% | two-resolution stage 1 / stage 2 |
+
+* **Not affected:** the window-horizon oracle and continuation oracle (real data, no model), every classical
+  baseline, and the real-data reference numbers.
+* **Correction to Sept 30:** "every run's best epoch is 460–500 of 500" was read from the `best_loss` column of
+  `history.csv`, not from the saved file.
+* v14 itself is from epoch 400 (loss 0.4% above the last epoch), so its numbers will probably move little, but every
+  comparison *between* versions mixed epochs 1 to 450.
+
+### ✅ Decision
+* **Generate from the final weights (`final_regime_model.pt`, last epoch) everywhere**, as the user decided. EDM
+  samples from the EMA weights, while "best" was chosen on the raw model's noisy training loss, so the final EMA is
+  the standard choice anyway.
+* **Code (one commit):** `train_regime.py` and `tworesolution/train_fine.py` save "best" at every new lowest loss
+  (checked on CPU: 6 epochs, lowest at epoch 5, saved at 5; the old rule would have kept epoch 1). Generation from the
+  final weights in `submit_retrain.sh`, `submit_job_v14_uncond.sh`, `oneday/slurm/train.sbatch`,
+  `submit_generation_v17_ctx.sh` (`SUFFIX=_final`) and `generate_context.py --ckpt_name` (default unchanged).
+* **New `scripts/submit_regenerate_final.sh`:** a 15-task GPU array that repeats each version's original command
+  (config, transition table, assembly, plan seed 42) with only the weights changed. Outputs are tagged `_final`;
+  no existing series is overwritten. Laptop smoke: all 20 series load 100% of their parameters from the final epoch
+  (500; v15/v15_ctrl 200; sg_v14 698).
+* **Every result in the "Results that rest on it" column is provisional** until rescored from the `_final` series.
+  v14 stays the deliverable until `v14_final` is scored against it. v19 is still training under the old rule; it
+  is regenerated from its final weights (`GENERATE_ONLY=1`) before its result is read.
+
+**Verdict:** **bug fixed in code; every scored diffusion result from v8 on must be regenerated from the last epoch
+and rescored before it is used in the thesis.**
+
+---
+
 ## October 17, 2026 — v14_uncond (Conditioning Ablation of v14): Setup and Predictions Before Sending
 
 ### 🔍 Overview

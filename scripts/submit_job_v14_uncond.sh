@@ -38,8 +38,9 @@ python regime_training/train_regime.py \
     --run_id "${RUN_ID}"
 
 # ── 2. Generate 10 years (same flags as run_v12_generation.sh) ───────
+# From the final weights (best_regime_model.pt could freeze early before 2026-10-18; compare with v14_final)
 python regime_training/generate_hmm_v1.py \
-    --model_ckpt "${RUN_DIR}/best_regime_model.pt" \
+    --model_ckpt "${RUN_DIR}/final_regime_model.pt" \
     --scaler_path "${RUN_DIR}/scaler.pkl" \
     --config "${CONFIG}" \
     --assembly_mode unconditional \

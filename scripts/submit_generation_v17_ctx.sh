@@ -36,19 +36,23 @@ YEARS="${YEARS:-10}"
 NAME="rainfall_synthetic_10y_v17_ctx"
 [ "${K}" = "2" ] || NAME="${NAME}${K}"
 [ "${YEARS}" = "10" ] || NAME="${NAME}_${YEARS}y"
-NAME="${NAME}_cal"
+NAME="${NAME}_cal${SUFFIX:-}"
 RUN_DIR="logs/ImagenFew/Rainfall_Regime/v17"
+# Weights file (2026-10-18): final_regime_model.pt, the last epoch. The first v17 series came from
+# best_regime_model.pt, which had frozen at epoch 50 of 500 (train_regime.py save bug). SUFFIX tags
+# the regenerated series (_final) so the first ones are kept as the record.
+CKPT_NAME="${CKPT_NAME:-final_regime_model.pt}"
 
 cd "${SLURM_SUBMIT_DIR:-.}"
 mkdir -p logs results/generated_data
 source /home/t/tanyawar/thesis/ImagenFew/.venv/bin/activate
 
 echo "Job ID: ${SLURM_JOB_ID:-} | GPU: ${CUDA_VISIBLE_DEVICES:-} | Host: $(hostname -s) | Start: $(date)"
-echo "K=${K} members=${MEMBERS} years=${YEARS} -> ${NAME}"
+echo "K=${K} members=${MEMBERS} years=${YEARS} weights=${CKPT_NAME} -> ${NAME}"
 echo "commit: $(git rev-parse HEAD)"
 python -c "import torch; assert torch.cuda.is_available(), 'ERROR: CUDA is not available on ' + '$(hostname -s)'"
 
-for f in "${RUN_DIR}/best_regime_model.pt" "${RUN_DIR}/scaler.pkl" regime_training/config_v17.yaml; do
+for f in "${RUN_DIR}/${CKPT_NAME}" "${RUN_DIR}/scaler.pkl" regime_training/config_v17.yaml; do
     [ -f "${f}" ] || { echo "ERROR: ${f} not found (train v17 first: scripts/submit_strengthening.sh)"; exit 1; }
 done
 grep -q "known_pixels" regime_training/generate_context.py \
@@ -58,7 +62,7 @@ python regime_training/generate_context.py \
     --run v17 --mode calendar --years "${YEARS}" --seed 42 \
     --members "${MEMBERS}" --context_cols "${K}" \
     --known_pixels clean --resample 1 --history_noise 0 \
-    --device cuda --output_name "${NAME}"
+    --device cuda --ckpt_name "${CKPT_NAME}" --output_name "${NAME}"
 
 ls -lh results/generated_data/${NAME}*.csv
 echo "Job completed at: $(date)"

@@ -17,6 +17,8 @@
 #            (as v14_nobridge_cal: calendar timeline, no bridge blocks, 4-step overlap; seeds 42-45)
 #   verdict  results/oneday/evaluation.json (statistics; the sewer check runs on the laptop)
 # GENERATE_ONLY=1 skips training (to regenerate from a finished model).
+# Generates from final_regime_model.pt (the last epoch): best_regime_model.pt could freeze early under the
+# train_regime.py save rule used before 2026-10-18 (diary, "Best-Checkpoint Bug").
 # ==============================================================================
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-.}"
@@ -42,7 +44,7 @@ fi
 for K in 0 1 2 3; do
     NAME="rainfall_synthetic_10y_v19_nobridge_cal$([ "${K}" = 0 ] || echo "_m${K}").csv"
     python regime_training/generate_hmm_v1.py \
-        --model_ckpt "${RUN_DIR}/best_regime_model.pt" --scaler_path "${RUN_DIR}/scaler.pkl" \
+        --model_ckpt "${RUN_DIR}/final_regime_model.pt" --scaler_path "${RUN_DIR}/scaler.pkl" \
         --config regime_training/config_v19.yaml --transition_matrix_path "${CAL}" \
         --assembly_mode calendar --bridge_blocks 0 --years 10 --freq 5min --overlap 4 --transition_overlap 8 \
         --seed $((42 + K)) --output_dir results/generated_data --output_name "${NAME}"

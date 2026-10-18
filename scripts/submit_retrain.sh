@@ -25,7 +25,8 @@
 #
 # Training: 500 epochs, batch 2048, lr 1e-4: the settings of every scored version since v8
 # (taken from the config; nothing is overridden on the command line).
-# Generation, both with plan seed 42 so that only the trained weights differ from the
+# Generation uses final_regime_model.pt (the last epoch; best_regime_model.pt could freeze early
+# under the save rule used before 2026-10-18), both with plan seed 42 so that only the trained weights differ from the
 # version being compared against:
 #   markov, 1 bridge block per change -> rainfall_synthetic_10y_<RUN_ID>.csv
 #       (how the scored rows v10, v13, v14 were made: scripts/submit_job_v14.sh)
@@ -69,7 +70,7 @@ grep -q "def known_prefix_mask" regime_training/train_regime.py \
 
 # ── 1. Train ──────────────────────────────────────────────────────────
 if [ "${GENERATE_ONLY}" = "1" ]; then
-    [ -f "${RUN_DIR}/best_regime_model.pt" ] || { echo "ERROR: GENERATE_ONLY=1 but ${RUN_DIR} has no model"; exit 1; }
+    [ -f "${RUN_DIR}/final_regime_model.pt" ] || { echo "ERROR: GENERATE_ONLY=1 but ${RUN_DIR} has no model"; exit 1; }
 else
     if [ -e "${RUN_DIR}/best_regime_model.pt" ] || [ -e "${RUN_DIR}/final_regime_model.pt" ]; then
         echo "ERROR: ${RUN_DIR} already holds a trained model; refusing to overwrite it."
@@ -84,13 +85,13 @@ else
 fi
 
 # ── 2. Generate 10 years, the two ways the scored versions were made ──
-for f in "${RUN_DIR}/best_regime_model.pt" "${RUN_DIR}/scaler.pkl"; do
+for f in "${RUN_DIR}/final_regime_model.pt" "${RUN_DIR}/scaler.pkl"; do
     [ -f "${f}" ] || { echo "ERROR: ${f} missing after training"; exit 1; }
 done
 for MODE in markov calendar; do
     if [ "${MODE}" = "calendar" ]; then BRIDGE=0; SUFFIX="_nobridge_cal"; else BRIDGE=1; SUFFIX=""; fi
     python regime_training/generate_hmm_v1.py \
-        --model_ckpt "${RUN_DIR}/best_regime_model.pt" \
+        --model_ckpt "${RUN_DIR}/final_regime_model.pt" \
         --scaler_path "${RUN_DIR}/scaler.pkl" \
         --config "${CONFIG}" \
         --transition_matrix_path "${TRANS_MATRIX}" \
