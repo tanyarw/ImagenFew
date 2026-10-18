@@ -46,6 +46,18 @@ from omegaconf import OmegaConf
 
 from models.ImagenFew.ImagenFew import ImagenFew
 from models.ImagenFew.sampler import DiffusionProcess
+from sitetransfer.timegrid import slot_starts
+
+
+def calendar365_dates(n, freq="5min"):
+    """Dates for n steps from 2026-01-01 on the 365-day calendar the rain is laid out in: 29 February is
+    skipped, as in the real record (no 29 February) and in the sewer model's gauge files. Before 2026-10-18
+    the output used pd.date_range, whose 29 Feb 2028 / 2032 put every later date one or two days ahead of
+    the season the rain was generated for."""
+    k = int(pd.Timedelta(freq) / pd.Timedelta("5min"))
+    if k < 1 or pd.Timedelta(freq) != k * pd.Timedelta("5min"):
+        raise ValueError(f"freq must be a multiple of 5 min, got {freq}")
+    return slot_starts(n * k, 2026)[::k]
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -398,8 +410,11 @@ def main():
         raise ValueError(
             f"Overlap ({cli.overlap}) must be < seq_len ({args.seq_len})"
         )
-    # Overshoot slightly to account for wider overlaps at transitions
-    num_base_blocks = int(np.ceil(total_steps / base_stride)) + 10
+    # Enough blocks even if every join is a state change (transition_overlap). Until 2026-10-18 this used
+    # base_stride + 10 blocks, which ran out in calendar mode without bridges (v14_nobridge_cal: 276 steps,
+    # 23 h, short of 10 years). Bridge blocks only add length, so this is a safe upper bound in every mode.
+    worst_stride = args.seq_len - min(max(cli.overlap, cli.transition_overlap), args.seq_len - 1)
+    num_base_blocks = int(np.ceil(max(total_steps - args.seq_len, 0) / worst_stride)) + 1 + 10
 
     # ── Transition Matrix & State Sequence ────────────────────────────
     if cli.state is not None:
@@ -609,6 +624,8 @@ def main():
     )
 
     # Trim to exact length, then threshold
+    if len(unscaled) < total_steps:
+        raise RuntimeError(f"Stitched series has {len(unscaled)} steps, fewer than the {total_steps} requested")
     unscaled = unscaled[:total_steps].reshape(-1, channels)
     unscaled[unscaled < 0.005] = 0.0
 
@@ -626,9 +643,7 @@ def main():
     out_path = os.path.join(cli.output_dir, out_filename)
 
     df = pd.DataFrame(unscaled, columns=["avg_rainfall"])
-    df.insert(0, "date", pd.date_range(
-        start="2026-01-01", periods=len(df), freq=freq,
-    ))
+    df.insert(0, "date", calendar365_dates(len(df), freq))
     df.to_csv(out_path, index=False)
 
     # ── Summary Statistics ────────────────────────────────────────────

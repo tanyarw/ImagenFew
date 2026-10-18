@@ -40,6 +40,16 @@ Epoch of the weights every scored series was generated from (loss = training los
   diagnostic (`diagnose_denoising_error.py`, default `--ckpt_name best_regime_model.pt`: v10 at epoch 75 against
   v14 at 400, so its v10-vs-v14 heavy-rain comparison is provisional) and the block-assembly ablation
   (`ablate_block_assembly.py`, v14 at 400).
+* **Calendar fixes from the same audit (user's rule: only 365-day years, 29 February left out):**
+  (a) every generated series now reaches its full length: the block count assumed 60-step joins, but calendar
+  joins at state changes take 8 steps, so `v14_nobridge_cal` (flood-control's v14) was 276 steps (23 h) short of
+  10 years; the count now covers the worst case and generation stops if the series still comes out short.
+  (b) Generated dates follow the 365-day calendar the rain is laid out in (`calendar365_dates`, reusing
+  `sitetransfer.timegrid.slot_starts`); before, 29 February 2028 / 2032 put every later date one or two days ahead.
+  `gate_b_sewer.py` accepts the skipped day and aligns rain by date; SWMM then runs Feb 29 as a dry day, as for
+  real leap years. Checked with SWMM on v14's rain: 2026 identical under both calendars; 2028 rain exactly the
+  year's 105,120 steps (856.346 mm), overflow −0.04%. The `_final` series get both fixes; stored series keep
+  their old dates.
 * **Correction to Sept 30:** "every run's best epoch is 460–500 of 500" was read from the `best_loss` column of
   `history.csv`, not from the saved file.
 * v14 itself is from epoch 400 (loss 0.4% above the last epoch), so its numbers will probably move little, but every

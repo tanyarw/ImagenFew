@@ -57,14 +57,24 @@ def events(x):
     return np.bincount(ids[wet], x[wet]) if wet.any() else np.zeros(0)
 
 
+def check_steps(dates, name):
+    """Every step is 5 min, except that 29 February may be skipped (the 365-day calendar of the real record
+    and of series written since 2026-10-18). SWMM then sees no rain on 29 February, as for real leap years."""
+    gap = dates.diff().iloc[1:]
+    prev = dates.iloc[:-1].reset_index(drop=True)
+    gap = gap.reset_index(drop=True)
+    feb29 = (gap == STEP + pd.Timedelta(days=1)) & (prev.dt.month == 2) & (prev.dt.day == 28) & prev.dt.is_leap_year
+    if not ((gap == STEP) | feb29).all():
+        raise ValueError(f'{name} is not contiguous at 5 min (other than skipping 29 February)')
+
+
 def build(name, fc, tmp):
-    """Four gauge files and a model copy reading them; returns (directory, first date, steps)."""
+    """Four gauge files and a model copy reading them; returns (directory, first date, last date)."""
     from src.astlingen.model import control_free_inp
     from src.rain.split import load_params, split
     csv, _, name = name.partition('=') if '=' in name else (name, '', name)
     df = pd.read_csv(GEN / f'rainfall_synthetic_10y_{csv}.csv', parse_dates=['date'])
-    if not (df.date.diff().dropna() == STEP).all():
-        raise ValueError(f'{name} is not contiguous at 5 min')
+    check_steps(df.date, name)
     d = Path(tmp) / name
     d.mkdir()
     g = split(df.avg_rainfall.to_numpy(np.float32).astype(np.float64), load_params(), 0)   # float32 as in vendor_v14.py
@@ -73,6 +83,7 @@ def build(name, fc, tmp):
         pd.DataFrame({'d': days, 't': times, 'v': g[:, i]}).to_csv(d / f'g{i + 1}.dat', sep=' ', header=False,
                                                                   index=False, float_format='%.4f')
     np.save(d / 'rain_mean.npy', g.mean(axis=1))
+    np.save(d / 'dates.npy', df.date.to_numpy())
     text = Path(control_free_inp()).read_text()
     for i in range(1, 5):
         real = str((fc / f'data/SWMM-Astlingen/{i}Astlingen_Erft{i}.txt').resolve())
@@ -80,20 +91,22 @@ def build(name, fc, tmp):
             raise RuntimeError(f'{real} not found in the control-free model')
         text = text.replace(real, str((d / f'g{i}.dat').resolve()))
     (d / 'model.inp').write_text(text)
-    return d, df.date.iloc[0], len(df)
+    return d, df.date.iloc[0], df.date.iloc[-1]
 
 
 def one(job):
-    name, d, start0, n_steps, year, ctrl, fc = job
+    name, d, first, last, year, ctrl, fc = job
     flood_control(fc)
     from src.astlingen.controllers import BCController, EFDController
     from src.astlingen.simulate import run
     start = pd.Timestamp(f'{year}-01-01')
-    end = min(pd.Timestamp(f'{year}-12-31 23:55'), start0 + n_steps * STEP)
+    end = min(pd.Timestamp(f'{year}-12-31 23:55'), last)
     res = run({'BC': BCController, 'EFD': EFDController}[ctrl](), start, end, inp_path=str(d / 'model.inp'),
               record_trace=True)
-    i0 = int((start - start0) / STEP)
-    rain = np.load(d / 'rain_mean.npy')[i0:i0 + res.steps]
+    # Rain on SWMM's own time axis: aligned by date, and no rain where the file has no step (29 February),
+    # as SWMM reads it. For a series with every 5-min step this is the same slice as before.
+    series = pd.Series(np.load(d / 'rain_mean.npy'), index=pd.DatetimeIndex(np.load(d / 'dates.npy')))
+    rain = series.reindex(pd.date_range(start, periods=res.steps, freq=STEP), fill_value=0.0).to_numpy()
     storms, overflow = events(rain), events(res.trace.overflow_step_m3.to_numpy())
     return dict(source=name, year=year, controller=ctrl, days=res.steps / 288, rain_mm=float(rain.sum()),
                 storms_ge10mm=int((storms >= 10).sum()), max_storm_mm=float(storms.max()),
@@ -141,9 +154,9 @@ def main():
             name = spec.split('=')[-1]
             if name in ('real', 'v14'):
                 raise SystemExit(f"'{name}' is flood-control's saved run; store this series under another label")
-            d, start0, n = build(spec, fc, tmp)
-            years = range(start0.year, (start0 + (n - 1) * STEP).year + 1)
-            jobs += [(name, d, start0, n, y, c, fc) for y in years for c in args.controllers]
+            d, first, last = build(spec, fc, tmp)
+            years = range(first.year, last.year + 1)
+            jobs += [(name, d, first, last, y, c, fc) for y in years for c in args.controllers]
         rows = []
         with ProcessPoolExecutor(args.workers) as pool:
             for r in pool.map(one, jobs):

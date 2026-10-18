@@ -302,7 +302,7 @@ def main():
                 np.savez(state_path, key=key, pos=pos, b=b, out=out[:, :pos], ctx=ctx.cpu().numpy())
 
     out[out < WET_THR] = 0.0
-    dates = pd.date_range(start='2026-01-01', periods=total, freq='5min')
+    dates = gen.calendar365_dates(total)        # 365-day calendar, no 29 February (as the real record)
     for mbr in range(M):
         path = os.path.join(out_dir, f'{name}{"" if mbr == 0 else f"_m{mbr}"}.csv')
         pd.DataFrame({'date': dates, 'avg_rainfall': out[mbr]}).to_csv(path, index=False)
