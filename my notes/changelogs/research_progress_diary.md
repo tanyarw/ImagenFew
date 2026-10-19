@@ -3,6 +3,35 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 19, 2026 — v14 From Scratch, Second Training Seed: Confirmed
+
+### 🔍 Overview
+Job 972544 (commit `3130bc8`): v14's config from random weights, training seed 1, 500 epochs, generated from the
+final weights (Markov and calendar, plan seed 42). Sewer (BC, EFD) on the laptop. The confirmation rule was
+proposed on Oct 18 before the run finished (not formally entered in the diary): calendar sewer above all three
+pretrained runs (> 0.57) and volume within 0.95–1.05.
+
+### 📊 Findings
+| Sewer BC / real | Scratch seed 1 | Scratch seed 0 | Pretrained (v14, seed 1, seed 2) |
+| :--- | :---: | :---: | :---: |
+| Calendar | **0.630** | 0.681 | 0.539, 0.566, 0.570 |
+| Markov | **0.677** | 0.783 | 0.576, 0.628, 0.603 |
+
+* Volume: 0.976 (calendar), 1.003 (Markov): in band.
+* Same years against the mean of the three pretrained runs: **+0.071 ± 0.029** (calendar) and **+0.075 ± 0.027**
+  (Markov), higher in **10 of 10 years** on both timelines.
+* The gain is smaller than seed 0's (+0.12 calendar), so the two scratch runs differ by about 0.05.
+
+### ✅ Decision
+* **Confirmed:** training from random weights beats the pretrained start on the sewer and on volume, in two of two
+  training runs. Pretraining on the ImagenFew datasets does not help this task at 64 steps.
+* v14 from scratch is the best generator for the sewer; whether it replaces the deliverable is the user's call.
+
+**Verdict:** **second scratch seed: sewer 0.63 (calendar), above every pretrained run in 10 of 10 years, volume in
+band; the from-scratch result holds.**
+
+---
+
 ## October 19, 2026 — v19 (One-Day Window): Results at Epoch 325
 
 ### 🔍 Overview
