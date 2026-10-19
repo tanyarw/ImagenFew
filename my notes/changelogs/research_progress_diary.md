@@ -3,6 +3,48 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 19, 2026 — v17 Chained From Its Final Weights: Long Storms at the Real Rate, but Too Dry
+
+### 🔍 Overview
+The E3 test (trained continuation, Oct 11 plan, run 5) repeated with v17's final weights instead of the epoch-50
+file: jobs 970021 (80 min of context, K = 2) and 970022 (no context, K = 0, the control), commit `3130bc8`,
+calendar timeline, 4 independent 10-year chains each. Statistics with `eval_suite`'s functions; sewer (BC, EFD)
+for all eight chains on the laptop.
+
+### 📊 Findings
+| Chain means | Chained (80 min context) | Control (no context) | v14 final | Real |
+| :--- | :---: | :---: | :---: | :---: |
+| Unbroken wet runs > 5h20 per year | **13.0** | 1.7 | 1.5 | 14.2 |
+| Share of rain in them | **20.3%** | 2.3% | 2.0% | 21.4% |
+| Volume / real | **0.77** (0.71–0.81) | 0.93 | 0.93 | 1 |
+| Wet spell / real | 0.95 | 0.90 | 0.95 | 1 |
+| Storms ≥ 10 mm per year | 9.8 | 7.3 | 6.4 | 15.7 |
+| Sewer BC / real (± 95%) | **0.56 ± 0.05** | 0.57 ± 0.05 | 0.54 | 1 |
+
+* **Rule (Oct 11):** long runs ≥ 10 **PASS**, rain in them ≥ 15% **PASS**, wet spell **PASS**, volume 0.95–1.05
+  **FAIL**. Context test: the control has under half the chained long-run rate (1.7 vs 6.5) **PASS**. So the
+  pre-registered verdict is **not SUCCESS** (one of four targets fails).
+* **Why it is dry:** rain per wet step is right (0.068–0.073 mm vs 0.073 real), but chains start about **16% fewer
+  rain spells** (about 1,275 per year vs 1,513 real; the control 1,485–1,507). The context that keeps storms going
+  also keeps dry spells going. No drift across the 10 years.
+* **Sewer:** chained and control overflow the same (difference −0.015 ± 0.070, chained higher in 19 of 40
+  member-years). Longer storms are cancelled by less rain: the largest storm of each year is 24–30 mm (control 21,
+  real 42). Prediction (Oct 11) chained ≥ 0.85: **wrong** (0.56); control 0.55–0.70: **right** (0.57).
+* Compared with the epoch-50 run (Oct 13: 8.2 runs per year, 12.1%, volume 0.88): the final weights carry storms
+  at the real rate, but are drier.
+
+### ✅ Decision
+* **Trained continuation works for storm duration**: the window limit is removed by a learned continuation, the
+  first time any model reaches the real rate of long storms. Thesis claim: duration can be learned; the
+  remaining gap is rain occurrence after dry context (and storm depth), not the window.
+* It is not a usable generator yet (23% too dry, no sewer gain). Not pursued further now; v14 trained from scratch
+  stays the leading candidate (sewer 0.68).
+
+**Verdict:** **with final weights, chained v17 reaches the real number of long storms (13 vs 14 per year) but starts
+16% too few rain spells, so it is 23% too dry and floods no more than the control.**
+
+---
+
 ## October 19, 2026 — v19 (One-Day Window): Training Stopped Early; Generated From the Epoch-325 Snapshot (Deviation)
 
 ### 🔍 Overview
