@@ -28,3 +28,14 @@ Tests: `python -m unittest discover -s oneday/tests -t .`
    cd ../flood-control && PYTHONPATH=. .venv/bin/python ../ImagenFew/scripts/gate_b_sewer.py \
        v19_nobridge_cal v19_nobridge_cal_m1 v19_nobridge_cal_m2 v19_nobridge_cal_m3 --controllers BC EFD
    ```
+
+## Other runs of the recipe
+
+`train.sbatch` takes `RUN_ID`, `INIT` (`pretrained` | `none`), `EPOCHS` and `SAVE_EVERY` (header of the script);
+the defaults are v19. Each run gets its own model folder, series names and `results/oneday/evaluation_<RUN_ID>.json`
+(`python -m oneday evaluate --run-id <RUN_ID>`); v19's files are never touched.
+
+v19 from scratch (diary 2026-10-19), 325 epochs to match v19's evaluated snapshot:
+```bash
+RUN_ID=v19_scratch INIT=none EPOCHS=325 SAVE_EVERY=50 TRAIN_TIME=48:00:00 oneday/slurm/submit.sh train
+```

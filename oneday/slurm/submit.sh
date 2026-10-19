@@ -3,6 +3,8 @@
 # Send v19 to SLURM from the repository root on the login node:
 #   oneday/slurm/submit.sh smoke                        # ~10 min GPU: speed, memory, time limit
 #   TRAIN_TIME=40:00:00 oneday/slurm/submit.sh train    # after the config is fixed from the smoke result
+#   RUN_ID=v19_scratch INIT=none EPOCHS=325 SAVE_EVERY=50 TRAIN_TIME=48:00:00 oneday/slurm/submit.sh train
+#                                                       # another run of the recipe (train.sbatch header)
 #   ... --dry-run                                       # print the sbatch command only
 #   GPU_PARTITION=gpu-long (default) | gpu
 #
@@ -35,7 +37,10 @@ case "${WHAT}" in
         ;;
     train)
         T="${TRAIN_TIME:?set TRAIN_TIME (e.g. 40:00:00) from the smoke result and the rule in the plan}"
-        CMD=(sbatch --parsable -p "${GPU_PARTITION}" -t "${T}" oneday/slurm/train.sbatch)
+        R="${RUN_ID:-v19}"
+        [ "${GENERATE_ONLY:-0}" = "1" ] || [ ! -e "logs/ImagenFew/Rainfall_Regime/${R}/best_regime_model.pt" ] || \
+            { echo "ERROR: logs/ImagenFew/Rainfall_Regime/${R} already holds a model"; exit 1; }
+        CMD=(sbatch --parsable -p "${GPU_PARTITION}" -t "${T}" -J "${R}" oneday/slurm/train.sbatch)
         ;;
     *)
         echo "unknown: ${WHAT} (smoke | train)"; exit 1
@@ -43,4 +48,4 @@ case "${WHAT}" in
 esac
 if [ "${DRY}" = "1" ]; then echo "${CMD[*]}"; exit 0; fi
 J=$("${CMD[@]}")
-echo "job ${J}: logs/$([ "${WHAT}" = smoke ] && echo v19_smoke || echo v19)_${J}.out"
+echo "job ${J}: logs/$([ "${WHAT}" = smoke ] && echo v19_smoke || echo "${RUN_ID:-v19}")_${J}.out"

@@ -85,6 +85,9 @@ def parse_args():
                         "not bit for bit (cuDNN kernels are not deterministic).")
     p.add_argument("--limit_batches", type=int, default=None,
                    help="Stop each epoch after this many batches. For local smoke tests only.")
+    p.add_argument("--save_every", type=int, default=0,
+                   help="Also keep the weights every N epochs as epoch_NNNN_regime_model.pt, so held-out "
+                        "loss can be measured along training afterwards. 0 (default) keeps none.")
     return p.parse_args()
 
 
@@ -99,6 +102,7 @@ def load_config(config_path, cli):
     cfg["run_id"] = cli.run_id
     cfg["seed"] = cli.seed
     cfg["limit_batches"] = cli.limit_batches
+    cfg["save_every"] = cli.save_every
     return argparse.Namespace(**cfg)
 
 
@@ -419,7 +423,8 @@ def main():
             "data_transform": data_transform, "asinh_scale": asinh_scale,
             "known_prefix_prob": prefix_prob,
             "known_prefix_steps": None if prefix_steps is None else prefix_steps.tolist(),
-            "limit_batches": args.limit_batches, "git_commit": commit, "git_dirty": dirty,
+            "limit_batches": args.limit_batches, "save_every": args.save_every,
+            "git_commit": commit, "git_dirty": dirty,
             "torch": torch.__version__, "host": socket.gethostname(),
             "slurm_job_id": os.environ.get("SLURM_JOB_ID"), "started": datetime.now().isoformat(timespec="seconds"),
         }, f, indent=1)
@@ -572,6 +577,10 @@ def main():
         if is_best:
             _save_ckpt(model, args, epoch, avg_loss,
                        os.path.join(ckpt_dir, "best_regime_model.pt"))
+
+        if args.save_every > 0 and epoch % args.save_every == 0:
+            _save_ckpt(model, args, epoch, avg_loss,
+                       os.path.join(ckpt_dir, f"epoch_{epoch:04d}_regime_model.pt"))
 
         history.append(epoch_record)
 

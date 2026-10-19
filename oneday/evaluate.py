@@ -2,7 +2,8 @@
 to, plus memorisation at the one-day scale, member means over 4 generation seeds. The sewer check runs on the
 laptop (scripts/gate_b_sewer.py) and is added to the diary by hand.
 
-Comparators: v14, the perfect one-day and 5h20 window generators (sitetransfer.pilot, seed 0), real 2008-2009.
+Comparators: v14, the perfect one-day and 5h20 window generators (sitetransfer.pilot, seed 0), real 2008-2009, and
+for any other run of the recipe (e.g. v19_scratch) v19's first member.
 Bands: the committed Astlingen resampled bands (10 years against 2000-2007), as everywhere since the transfer test.
 """
 import json
@@ -20,17 +21,25 @@ from tworesolution.evaluate import ASTLINGEN_BANDS, V14, Memorisation, member_na
 from .config import RUN_ID
 
 MEMBERS = 4
-SERIES = f"{RUN_ID}_nobridge_cal"
-OUT = ROOT / "results" / "oneday" / "evaluation.json"
 RULES = {"long_runs_yr_min": 10.0, "long_run_rain_pct_min": 15.0, "volume_ratio": [0.95, 1.05],
          "wet_spell_ratio": [0.90, 1.10], "gate_a_min": 12, "too_close_pct_max": 10.0, "sewer_ratio": [0.85, 1.15]}
 
 
-def series_csv(k):
-    return ROOT / "results" / "generated_data" / f"rainfall_synthetic_10y_{member_name(SERIES, k)}.csv"
+def series_name(run_id=RUN_ID):
+    return f"{run_id}_nobridge_cal"
 
 
-def run(members=MEMBERS):
+def out_path(run_id=RUN_ID):
+    """v19 keeps results/oneday/evaluation.json; other runs get their own file, so none overwrites another."""
+    return ROOT / "results" / "oneday" / ("evaluation.json" if run_id == RUN_ID else f"evaluation_{run_id}.json")
+
+
+def series_csv(k, run_id=RUN_ID):
+    return ROOT / "results" / "generated_data" / f"rainfall_synthetic_10y_{member_name(series_name(run_id), k)}.csv"
+
+
+def run(members=MEMBERS, run_id=RUN_ID):
+    SERIES, OUT = series_name(run_id), out_path(run_id)
     tau = TD.tau5()
     P = params()
     ref = TD.clean(TD.train_record(), tau)
@@ -40,12 +49,14 @@ def run(members=MEMBERS):
     if b["reference_years"] != list(range(2000, 2008)) or b["n_years"] != 10:
         raise ValueError(f"{rel(ASTLINGEN_BANDS)} was not made for 10 years against 2000-2007")
     mem = Memorisation(ref, held, length=288, agg=3, min_total=1.0)    # one-day windows, 15-minute totals, >= 1 mm
-    series = {member_name(SERIES, k): load_generated(series_csv(k), tau) for k in range(members)}
+    series = {member_name(SERIES, k): load_generated(series_csv(k, run_id), tau) for k in range(members)}
     series["perfect one-day windows"] = perfect_window(ref, None, 288, 10, seed=0)[0]
     series["perfect 5h20 windows"] = perfect_window(ref, None, 64, 10, seed=0)[0]
     series["real 2008-09 (held out)"] = held
     if V14.exists():
         series["v14"] = load_generated(V14, tau)
+    if run_id != RUN_ID and series_csv(0).exists():
+        series[RUN_ID] = load_generated(series_csv(0), tau)
     rows = {}
     for name, a in series.items():
         m = M.hydro(a, R, P)
@@ -70,7 +81,7 @@ def run(members=MEMBERS):
              "Gate A >= 12 / 18": mean["gate_a"] >= r["gate_a_min"],
              "too-close one-day windows <= 10%": mean["too_close_pct"] <= r["too_close_pct_max"]}
     verdict = ("statistics PASS" if all(tests.values()) else "statistics FAIL") + "; sewer pending"
-    out = {"run": RUN_ID, "rules": r, "member_means": mean, "tests": tests, "verdict": verdict,
+    out = {"run": run_id, "rules": r, "member_means": mean, "tests": tests, "verdict": verdict,
            "real_reference": {"long_runs_yr": R["long_storms_yr"], "rain_in_320min_pct":
                               R["storm_scale"]["rain_in_320min_pct"], "volume_mm_yr": R["stats"]["volume"]},
            "memorisation_threshold": mem.threshold, "series": rows}

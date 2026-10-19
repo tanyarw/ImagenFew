@@ -3,6 +3,47 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 19, 2026 — v19 From Scratch: Set-Up, Predictions and Rule (Before the Run)
+
+### 🔍 Overview
+The two v14 scratch seeds beat every pretrained run on the sewer and on volume, but only at the 64-step window.
+**v19_scratch** asks whether that holds at one day: v19's exact recipe (`config_v19.yaml`, training seed 0,
+generation seeds 42–45, calendar timeline, no bridge blocks) with random starting weights instead of the 288-step
+pretrained checkpoint. It is compared **with v19 only**: both use one-day windows, so the training set (number and
+length of windows) is the same and the starting weights are the only difference. Comparisons with the 64-step
+models stay confounded by window length, as they are for v19 itself.
+
+* **Epochs: 325**, to match the v19 snapshot that was evaluated (time-limit deviation, entry below). The learning rate
+  is constant (no schedule), so a 325-epoch run follows the same procedure as v19's first 325 epochs.
+* **Snapshots every 50 epochs** (`--save_every 50`, new, off by default) so held-out loss can be measured along
+  training afterwards, as in the convergence check below.
+* Code (this commit): `train.sbatch` takes `RUN_ID`, `INIT`, `EPOCHS`, `SAVE_EVERY` with v19's values as defaults;
+  `python -m oneday evaluate --run-id` writes `evaluation_<run>.json` and adds v19 as a comparator. Tested on the
+  laptop: tiny from-scratch training wrote snapshots and recorded the settings; v19's evaluation through the
+  changed code is bit-identical to the old code; the job script's commands checked for v19 and v19_scratch.
+* Time: v19 ran at 6.3–6.5 min per epoch, so about 35 h; limit 48 h.
+
+### 📊 Predictions (member means, against v19 at epoch 325)
+| | v19 (pretrained) | v19_scratch predicted |
+| :--- | :---: | :---: |
+| Unbroken runs > 5h20 per year | 11.9 | 9–14 (the window sets duration, not the start) |
+| Volume / real | 0.84 | 0.88–1.02 (closer to 1, as at 64 steps) |
+| Gate A | 10.75 | ≥ 11 |
+| Sewer BC / real (calendar) | 0.62 | 0.62–0.80 |
+
+### ✅ Rule (fixed now)
+* Sewer BC, the same 4 members × 10 years against v19's (same generation seeds, paired by member and year):
+  **scratch helps at one day** if the mean difference is ≥ +0.05 and scratch is higher in ≥ 30 of 40 member-years,
+  and volume is closer to 1 than v19's. **No gain** if the difference is within ±0.05 or scratch is higher in fewer
+  than 25 of 40. Anything else: **inconclusive**.
+* One training seed only. The two v14 scratch seeds differed by about 0.05 in their gain, so a difference below
+  0.05 cannot be read from one seed.
+* v19's statistical rule (Oct 15) is applied unchanged and reported, but it is not the question here.
+
+**Verdict:** **v19_scratch (random start, 325 epochs) set up and tested; predictions and rule recorded before sending.**
+
+---
+
 ## October 19, 2026 — v14 From Scratch, Second Training Seed: Confirmed
 
 ### 🔍 Overview
