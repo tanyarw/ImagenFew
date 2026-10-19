@@ -3,6 +3,41 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 19, 2026 — v19 (One-Day Window): Results at Epoch 325
+
+### 🔍 Overview
+Job 975696 (commit `2aa1470`) generated the four v19 members from the epoch-325 snapshot (log: `generating from
+.../best_regime_model.pt epoch 325 sha256 2df3fb5909a6ab74`) and ran `python -m oneday evaluate`; sewer (BC, EFD)
+on the laptop. The deviation (325 of 500 epochs) is recorded in the entry below, before these results.
+
+### 📊 Findings
+| Member means | v19 | v14 final | v14 from scratch | v17 chained | Real |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Unbroken runs > 5h20 per year | **11.9** | 1.5 | 1.6 | 13.0 | 14.2 |
+| Share of rain in them | **19.6%** | 2.0% | 2.2% | 20.3% | 21.4% |
+| Volume / real | 0.84 | 0.93 | **1.01** | 0.77 | 1 |
+| Gate A | 10.75 | 13 | 14 | 8.75 | (held-out real 10) |
+| Sewer BC / real | 0.62 ± 0.06 | 0.54 | **0.68** | 0.56 | 1 |
+
+* Members: sewer BC 0.70, 0.61, 0.69, 0.48; storms ≥ 10 mm 9.5–11.0 per year (real 15.7); too-close days 7.5%
+  (rule ≤ 10%, held-out real 5.1%).
+* **Predictions (Oct 15):** (1) 8–13 runs, mean ≥ 10: **right** (11.9); (2) 13–20% of rain: **right** (19.6%);
+  (3) volume 0.92–1.02: **wrong** (0.84); (4) wet spell 0.90–1.05 **right** (0.93), Gate A ≥ 12 **wrong** (10.75),
+  Tier 6 ≥ 2/3 **wrong** (0.5), too-close ≤ 10% **right**; (5) sewer 0.80–1.05: **wrong** (0.62); (6) the
+  statistical rule passes: **wrong** (fails on volume and Gate A).
+
+### ✅ Decision
+* **A one-day window removes the long-storm deficit** (11.9 vs 1.5 per year for the 5h20 models), as the window
+  pilot predicted, but like v17 chained it is too dry (0.84) and its storms are too shallow, so the sewer gains
+  little (0.62 vs 0.54 for v14 final; below v14 from scratch, 0.68).
+* Two independent routes (learned continuation, longer window) now give the same picture: duration is solved,
+  occurrence and depth are not. v14 from scratch stays the leading candidate, pending its second seed.
+
+**Verdict:** **v19 at epoch 325: long storms at nearly the real rate, 16% too dry, sewer 0.62 of real; the rule
+fails on volume and Gate A.**
+
+---
+
 ## October 19, 2026 — v17 Chained From Its Final Weights: Long Storms at the Real Rate, but Too Dry
 
 ### 🔍 Overview
