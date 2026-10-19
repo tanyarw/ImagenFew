@@ -3,6 +3,49 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 19, 2026 — Are the Models Trained Well? Convergence and Held-Out Loss
+
+### 🔍 Overview
+Two questions about the 500-epoch runs: has the loss stopped falling, and does late training still improve the
+model on years it never saw? `train_regime.py` logs only the training loss (it builds a held-out dataset but never
+uses it) and keeps only two snapshots per run. So the training objective (EDM-weighted denoising error, the EMA
+weights generation samples from, time + FFT term) was measured on the held-out years 2008–09 (all 3,285
+non-overlapping 64-step windows) and on 3,300 training-year windows, for both saved snapshots of v14, v14_s1,
+v14_s2, v14_scratch and v17, with the same windows and the same noise for every snapshot (paired; laptop CPU,
+scratch script).
+
+### 📊 Findings
+* **Training loss has not flattened:** still −1.2 to −1.5% per 100 epochs at epoch 500 in every run (95% interval
+  about ±0.3%); constant learning rate, no schedule. All four v14 runs end within 0.6% of each other (0.2136–0.2148).
+* **Held-out loss rises while training loss falls:**
+
+  | Run | Snapshots | Held-out 2008–09 | Training years |
+  | :--- | :---: | :---: | :---: |
+  | v14 | epoch 400 → 500 | **+1.5% ± 0.3%** | −1.4% ± 0.4% |
+  | v14 from scratch | 400 → 500 | **+1.8% ± 0.4%** | −1.3% ± 0.3% |
+  | v14 seed 1 | 50 → 500 | **+4.4% ± 1.0%** | −5.9% ± 0.9% |
+  | v17 | 50 → 500 | **+3.0% ± 0.8%** | −4.4% ± 0.8% |
+
+* **Gap at epoch 500:** held-out loss is 14% above training loss for every v14 run (v17: 11%); at epoch 50 it was
+  2.7% (seed 1), so most of the gap is fitting the eight training years, not the held-out years being harder.
+* **No copying:** the memorisation check finds no generated window closer to a training window than new real
+  windows get (0%). The overfitting is fine detail of eight years of weather, not copied pieces.
+* **Lower held-out loss did not mean better rain:** v17 at epoch 50 had the lower held-out loss, but its rain was
+  19% too wet with heavy-rain peaks 26% too high. Loss alone cannot pick the snapshot.
+
+### ✅ Decision
+* Training longer will not help: the models are past their best on unseen years by this measure. 840,000
+  overlapping windows come from only eight years of weather, which is the real data size.
+* **Proposed (not done, user's decision):** log the held-out loss on 2008 during training (keep 2009 for final
+  evaluation, so the evaluation stays untouched) and save a snapshot every 50 epochs, so the epoch can be chosen
+  on held-out data and its rain checked. Applies to future runs; v19 and v14_scratch_s1 are already running.
+
+**Verdict:** **training is stable and every run reaches the same loss, but after the first ~50–100 epochs extra
+training fits the eight training years more closely and generalises slightly worse; the epoch should be chosen on
+held-out data, not taken as the last.**
+
+---
+
 ## October 18, 2026 — Series Regenerated From Final Weights: First Statistics and Sewer Results
 
 ### 🔍 Overview
