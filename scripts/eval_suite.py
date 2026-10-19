@@ -51,7 +51,9 @@ SURV_K = [12, 24, 36, 48, 64, 96]          # storm-duration thresholds in steps 
 SCALES = [1, 3, 6, 12, 36, 72, 144, 288, 864, 2016]   # aggregation scales, 5 min ... 1 week
 STORM_GAP = 24                  # Tier 6 storms: a dry run of 2 h ends one (flood-control's src/rain/split.py)
 TOP_RATE = 1.25                 # Tier 6 "top-10": the largest 1.25 storms per year (10 in the 8 reference years)
-RNG = np.random.default_rng(0)
+# Window sampling uses its own fixed seeds (WindowRef): until 2026-10-18 one shared stream made a version's sample,
+# and so its window scores, depend on how many versions were scored before it.
+SEED_REAL, SEED_FAKE = 0, 1
 
 # name, group, short label, what changed, block length (steps), plan key, clean 2000-2007 split
 # plan key 'markov64': Markov series made before 2026-10-18 (transition file's P_block); 'markov64s': after
@@ -422,7 +424,7 @@ def prdc(real, fake, k=5):
 
 
 def c2st_auc(real, fake, seed=0):
-    """Classifier two-sample test: 5-fold ROC AUC of telling real from generated (0.5 = can't)."""
+    """Classifier two-sample test: 3-fold ROC AUC of telling real from generated (0.5 = can't)."""
     from sklearn.ensemble import HistGradientBoostingClassifier
     from sklearn.model_selection import StratifiedKFold, cross_val_score
     n = min(len(real), len(fake))
@@ -440,24 +442,27 @@ class WindowRef:
         from sklearn.decomposition import PCA
         from sklearn.neighbors import NearestNeighbors
         self.n_fake, self.n_fake_day = n_fake, n_fake_day
+        rng = np.random.default_rng(SEED_REAL)
         W, self.n_win_train = wet_windows(train, 64)
         self.wet_share_train = len(W) / self.n_win_train
         self.pca = PCA(16, random_state=0).fit(W)
-        self.real = W[RNG.choice(len(W), n_real, replace=False)]
+        self.real = W[rng.choice(len(W), n_real, replace=False)]
         self.real_emb = self.pca.transform(self.real)
         self.nn = NearestNeighbors(n_neighbors=1).fit(W)  # all training windows, for memorisation
         D, _ = wet_windows(train, 288, agg=3)
         self.pca_day = PCA(16, random_state=0).fit(D)
-        self.real_day = D[RNG.choice(len(D), n_real_day, replace=False)]
+        self.real_day = D[rng.choice(len(D), n_real_day, replace=False)]
         self.real_day_emb = self.pca_day.transform(self.real_day)
         Wh, _ = wet_windows(held, 64)
         self.held_nn = self.nn.kneighbors(Wh)[0][:, 0]  # how close genuinely new real windows get
 
-    def score(self, a):
+    def score(self, a, seed=SEED_FAKE):
+        """Window scores of one series; the sample depends only on the series and `seed`."""
+        rng = np.random.default_rng(seed)
         W, n = wet_windows(a, 64)
         D, _ = wet_windows(a, 288, agg=3)
-        f = W[RNG.choice(len(W), min(self.n_fake, len(W)), replace=False)]
-        fd = D[RNG.choice(len(D), min(self.n_fake_day, len(D)), replace=False)]
+        f = W[rng.choice(len(W), min(self.n_fake, len(W)), replace=False)]
+        fd = D[rng.choice(len(D), min(self.n_fake_day, len(D)), replace=False)]
         out = prdc(self.real_emb, self.pca.transform(f))
         out['c2st_auc_5h'] = c2st_auc(self.real, f)
         out['c2st_auc_1day'] = c2st_auc(self.real_day, fd)
