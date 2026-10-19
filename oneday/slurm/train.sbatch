@@ -17,8 +17,12 @@
 #            (as v14_nobridge_cal: calendar timeline, no bridge blocks, 4-step overlap; seeds 42-45)
 #   verdict  results/oneday/evaluation.json (statistics; the sewer check runs on the laptop)
 # GENERATE_ONLY=1 skips training (to regenerate from a finished model).
-# Generates from final_regime_model.pt (the last epoch): best_regime_model.pt could freeze early under the
-# train_regime.py save rule used before 2026-10-18 (diary, "Best-Checkpoint Bug").
+# CKPT_NAME = the weights file in RUN_DIR to generate from (default final_regime_model.pt, the last epoch;
+# best_regime_model.pt could freeze early under the train_regime.py save rule used before 2026-10-18, diary
+# "Best-Checkpoint Bug"). Not to be confused with CKPT below, the pretrained checkpoint training starts from.
+# The first v19 training job stopped at its time limit near epoch 330 of 500, so no final_regime_model.pt
+# exists; its last snapshot (epoch 325) is generated with (a recorded deviation, diary 2026-10-19):
+#   GENERATE_ONLY=1 CKPT_NAME=best_regime_model.pt TRAIN_TIME=02:00:00 oneday/slurm/submit.sh train
 # ==============================================================================
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-.}"
@@ -27,6 +31,14 @@ mkdir -p logs
 RUN_DIR="logs/ImagenFew/Rainfall_Regime/v19"
 CKPT="models_ckpt/ImagenFew/ImagenFew_288_1200epochs.ckpt"
 CAL="data/rainfall/splits/seasonal_transition_matrix_train_len288.pkl"
+CKPT_NAME="${CKPT_NAME:-final_regime_model.pt}"
+WEIGHTS="${RUN_DIR}/${CKPT_NAME}"
+# Generating from an existing model: stop now, before tests and setup, if its weights file is missing
+if [ "${GENERATE_ONLY:-0}" = "1" ] && [ ! -f "${WEIGHTS}" ]; then
+    echo "ERROR: ${WEIGHTS} not found. Weights files in ${RUN_DIR}: $(ls "${RUN_DIR}" 2>/dev/null | grep '\.pt$' | tr '\n' ' ')"
+    echo "       Choose one with CKPT_NAME=... (e.g. CKPT_NAME=best_regime_model.pt)"
+    exit 1
+fi
 echo "job ${SLURM_JOB_ID:-} | $(hostname -s) | GPU ${CUDA_VISIBLE_DEVICES:-} | $(date)"
 echo "commit $(git rev-parse HEAD) $([ -z "$(git status --porcelain --untracked-files=no)" ] || echo '(UNCOMMITTED CHANGES)')"
 python -c "import torch; assert torch.cuda.is_available(), 'CUDA not available'"
@@ -41,10 +53,15 @@ if [ "${GENERATE_ONLY:-0}" != "1" ]; then
         --seed 0 --run_id v19
 fi
 
+[ -f "${WEIGHTS}" ] || { echo "ERROR: ${WEIGHTS} not found after training"; exit 1; }
+# Provenance: which weights file, the epoch stored in it, and its hash
+python -c "import torch,hashlib,sys; c=torch.load(sys.argv[1],map_location='cpu',weights_only=False); \
+print('generating from', sys.argv[1], 'epoch', c['epoch'], 'sha256', hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest()[:16])" "${WEIGHTS}"
+
 for K in 0 1 2 3; do
     NAME="rainfall_synthetic_10y_v19_nobridge_cal$([ "${K}" = 0 ] || echo "_m${K}").csv"
     python regime_training/generate_hmm_v1.py \
-        --model_ckpt "${RUN_DIR}/final_regime_model.pt" --scaler_path "${RUN_DIR}/scaler.pkl" \
+        --model_ckpt "${WEIGHTS}" --scaler_path "${RUN_DIR}/scaler.pkl" \
         --config regime_training/config_v19.yaml --transition_matrix_path "${CAL}" \
         --assembly_mode calendar --bridge_blocks 0 --years 10 --freq 5min --overlap 4 --transition_overlap 8 \
         --seed $((42 + K)) --output_dir results/generated_data --output_name "${NAME}"

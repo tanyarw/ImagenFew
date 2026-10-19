@@ -3,6 +3,31 @@
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 
+## October 19, 2026 — v19 (One-Day Window): Training Stopped Early; Generated From the Epoch-325 Snapshot (Deviation)
+
+### 🔍 Overview
+Training job 958872 (commit `69b214c`) was stopped by its 36 h limit at about epoch 330 of 500: it ran at 6.3 min per
+epoch (100 epochs per ~10.5 h), twice the smoke job's 3.2 (0.475 s per step). No `final_regime_model.pt` was written,
+so the regeneration job 970183 (commit `3130bc8`, which generates from the final weights) failed. The last snapshot,
+`best_regime_model.pt`, holds epoch 325 (read from the file; sha256 `2df3fb5909a6ab74`).
+
+### 📊 Findings
+* The plan (section 3) fixed v14's 500 epochs and said they are never silently shortened; 325 is a deviation.
+* Today's held-out check (entry below) found that every 64-step run fits its training years more closely after the
+  first ~50–100 epochs (held-out loss rising), so epoch 325 is not expected to be worse than 500 on unseen years.
+* Laptop check: the epoch-325 weights load completely (1,092/1,092 tensors) and generate with the job's settings.
+
+### ✅ Decision
+* **Generate v19 from the epoch-325 snapshot** (user's decision), reported as a deviation: 325 of the planned 500
+  epochs, stopped by the time limit, not chosen on results. `oneday/slurm/train.sbatch` takes the weights file as
+  `CKPT_NAME` (default unchanged: the final weights), stops before setup if it is missing, and logs the file's epoch.
+* Continuing to 500 (about 18 h, optimiser and averaged weights restarting) only if the result is worth confirming.
+  Rules and predictions of Oct 15 unchanged.
+
+**Verdict:** **v19 is evaluated at epoch 325 of 500, a time-limit deviation recorded before any of its rain was seen.**
+
+---
+
 ## October 19, 2026 — Are the Models Trained Well? Convergence and Held-Out Loss
 
 ### 🔍 Overview
