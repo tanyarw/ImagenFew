@@ -4,7 +4,8 @@
   check [--no-checkpoint]                             the config is v14's with allowed changes; the checkpoint is
                                                       the recorded one; the one-day calendar file exists
   smoke                                               GPU: speed and memory -> results/oneday/smoke.json
-  evaluate [--members 4] [--run-id v19]               verdict -> results/oneday/evaluation.json (v19) or
+  evaluate [--members 4] [--run-id v19] [--heldout 2008-09|2008]
+                                                      verdict -> results/oneday/evaluation.json (v19) or
                                                       evaluation_<run-id>.json (other runs of the recipe)
 """
 import argparse
@@ -31,6 +32,8 @@ def main(argv=None):
     ap.add_argument("--no-checkpoint", action="store_true", help="check: skip the checkpoint (login nodes)")
     ap.add_argument("--members", type=int, default=4)
     ap.add_argument("--run-id", default=K.RUN_ID, help="evaluate: the run to score (default v19)")
+    ap.add_argument("--heldout", default="2008-09", choices=["2008-09", "2008"],
+                    help="evaluate: real held-out years (2008 keeps 2009 closed, code_plan/TEST_YEAR_PLAN.md)")
     a = ap.parse_args(argv)
     if a.command == "config":
         print(f"wrote {rel(K.write(a.epochs, a.batch_size, a.reason))}")
@@ -57,7 +60,7 @@ def main(argv=None):
     else:
         from .evaluate import out_path, run
         with _record("evaluate", vars(a)) as rec:
-            out = run(a.members, a.run_id)
+            out = run(a.members, a.run_id, a.heldout)
             rec.output(out_path(a.run_id))
             rec.result(verdict=out["verdict"])
     return 0

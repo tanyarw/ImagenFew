@@ -32,6 +32,13 @@
 # The first v19 training job stopped at its time limit near epoch 330 of 500, so no final_regime_model.pt
 # exists; its last snapshot (epoch 325) is generated with (a recorded deviation, diary 2026-10-19):
 #   GENERATE_ONLY=1 CKPT_NAME=best_regime_model.pt TRAIN_TIME=02:00:00 oneday/slurm/submit.sh train
+# SERIES_ID   names the series and the verdict instead of RUN_ID (default RUN_ID), so a snapshot of a run gets its
+#             own files. A series that exists is never overwritten (ALLOW_OVERWRITE=1 to regenerate on purpose).
+# HELDOUT     the real years evaluate compares with: 2008-09 (default, as before) | 2008 (keeps 2009 closed for
+#             the test year, code_plan/TEST_YEAR_PLAN.md)
+# v19 scratch at epoch 50, the generator the test year is for (diary 2026-10-22):
+#   RUN_ID=v19_scratch SERIES_ID=v19_scratch_ep50 CKPT_NAME=epoch_0050_regime_model.pt HELDOUT=2008 GENERATE_ONLY=1 \
+#       TRAIN_TIME=02:00:00 oneday/slurm/submit.sh train
 # ==============================================================================
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-.}"
@@ -51,6 +58,13 @@ esac
 CAL="data/rainfall/splits/seasonal_transition_matrix_train_len288.pkl"
 CKPT_NAME="${CKPT_NAME:-final_regime_model.pt}"
 WEIGHTS="${RUN_DIR}/${CKPT_NAME}"
+SERIES_ID="${SERIES_ID:-${RUN_ID}}"
+HELDOUT="${HELDOUT:-2008-09}"
+FIRST="results/generated_data/rainfall_synthetic_10y_${SERIES_ID}_nobridge_cal.csv"
+if [ -e "${FIRST}" ] && [ "${ALLOW_OVERWRITE:-0}" != "1" ]; then
+    echo "ERROR: ${FIRST} exists; set SERIES_ID to a new name (or ALLOW_OVERWRITE=1 to regenerate on purpose)"
+    exit 1
+fi
 # Generating from an existing model: stop now, before tests and setup, if its weights file is missing
 if [ "${GENERATE_ONLY:-0}" = "1" ] && [ ! -f "${WEIGHTS}" ]; then
     echo "ERROR: ${WEIGHTS} not found. Weights files in ${RUN_DIR}: $(ls "${RUN_DIR}" 2>/dev/null | grep '\.pt$' | tr '\n' ' ')"
@@ -78,7 +92,7 @@ python -c "import torch,hashlib,sys; c=torch.load(sys.argv[1],map_location='cpu'
 print('generating from', sys.argv[1], 'epoch', c['epoch'], 'sha256', hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest()[:16])" "${WEIGHTS}"
 
 for K in 0 1 2 3; do
-    NAME="rainfall_synthetic_10y_${RUN_ID}_nobridge_cal$([ "${K}" = 0 ] || echo "_m${K}").csv"
+    NAME="rainfall_synthetic_10y_${SERIES_ID}_nobridge_cal$([ "${K}" = 0 ] || echo "_m${K}").csv"
     python regime_training/generate_hmm_v1.py \
         --model_ckpt "${WEIGHTS}" --scaler_path "${RUN_DIR}/scaler.pkl" \
         --config regime_training/config_v19.yaml --transition_matrix_path "${CAL}" \
@@ -86,5 +100,5 @@ for K in 0 1 2 3; do
         --seed $((42 + K)) --output_dir results/generated_data --output_name "${NAME}"
 done
 
-python -m oneday evaluate --run-id "${RUN_ID}"
+python -m oneday evaluate --run-id "${SERIES_ID}" --heldout "${HELDOUT}"
 echo "done $(date)"

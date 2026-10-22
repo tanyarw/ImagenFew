@@ -21,7 +21,8 @@ from tworesolution.evaluate import ASTLINGEN_BANDS, V14, Memorisation, member_na
 from .config import RUN_ID
 
 MEMBERS = 4
-RULES = {"long_runs_yr_min": 10.0, "long_run_rain_pct_min": 15.0, "volume_ratio": [0.95, 1.05],
+HELDOUT = {"2008-09": "real 2008-09 (held out)", "2008": "real 2008 (held out)"}   # 2008: 2009 stays closed
+RULES ={"long_runs_yr_min": 10.0, "long_run_rain_pct_min": 15.0, "volume_ratio": [0.95, 1.05],
          "wet_spell_ratio": [0.90, 1.10], "gate_a_min": 12, "too_close_pct_max": 10.0, "sewer_ratio": [0.85, 1.15]}
 
 
@@ -38,12 +39,14 @@ def series_csv(k, run_id=RUN_ID):
     return ROOT / "results" / "generated_data" / f"rainfall_synthetic_10y_{member_name(series_name(run_id), k)}.csv"
 
 
-def run(members=MEMBERS, run_id=RUN_ID):
+def run(members=MEMBERS, run_id=RUN_ID, heldout="2008-09"):
     SERIES, OUT = series_name(run_id), out_path(run_id)
     tau = TD.tau5()
     P = params()
     ref = TD.clean(TD.train_record(), tau)
-    held = TD.clean(TD.heldout_record(), tau)
+    if heldout not in HELDOUT:
+        raise ValueError(f"heldout {heldout!r}: one of {list(HELDOUT)}")
+    held = TD.clean(TD.heldout_record() if heldout == "2008-09" else TD.load_split("val")[0], tau)
     R = M.reference(ref, P)
     b = json.loads(ASTLINGEN_BANDS.read_text())
     if b["reference_years"] != list(range(2000, 2008)) or b["n_years"] != 10:
@@ -52,7 +55,7 @@ def run(members=MEMBERS, run_id=RUN_ID):
     series = {member_name(SERIES, k): load_generated(series_csv(k, run_id), tau) for k in range(members)}
     series["perfect one-day windows"] = perfect_window(ref, None, 288, 10, seed=0)[0]
     series["perfect 5h20 windows"] = perfect_window(ref, None, 64, 10, seed=0)[0]
-    series["real 2008-09 (held out)"] = held
+    series[HELDOUT[heldout]] = held
     if V14.exists():
         series["v14"] = load_generated(V14, tau)
     if run_id != RUN_ID and series_csv(0).exists():
@@ -81,7 +84,7 @@ def run(members=MEMBERS, run_id=RUN_ID):
              "Gate A >= 12 / 18": mean["gate_a"] >= r["gate_a_min"],
              "too-close one-day windows <= 10%": mean["too_close_pct"] <= r["too_close_pct_max"]}
     verdict = ("statistics PASS" if all(tests.values()) else "statistics FAIL") + "; sewer pending"
-    out = {"run": run_id, "rules": r, "member_means": mean, "tests": tests, "verdict": verdict,
+    out = {"run": run_id, "heldout": heldout, "rules": r,"member_means": mean, "tests": tests, "verdict": verdict,
            "real_reference": {"long_runs_yr": R["long_storms_yr"], "rain_in_320min_pct":
                               R["storm_scale"]["rain_in_320min_pct"], "volume_mm_yr": R["stats"]["volume"]},
            "memorisation_threshold": mem.threshold, "series": rows}
