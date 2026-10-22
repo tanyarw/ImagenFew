@@ -4,6 +4,48 @@
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 **Thesis framing (2026-10-22, flood-control D33):** *learned rainfall generators as training and test environments for reinforcement-learning sewer control.* Testing is the headline: do generated years rank controllers as real years do (flood-control `docs/SYNTHETIC_RAIN.md` §7)?
 
+## October 22, 2026 — Paper Positioning: Literature Review and the Idea to Wrap Around
+
+### 🔍 Overview
+Question: can this work become a NeurIPS submission, and what would it be wrapped around? A six-area literature
+review (operations research, ML evaluation, policy evaluation in generated worlds, real-plus-synthetic statistics,
+long-series diffusion and block bootstrap, deep weather generators and tails). Report:
+`reports/Decision aware generator evaluation.md`; notes: `research_notes/Decision aware generator evaluation/`.
+
+### 📊 Findings
+* **Not new:** "be accurate where the decision depends on it" (value equivalence, Grimm et al. 2020; value-aware
+  model learning; Henrion & Römisch problem-based distance; Prochazka & Wallace 2020; decision calibration, Zhao et
+  al. 2021; threshold-weighted scores, Allen et al. 2023); fidelity is not usefulness; ranking simulators by policy
+  agreement (Kadian et al. 2020; SIMPLER's MMRV); decision-focused diffusion generators (2025–26); the window ceiling
+  (block-bootstrap bias, textbook). The transform, seasonal labels, joining methods and pretraining are evidence, not
+  contributions.
+* **Survives (no precedent found):** a score on generator error weighted by the *differences between controllers*
+  that **predicts** whether generated years rank controllers as real years do (Kendall τ, MMRV), validated across the
+  ~28 variants, baselines and the real-window oracle (used as a block-length knob); an exact-physics testbed where only
+  the input is generated; evidence that a tail fix restores ranking agreement. Optional: paired twins +
+  prediction-powered ranking.
+* **One line of algebra:** two controllers keep their order on generated years when the generator's error on their
+  gap is smaller than the gap; rain on which they behave alike cancels. This explains why rain with ~40% less overflow
+  trained an equally good controller.
+* **Corrections:** the metric-validity numbers (~0.4 window vs ~0.9 day scale) target overflow level, not ranking,
+  and predate the best-checkpoint fix: recompute. Training from scratch also moved the sewer, not only window length.
+* **Venue:** NeurIPS Evaluations & Datasets track (replaced Datasets & Benchmarks in 2026); main track only with
+  ranking flips in two domains and a working fix.
+
+### ✅ Decision
+* **Headline idea (not yet tested):** *a scenario generator only has to be accurate where the controllers disagree.*
+* **Go/no-go:** flood-control's ranking study (`docs/SYNTHETIC_RAIN.md` §7). Planned first as a pilot: ~8 deliberately
+  different controllers × 6 rain sources (real 2008, real 2000–07, one-day model, 5-hour model, storm-and-cell, real
+  pieces glued at 5 h vs 1 day), ~500 one-year runs. Work moves to flood-control.
+* **Main risk:** rankings barely move (controllers within 0.97–1.00 × BC on 2008; McPhail et al. 2020). Fallback:
+  "controller testing tolerates large generator errors".
+* Read before claiming novelty: Prochazka & Wallace 2020, Dann–Mansour–Mohri 2026, Yu et al. 2026, Brodeur et al. 2024.
+
+**Verdict:** **the engineering work is the test population, not the contribution; the paper is wrapped around whether
+generated years rank controllers correctly. Nothing further runs in this repository.**
+
+---
+
 ## October 22, 2026 — Equal Sampling for the Selection: Set-Up and Rule (Before the Runs)
 
 ### 🔍 Overview

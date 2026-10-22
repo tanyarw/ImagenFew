@@ -442,3 +442,13 @@ criteria for each are in `code_plan/AUDIT_2026-09-22.md` §6.
    the physical tiers. Without this the thesis has no comparison class and never reports
    the base paper's own metrics on this data.
 8. **Multi-catchment generalization**, once 1–7 are further along.
+
+---
+
+## Update 2026-10-22: Paper Positioning
+
+Literature review (`reports/Decision aware generator evaluation.md`) shows the individual changes in §2 are
+variants of known methods. The proposed contribution is an evaluation one: across this project's ~28 generators
+with known errors, test whether generated years rank sewer controllers as real years do, and whether a score
+weighted by the differences between controllers predicts that while standard generative metrics do not. First
+test: the ranking pilot in flood-control (`docs/SYNTHETIC_RAIN.md` §7). Diary: "Paper Positioning".

@@ -1,5 +1,10 @@
 # Missing Experiments for a Paper
 
+> **Superseded 2026-10-22.** The paper is now framed around ranking validity: whether generated years rank
+> controllers as real years do, and a controller-difference-weighted score that predicts it. See
+> `reports/Decision aware generator evaluation.md` and the diary entry "Paper Positioning". The experiments below
+> remain useful as supporting evidence.
+
 **Written:** 2026-10-06 · **Status:** proposed, none started.
 **Context:** the single-site generator work (v1–v15, the AR / copula / storm-and-cell baselines and
 the sewer check) supports a paper framed as an evaluation study: *generators fail in
