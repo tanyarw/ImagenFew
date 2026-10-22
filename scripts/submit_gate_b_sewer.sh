@@ -13,7 +13,7 @@
 # scripts/gate_b_sewer.py on the cluster: the named series under BC and EFD, every calendar year from empty tanks,
 # with flood-control's code and .venv unchanged (CPU only). For checks too long for the laptop.
 #
-#   FLOOD_CONTROL=~/flood-control sbatch scripts/submit_gate_b_sewer.sh SERIES [SERIES ...]
+#   sbatch scripts/submit_gate_b_sewer.sh SERIES [SERIES ...]
 #   ... --dependency=afterok:<generation job> ...    to start once the series exist
 #
 # About 40 s per simulated year on 23 workers. Results: results/reference/gate_b_sewer.json (rows of the named
@@ -24,7 +24,7 @@ set -euo pipefail
 
 cd "${SLURM_SUBMIT_DIR:-.}"
 IMAGENFEW="$(pwd)"
-FLOOD_CONTROL="${FLOOD_CONTROL:-${HOME}/flood-control}"
+FLOOD_CONTROL="${FLOOD_CONTROL:-${HOME}/thesis/flood-control}"
 [ -x "${FLOOD_CONTROL}/.venv/bin/python" ] || {
     echo "ERROR: ${FLOOD_CONTROL}/.venv/bin/python not found. Set FLOOD_CONTROL to the flood-control checkout"
     echo "       (with 'uv sync --frozen' done once on the login node)."; exit 1; }
