@@ -35,12 +35,14 @@ for s in "$@"; do
 done
 mkdir -p logs
 
-echo "Job ID: ${SLURM_JOB_ID:-} | Host: $(hostname -s) | CPUs: $(nproc) | Start: $(date)"
+CPUS="${SLURM_CPUS_PER_TASK:-$(nproc)}"          # read before OMP_NUM_THREADS=1: nproc obeys it
+WORKERS=$(( CPUS > 1 ? CPUS - 1 : 1 ))
+echo "Job ID: ${SLURM_JOB_ID:-} | Host: $(hostname -s) | CPUs: ${CPUS} | workers ${WORKERS} | Start: $(date)"
 echo "ImagenFew commit $(git rev-parse HEAD); flood-control commit $(git -C "${FLOOD_CONTROL}" rev-parse HEAD)"
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 
 cd "${FLOOD_CONTROL}"
 PYTHONPATH=. .venv/bin/python "${IMAGENFEW}/scripts/gate_b_sewer.py" "$@" \
-    --controllers BC EFD --flood_control "${FLOOD_CONTROL}" --workers $(( $(nproc) - 1 ))
+    --controllers BC EFD --flood_control "${FLOOD_CONTROL}" --workers "${WORKERS}"
 
 echo "Job completed at: $(date)"
