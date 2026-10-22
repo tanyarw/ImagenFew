@@ -2,6 +2,152 @@
 
 **Project:** Adapting ImagenFew and Time-Series Diffusion Models for Sparse Rainfall Data  
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
+**Thesis framing (2026-10-22, flood-control D33):** *learned rainfall generators as training and test environments for reinforcement-learning sewer control.* Testing is the headline: do generated years rank controllers as real years do (flood-control `docs/SYNTHETIC_RAIN.md` §7)?
+
+## October 22, 2026 — Test Year 2009: v19 Scratch (Epoch 50) PASSES
+
+### 🔍 Overview
+The one-time test of the chosen generator against real 2009 (`code_plan/TEST_YEAR_PLAN.md`, package `testyear/`,
+commit `7b2e8ca`). Question: is 2009, a year the generator never trained on, a plausible year of its rain at the
+sewer and in the storm quantities, without copying training days? Each quantity of 2009 is placed among the
+generator's 40 years (4 members × 10); **inside** = percentile in [0.05, 0.95]. Rule, fixed before 2009 was read:
+**PASS** if (1) BC total overflow is inside, (2) at most 2 of 10 rain quantities are outside, (3) too-close one-day
+windows ≤ 10% (threshold from 2009's own days).
+
+* **Order kept:** preregistration (40 generated years, rule, series hashes) committed as `23af796` (15:04); 2008
+  rehearsal reproduced flood-control's saved 2008 sewer rows exactly (15:05); 2009 opened once (claim 15:06, result
+  15:07). Rule unchanged (10% copying limit kept), no test code changed after registration. flood-control's tree
+  had uncommitted changes (recorded, commit `8465920`); the 2008 reproduction check passed.
+* **2009 was not untouched before:** seen pooled with 2008 in `eval_suite`'s noise floor, the oneday memorisation
+  threshold and the held-out loss check (entry below; the epoch-50 choice is the same on 2008 alone); its BC
+  overflow is in flood-control's `ENV_VERIFICATION.md`. No model was trained on it or chosen on it alone.
+
+### 📊 Findings
+| 2009 | Real 2009 | Percentile | Generated 5% / 50% / 95% |
+| :--- | :---: | :---: | :--- |
+| **Overflow, BC (m³)** | 228,143 | **0.65** | 139,798 / 217,842 / 363,553 |
+| Overflow, EFD (m³) | 220,602 | 0.65 | 136,394 / 209,116 / 355,504 |
+| Creek overflow, BC (m³) | 65,756 | 0.57 | 42,745 / 63,977 / 101,583 |
+| Overflow events ≥ 1000 m³ | 34 | 0.79 | 22.9 / 30.0 / 38.1 |
+| Annual rain (mm) | 661 | 0.72 | 537 / 641 / 731 |
+| Wet share of steps (%) | 8.8 | **1.00 (outside)** | 6.5 / 7.7 / 8.5 |
+| P99.9 of wet steps (mm/5 min) | 1.2 | **0.00 (outside)** | 1.3 / 1.8 / 2.4 |
+| Largest hour (mm) | 8.9 | 0.07 | 8.7 / 12.6 / 28.1 |
+| Mean wet spell (min) | 33.0 | 0.95 | 27.6 / 30.5 / 32.9 |
+| Storms ≥ 10 mm | 16 | 0.89 | 7.0 / 11.5 / 17.0 |
+| Largest storm (mm) | 41.6 | 0.90 | 17.6 / 25.9 / 42.8 |
+
+* **Sewer:** all four quantities inside; 2009 is an ordinary year of the generator (BC at the 65th percentile).
+* **Rain:** exactly 2 of 10 outside, the most the rule allows. Both say one thing: **2009 was a gentle, drizzly year**
+  (wet more often, softer 5-min peaks) and the generator rarely makes one; largest hour and wet spell are near the
+  edge too. The sewer responds to storm totals, which match.
+* **Copying:** 3.8% (members 3.2–4.2), below the 5% a real unseen year gives.
+* **Read with the 2008 rehearsal:** 2008 (BC 413,768 m³, the largest of 2000–2008) is outside at the 97th percentile;
+  its largest storm, **102 mm, is far beyond the generator's 95th percentile (43 mm)**. Training years 2000–2007: 65%
+  of rain quantities inside (90% expected: the year-to-year range is too narrow), sewer 100%.
+* The copying share depends on the year that sets the threshold: 9.7% against 2008, 3.8% against 2009, same series.
+
+### ✅ Decision
+* **PASS:** a generator trained on 2000–2007 produces years that cover an unseen year at the sewer, without copying.
+  That is the claim the thesis needs before synthetic rain trains or tests controllers.
+* **Stated with it:** it covers typical years, not the record's extremes (2008); gentle, drizzly years are rare in
+  it; one year is one draw. For RL: an agent trained only on this rain seldom meets a 2008-sized storm, so the
+  Gate C safety clause (no worse than the fixed controller on the largest real storm) stays essential.
+* **2009 is spent.** Any other model scored on it (v14 comparators) is post-hoc and labelled so. v19 pretrained is
+  left out: only its overfit epoch-325 weights exist (no snapshots).
+
+**Verdict:** **v19 scratch at epoch 50 PASSES the preregistered 2009 test: sewer at the 65th percentile, 2 of 10 rain
+quantities outside (the limit), copying 3.8%; the record's largest storms remain beyond it.**
+
+---
+
+## October 22, 2026 — v19 Scratch at Epoch 50: Generated and Checked on 2008 (Before Preregistration)
+
+### 🔍 Overview
+Job 994673 generated the four members from `epoch_0050_regime_model.pt` (log: `epoch 50 sha256 d2290562b45adffa`)
+under their own name (`SERIES_ID=v19_scratch_ep50`, new; existing series are never overwritten), evaluated with
+`--heldout 2008` (new) so 2009 stayed closed. Sewer (BC, EFD) on the laptop.
+
+### 📊 Findings
+| Member means | Epoch 50 | Epoch 325 (final) | v19 pretrained (325) |
+| :--- | :---: | :---: | :---: |
+| Sewer BC / real | **0.76** (0.57–0.96) | 0.75 (0.61–0.86) | 0.62 |
+| Unbroken runs > 5h20 per year | 9.75 | 12.4 | 11.9 |
+| Volume / real | 0.89 | 0.88 | 0.84 |
+| Storms ≥ 10 mm per year | 11.8 | 11.9 | 10.2 |
+| Too-close days (2008 threshold) | 9.7% | 10.5% | — |
+
+* The sewer level of the final weights is kept at epoch 50, so **it did not come from overfitting**. Long storms
+  drop a little (9.75 per year, just under the oneday rule's 10).
+* oneday's statistical rule: fails on long runs (9.75), volume and Gate A (8.5; real 2008 scores 6 on the same
+  checks, so Gate A's bar is above a real year's).
+
+**Verdict:** **epoch 50 keeps the final weights' sewer level (0.76 vs 0.75) with slightly fewer long storms;
+registered for the test year as it is.**
+
+---
+
+## October 22, 2026 — v19 Scratch Overfits After Epoch 50 (Held-Out Loss); Epoch 50 Chosen
+
+### 🔍 Overview
+`history.csv` holds training loss only: `train_regime.py` builds a test set and never scores it (and builds it
+without the asinh transform). The training objective was therefore measured afterwards on fixed noise draws (same
+σ and noise for every checkpoint), 1,024 windows each from 2000–2007, 2008 and 2009, online and EMA weights, for
+v19_scratch's snapshots (every 50 epochs) and, for comparison, v19, v14 and v14 scratch.
+
+### 📊 Findings
+| EMA weights | Epoch | Train | Held-out (2008 / 2009) | Gap |
+| :--- | :---: | :---: | :---: | :---: |
+| v19 scratch | **50** | 0.101 | **0.098** / 0.100 | **−2%** |
+| v19 scratch | 100 | 0.093 | 0.104 / 0.105 | +12% |
+| v19 scratch | 200 | 0.082 | 0.115 / 0.116 | +42% |
+| v19 scratch | 325 | 0.073 | 0.125 / 0.126 | +73% |
+| v19 pretrained | 325 | 0.083 | 0.123 / 0.123 | +48% |
+| v14 / v14 scratch | 500 | 0.228 | 0.208 / 0.242 | −1% |
+
+* Held-out loss is lowest at epoch 50 and rises at every later snapshot; **2008 alone gives the same minimum**.
+* One-day windows overfit; 5h20 windows do not, even at 500 epochs (about 2,900 distinct training days are few
+  enough to learn). The gap opens at σ 0.1–2 (storm shapes), not at σ < 0.1.
+* Training itself was stable: clipping 100% only in the first ~15 epochs, 0% after ~50; no spikes or NaNs.
+
+### ✅ Decision
+* **Epoch 50 is the generator for the test year** (user), recorded as a 2008 decision. v19 pretrained has no early
+  snapshots, so it is not tested.
+* Held-out loss should be logged during training (not done yet).
+
+**Verdict:** **v19 scratch overfits from epoch ~50 (held-out gap −2% → +73% at 325); epoch 50 chosen on 2008.**
+
+---
+
+## October 22, 2026 — v19 From Scratch at Epoch 325: Results Against the Rule of October 19
+
+### 🔍 Overview
+Job 979612 (commit `f79f2a9`): v19's recipe from random weights, 325 epochs, generated from the final weights
+(epoch 325, sha256 `de593a6cd494ad86`). Sewer (BC, EFD) on the laptop. All current candidates were also scored
+with oneday's metrics on one footing (final weights except v19 pretrained).
+
+### 📊 Findings
+| Member means | v19 scratch | v19 pretrained | v14 scratch (2 seeds) | v14 (3 seeds) | Bartlett–Lewis relaxed |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Sewer BC / real | **0.75** (0.61–0.86) | 0.62 | 0.68 / 0.63 | 0.54–0.57 | 0.87 (1 member) |
+| Volume / real | 0.88 | 0.84 | 1.01 / 0.98 | 0.93–0.95 | 1.04 |
+| Unbroken runs > 5h20 per year | 12.4 | 11.9 | 1.6 / 1.9 | 1.5 | 46.1 |
+| Too-close days | 7.6% | 7.5% | 5.1 / 5.5% | ~5.7% | 11.0% |
+
+* **Rule (Oct 19):** paired with v19 by member and year, sewer BC difference **+0.129 ± 0.040**, scratch higher in
+  **34 of 40** member-years, volume closer to 1 (0.88 vs 0.84): **scratch helps at one day.**
+* **Predictions (Oct 19):** runs 9–14 **right** (12.4); volume 0.88–1.02 **right** (0.88); Gate A ≥ 11 **wrong**
+  (10.0); sewer 0.62–0.80 **right** (0.75).
+* Held-out real 2008–09 passes only 10 of 18 Gate A checks, below oneday's ≥ 12 bar.
+
+### ✅ Decision
+* The from-scratch result holds at one day as at 64 steps. v19 scratch is the best diffusion generator for the
+  sewer, pending the overfitting check (entry above).
+
+**Verdict:** **v19 scratch: sewer 0.75 of real, +0.13 over pretrained v19 in 34 of 40 member-years; the rule says
+scratch helps.**
+
+---
 
 ## October 19, 2026 — v19 From Scratch: Set-Up, Predictions and Rule (Before the Run)
 

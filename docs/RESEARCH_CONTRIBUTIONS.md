@@ -271,7 +271,21 @@ term.
 
 **Base paper:** Evaluates against held-out real data; no downstream task.
 
-**This fork's stated purpose:** generating multi-year synthetic precipitation records as
+**This fork's stated purpose** (revised 2026-10-22; thesis framing in flood-control's
+`docs/DECISIONS.md` D33): generating multi-year synthetic precipitation records as
+**training and test environments** for RL agents controlling the Astlingen SWMM urban
+drainage network. Testing is the headline question: do generated years rank controllers as
+real years do? See flood-control's `docs/SYNTHETIC_RAIN.md` §7.
+
+**Status, 2026-10-22.** This section was written on 2026-09-22. Both gates have run since:
+- Gate B: the sewer check, flood-control `docs/SYNTHETIC_RAIN.md` §5, and this repository's
+  `scripts/gate_b_sewer.py`.
+- Gate C: the training experiment, flood-control's wave 3. A policy trained on v14 alone
+  equals one trained on the record on real 2008; adding v14 to the record does not help.
+
+The original wording follows.
+
+**Original wording (2026-09-22):** generating multi-year synthetic precipitation records as
 training environments for RL agents controlling the Astlingen SWMM urban drainage network.
 `code_plan/ACCEPTANCE_CRITERIA.md` specifies this as Gate C, gated behind Gate B (routing
 observed and synthetic rainfall through SWMM under a fixed baseline controller — no RL).
@@ -291,7 +305,7 @@ generator improves, or even suffices for, RL training outcomes. Section 4's gaps
 | **Data split** | Random subset sampling | Strict chronological holdout (train/val/test); validation not yet used for model selection |
 | **Long-horizon assembly** | Not addressed | Calendar-ordered (delivers seasonality) + transition-sampled (does not) |
 | **Spectral loss** | Not applied | Present, documented as a retired defect, analytically inert at L=64 |
-| **Downstream task** | None | Specified (Gate B/C); not run |
+| **Downstream task** | None | Training and testing RL sewer controllers (D33, 2026-10-22). Gate B and Gate C (training) have run; ranking controllers on generated years is proposed |
 | **External baseline** | N/A (is the base paper) | None run; KoVAE/ImagenTime/DiffusionTS vendored but unused on this data |
 
 ---
