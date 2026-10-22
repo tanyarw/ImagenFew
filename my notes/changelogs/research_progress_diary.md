@@ -4,6 +4,42 @@
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 **Thesis framing (2026-10-22, flood-control D33):** *learned rainfall generators as training and test environments for reinforcement-learning sewer control.* Testing is the headline: do generated years rank controllers as real years do (flood-control `docs/SYNTHETIC_RAIN.md` §7)?
 
+## October 22, 2026 — Equal Sampling for the Selection: Set-Up and Rule (Before the Runs)
+
+### 🔍 Overview
+The selection of v19 scratch rested on unequal sampling: v19 scratch has 4 members × 10 years from **one** training
+run, each v14 run has **one** 10-year member. Ten years is noisy: the four v19 scratch epoch-50 members range from
+0.57 to 0.96 of real overflow (BC), and one 10-year mean carries ±0.10–0.17 (95%). The intervals of v19 scratch
+(0.76 ± 0.08, 40 years) and v14 scratch (0.68 ± 0.11, 0.63 ± 0.12) overlap. Two runs put them on equal footing;
+**2009 is not used** (spent).
+
+* **Members 1–3 for the five v14 runs** (v14, v14_s1, v14_s2, v14_scratch, v14_scratch_s1), from their final
+  weights with member 0's exact command and seeds 43–45: `scripts/submit_members_v14.sh`.
+* **A second training seed of v19 scratch** (`TRAIN_SEED=1`, new in `train.sbatch`), 50 epochs, generated from its
+  final weights (= epoch 50; the learning rate is constant, so this is the first 50 epochs of a seed-0-like run),
+  4 members with seeds 42–45, snapshots every 25 epochs for the held-out loss check, evaluated with `--heldout 2008`.
+* Sewer (BC, EFD) for all 19 new series on the cluster: `scripts/submit_gate_b_sewer.sh`.
+
+### ✅ Rule (fixed now)
+Per recipe, all member-years pooled: **v19 scratch epoch 50** (2 training seeds × 40 = 80 years), **v14 scratch**
+(2 × 40 = 80), **v14 pretrained** (3 × 40 = 120). Quantity: BC total overflow / real, per member-year.
+* **Selection confirmed on the sewer** if v19 scratch's pooled mean is above v14 scratch's with the 95% interval of
+  the difference (Welch, member-years as units) above 0, **and** each v19 scratch training seed's mean is above each
+  v14 scratch seed's.
+* **Tie on the sewer** if the interval contains 0: the selection rests on storm structure (long storms, about 10 vs
+  1.5 per year), and is described so.
+* **v14 scratch better on the sewer** if the interval lies below 0: reported; whether the deliverable changes is the
+  user's decision, with storm structure weighed against the sewer.
+* Member-years within a training run are not independent of that run's weights; with 2 training seeds the
+  training-seed spread is shown, not tested.
+* The second v19 scratch seed's held-out loss is reported at epochs 25 and 50 (the epoch is not re-chosen).
+* If the second seed agrees, its 4 members may be added to the deliverable, labelled as not tested on 2009.
+
+**Verdict:** **equal sampling set up (4 members for every run, a second v19 scratch seed); rule recorded before
+sending.**
+
+---
+
 ## October 22, 2026 — Test Year 2009: v19 Scratch (Epoch 50) PASSES
 
 ### 🔍 Overview

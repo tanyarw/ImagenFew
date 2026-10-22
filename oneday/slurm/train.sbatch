@@ -24,6 +24,7 @@
 #   INIT        pretrained (the checkpoint CKPT below) | none (random weights; RUN_ID must then differ from v19)
 #   EPOCHS      overrides the config's epochs on the command line (recorded in run_args.json)  default: config's
 #   SAVE_EVERY  keep the weights every N epochs as epoch_NNNN_regime_model.pt                  default 0 (none)
+#   TRAIN_SEED  training seed                                                                  default 0
 # v19 from scratch (diary 2026-10-19), 325 epochs to match v19's evaluated snapshot:
 #   RUN_ID=v19_scratch INIT=none EPOCHS=325 SAVE_EVERY=50 TRAIN_TIME=48:00:00 oneday/slurm/submit.sh train
 # CKPT_NAME = the weights file in RUN_DIR to generate from (default final_regime_model.pt, the last epoch;
@@ -48,6 +49,7 @@ RUN_ID="${RUN_ID:-v19}"
 INIT="${INIT:-pretrained}"
 EPOCHS="${EPOCHS:-}"
 SAVE_EVERY="${SAVE_EVERY:-0}"
+TRAIN_SEED="${TRAIN_SEED:-0}"
 RUN_DIR="logs/ImagenFew/Rainfall_Regime/${RUN_ID}"
 case "${INIT}" in
     pretrained) CKPT="models_ckpt/ImagenFew/ImagenFew_288_1200epochs.ckpt" ;;
@@ -72,7 +74,7 @@ if [ "${GENERATE_ONLY:-0}" = "1" ] && [ ! -f "${WEIGHTS}" ]; then
     exit 1
 fi
 echo "job ${SLURM_JOB_ID:-} | $(hostname -s) | GPU ${CUDA_VISIBLE_DEVICES:-} | $(date)"
-echo "run ${RUN_ID} | init ${INIT} (${CKPT}) | epochs ${EPOCHS:-config} | save every ${SAVE_EVERY}"
+echo "run ${RUN_ID} | init ${INIT} (${CKPT}) | epochs ${EPOCHS:-config} | save every ${SAVE_EVERY} | training seed ${TRAIN_SEED}"
 echo "commit $(git rev-parse HEAD) $([ -z "$(git status --porcelain --untracked-files=no)" ] || echo '(UNCOMMITTED CHANGES)')"
 python -c "import torch; assert torch.cuda.is_available(), 'CUDA not available'"
 
@@ -83,7 +85,7 @@ python -m oneday check
 if [ "${GENERATE_ONLY:-0}" != "1" ]; then
     [ ! -e "${RUN_DIR}/best_regime_model.pt" ] || { echo "ERROR: ${RUN_DIR} already holds a model"; exit 1; }
     python regime_training/train_regime.py --model_ckpt "${CKPT}" --config regime_training/config_v19.yaml \
-        --seed 0 --run_id "${RUN_ID}" --save_every "${SAVE_EVERY}" ${EPOCHS:+--epochs "${EPOCHS}"}
+        --seed "${TRAIN_SEED}" --run_id "${RUN_ID}" --save_every "${SAVE_EVERY}" ${EPOCHS:+--epochs "${EPOCHS}"}
 fi
 
 [ -f "${WEIGHTS}" ] || { echo "ERROR: ${WEIGHTS} not found after training"; exit 1; }
