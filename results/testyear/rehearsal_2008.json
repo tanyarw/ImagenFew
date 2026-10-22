@@ -1,0 +1,239 @@
+{
+ "year": 2008,
+ "role": "rehearsal",
+ "prereg_sha256": "ae7ee31951bebe92ffbd21145a8300e64416a992e5b683eff33ee474fa889e12",
+ "series": "v19_scratch_ep50_nobridge_cal",
+ "members": [
+  "v19_scratch_ep50_nobridge_cal",
+  "v19_scratch_ep50_nobridge_cal_m1",
+  "v19_scratch_ep50_nobridge_cal_m2",
+  "v19_scratch_ep50_nobridge_cal_m3"
+ ],
+ "finished": "2026-10-22T15:05:48",
+ "git": {
+  "commit": "23af7967e63b3d86e324419ce0b73006372da34f",
+  "branch": "use-asinh",
+  "dirty": true,
+  "diff_sha256": "4ab5f6cf3bc77939b87ec1681ea46a68ef236238733a611d63d72afe6deba1f8"
+ },
+ "flood_control_git": {
+  "commit": "846592045e9cd4deda88cfc00121fa186543de51",
+  "dirty": true
+ },
+ "code_changed_since_registration": [],
+ "rain": {
+  "annual_mm": {
+   "value": 755.7049999999999,
+   "percentile": 0.95,
+   "inside": true,
+   "generated_p5_p50_p95": [
+    537.394402348255,
+    641.1851176033501,
+    730.9240265259499
+   ]
+  },
+  "wet_pct": {
+   "value": 7.918569254185693,
+   "percentile": 0.675,
+   "inside": true,
+   "generated_p5_p50_p95": [
+    6.507467656012177,
+    7.664573820395738,
+    8.509893455098934
+   ]
+  },
+  "wet_spell_min": {
+   "value": 31.222805701425358,
+   "percentile": 0.625,
+   "inside": true,
+   "generated_p5_p50_p95": [
+    27.566710633116884,
+    30.498935489480676,
+    32.9351953969725
+   ]
+  },
+  "p999_wet": {
+   "value": 1.7170475000001761,
+   "percentile": 0.475,
+   "inside": true,
+   "generated_p5_p50_p95": [
+    1.3343401470000515,
+    1.786988772650158,
+    2.363566731000011
+   ]
+  },
+  "max_1h_mm": {
+   "value": 12.0225,
+   "percentile": 0.4,
+   "inside": true,
+   "generated_p5_p50_p95": [
+    8.69416797495,
+    12.57032207,
+    28.125940425999993
+   ]
+  },
+  "max_day_mm": {
+   "value": 52.0975,
+   "percentile": 0.975,
+   "inside": false,
+   "generated_p5_p50_p95": [
+    18.368277305735,
+    26.57883347555,
+    42.312404833814995
+   ]
+  },
+  "storms_ge_10mm": {
+   "value": 15.0,
+   "percentile": 0.825,
+   "inside": true,
+   "generated_p5_p50_p95": [
+    7.0,
+    11.5,
+    17.0
+   ]
+  },
+  "long_storms": {
+   "value": 57.0,
+   "percentile": 0.2,
+   "inside": true,
+   "generated_p5_p50_p95": [
+    51.9,
+    63.5,
+    71.1
+   ]
+  },
+  "rain_in_long_pct": {
+   "value": 59.85238949060878,
+   "percentile": 0.825,
+   "inside": true,
+   "generated_p5_p50_p95": [
+    46.2327495914864,
+    56.63588352317502,
+    64.91578275500274
+   ]
+  },
+  "max_storm_mm": {
+   "value": 101.87249999999955,
+   "percentile": 1.0,
+   "inside": false,
+   "generated_p5_p50_p95": [
+    17.571612503064973,
+    25.8894779106499,
+    42.781240355254724
+   ]
+  }
+ },
+ "sewer": {
+  "BC total_m3": {
+   "value": 412641.7863769342,
+   "percentile": 0.975,
+   "inside": false,
+   "generated_p5_p50_p95": [
+    139798.201927884,
+    217842.27480297314,
+    363552.9349357167
+   ]
+  },
+  "EFD total_m3": {
+   "value": 402870.6364256599,
+   "percentile": 0.975,
+   "inside": false,
+   "generated_p5_p50_p95": [
+    136394.15453141628,
+    209116.39850513302,
+    355504.4383374515
+   ]
+  },
+  "BC creek_m3": {
+   "value": 106152.97796905134,
+   "percentile": 0.95,
+   "inside": true,
+   "generated_p5_p50_p95": [
+    42745.26029015675,
+    63976.50744503249,
+    101583.07768306501
+   ]
+  },
+  "BC overflow_events_ge1000m3": {
+   "value": 36.89925716508391,
+   "percentile": 0.9,
+   "inside": true,
+   "generated_p5_p50_p95": [
+    22.8502173726919,
+    29.959301005590532,
+    38.050361970718896
+   ]
+  }
+ },
+ "sewer_rows": [
+  {
+   "source": "real",
+   "year": 2008,
+   "controller": "BC",
+   "days": 365.99652777777777,
+   "rain_mm": 755.7325,
+   "storms_ge10mm": 15,
+   "max_storm_mm": 101.8725,
+   "total_m3": 413768.38638349983,
+   "creek_m3": 106442.79821902393,
+   "river_m3": 307325.5881644759,
+   "overflow_events": 69,
+   "overflow_events_ge1000m3": 37
+  },
+  {
+   "source": "real",
+   "year": 2008,
+   "controller": "EFD",
+   "days": 365.99652777777777,
+   "rain_mm": 755.7325,
+   "storms_ge10mm": 15,
+   "max_storm_mm": 101.8725,
+   "total_m3": 403970.5591107261,
+   "creek_m3": 84866.88972078792,
+   "river_m3": 319103.6693899382,
+   "overflow_events": 65,
+   "overflow_events_ge1000m3": 34
+  }
+ ],
+ "memorisation": {
+  "too_close_pct_mean": 9.68894692892507,
+  "threshold": 1.5748910725182252,
+  "real_windows": 128,
+  "members": {
+   "v19_scratch_ep50_nobridge_cal": {
+    "too_close_pct": 9.010458567980692,
+    "nn_dist_ratio": 0.9784055732520395
+   },
+   "v19_scratch_ep50_nobridge_cal_m1": {
+    "too_close_pct": 9.9601593625498,
+    "nn_dist_ratio": 1.0017940054106145
+   },
+   "v19_scratch_ep50_nobridge_cal_m2": {
+    "too_close_pct": 8.974358974358974,
+    "nn_dist_ratio": 1.0283142084245023
+   },
+   "v19_scratch_ep50_nobridge_cal_m3": {
+    "too_close_pct": 10.81081081081081,
+    "nn_dist_ratio": 0.9767100861027995
+   }
+  }
+ },
+ "tests": {
+  "sewer: BC total_m3 inside (0.05, 0.95)": false,
+  "rain: at most 2 of 10 outside": true,
+  "copying: too-close <= 10.0%": true
+ },
+ "rain_outside": [
+  "max_day_mm",
+  "max_storm_mm"
+ ],
+ "pass": false,
+ "verdict": "FAIL",
+ "checks": {
+  "sewer_reproduces_flood_control": true
+ },
+ "calibration_train_years": {
+  "coverage_rain": 0.65,
+  "coverage_sewer": 1.0
+ }
+}

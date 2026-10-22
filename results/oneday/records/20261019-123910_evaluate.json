@@ -1,0 +1,42 @@
+{
+ "command": "evaluate",
+ "site": "astlingen",
+ "params": {
+  "command": "evaluate",
+  "epochs": 500,
+  "batch_size": 2048,
+  "reason": "v14's recipe (500 epochs, batch 2048)",
+  "no_checkpoint": false,
+  "members": 4
+ },
+ "argv": [
+  "/home/t/tanyawar/thesis/ImagenFew/oneday/__main__.py",
+  "evaluate"
+ ],
+ "git": {
+  "commit": "2aa1470dfc9b7c7b7fb9cf98d6cbf00e881ef2c1",
+  "branch": "use-asinh",
+  "dirty": false,
+  "diff_sha256": null
+ },
+ "host": "xgph12",
+ "slurm_job_id": "975696",
+ "started": "2026-10-19T12:39:10",
+ "inputs": {},
+ "outputs": {
+  "results/oneday/evaluation.json": "2e328723cc13b48b28894e95297018ec9f85aa511e52db7773d2e43219a59863"
+ },
+ "results": {
+  "verdict": "statistics FAIL; sewer pending"
+ },
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "sklearn": "1.7.2",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-19T12:39:15",
+ "status": "ok"
+}

@@ -1,0 +1,35 @@
+{
+ "year": 2009,
+ "prereg_sha256": "ae7ee31951bebe92ffbd21145a8300e64416a992e5b683eff33ee474fa889e12",
+ "rows": [
+  {
+   "source": "real",
+   "year": 2009,
+   "controller": "BC",
+   "days": 364.99652777777777,
+   "rain_mm": 661.01,
+   "storms_ge10mm": 16,
+   "max_storm_mm": 41.64000000000011,
+   "total_m3": 228140.4096246831,
+   "creek_m3": 65755.48062982217,
+   "river_m3": 162384.9289948609,
+   "overflow_events": 58,
+   "overflow_events_ge1000m3": 34
+  },
+  {
+   "source": "real",
+   "year": 2009,
+   "controller": "EFD",
+   "days": 364.99652777777777,
+   "rain_mm": 661.01,
+   "storms_ge10mm": 16,
+   "max_storm_mm": 41.64000000000011,
+   "total_m3": 220599.70480425187,
+   "creek_m3": 35502.01834899488,
+   "river_m3": 185097.686455257,
+   "overflow_events": 50,
+   "overflow_events_ge1000m3": 32
+  }
+ ],
+ "function": "flood-control analysis/synthetic_rain/bc_efd_check.one"
+}

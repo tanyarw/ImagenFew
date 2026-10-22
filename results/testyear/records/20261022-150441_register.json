@@ -1,0 +1,36 @@
+{
+ "command": "register",
+ "site": "astlingen",
+ "params": {
+  "command": "register",
+  "series": "v19_scratch_ep50_nobridge_cal",
+  "spend_test_year": false
+ },
+ "argv": [
+  "/Users/tanyawarrier/Desktop/projects/ImagenFew/testyear/__main__.py",
+  "register"
+ ],
+ "git": {
+  "commit": "7b2e8cab6204001c7e243f1e6944223272b206d8",
+  "branch": "use-asinh",
+  "dirty": true,
+  "diff_sha256": "4ab5f6cf3bc77939b87ec1681ea46a68ef236238733a611d63d72afe6deba1f8"
+ },
+ "host": "Tanyas-MacBook-Air.local",
+ "slurm_job_id": null,
+ "started": "2026-10-22T15:04:41",
+ "inputs": {},
+ "outputs": {
+  "testyear/preregistration.json": "ae7ee31951bebe92ffbd21145a8300e64416a992e5b683eff33ee474fa889e12"
+ },
+ "results": {},
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-22T15:04:42",
+ "status": "ok"
+}
