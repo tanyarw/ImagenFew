@@ -4,6 +4,10 @@ ImagenFew's chosen generator, handed to flood-control on 2026-10-22. This folder
 `python scripts/export_deliverable.py`. `manifest.json` holds the hashes of every file and of the results quoted
 here.
 
+**Update 2026-10-23:** a second set of four members from the same recipe (training seed 1) is in
+`../v19_scratch_s1_ep50/`. It is closer to real (BC overflow 0.95 of real) but was not tested on 2009. The files in
+this folder are unchanged.
+
 ## What it is
 
 - **Four members × 10 years** of 5-minute rain: the mean over the catchment's four gauges, in mm per 5 min.

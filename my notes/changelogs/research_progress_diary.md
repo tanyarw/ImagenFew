@@ -4,6 +4,69 @@
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 **Thesis framing (2026-10-22, flood-control D33):** *learned rainfall generators as training and test environments for reinforcement-learning sewer control.* Testing is the headline: do generated years rank controllers as real years do (flood-control `docs/SYNTHETIC_RAIN.md` §7)?
 
+## October 23, 2026 — Equal Sampling: Result (v19 Scratch Selection Confirmed)
+
+### 🔍 Overview
+The rule from the entry "Equal Sampling for the Selection" (2026-10-22), applied unchanged. Inputs: members 1–3 for
+the five v14 runs (job 995604, commit `44b7cf7`, clean tree), a second training seed of v19 scratch (job 995711:
+random initial weights, training seed 1, 50 epochs, 4 members with seeds 42–45, evaluated with `--heldout 2008`), and
+the sewer check (BC, EFD) for all 19 new series (jobs 995869, 995870). **2009 was not used.**
+
+* **Files checked:** all 19 series have 10 × 105,120 steps, no missing or negative values, 10 sewer rows per
+  controller, and each row's rain within 0.5% of its series.
+* **Seed 1's run** recorded a dirty tree at `25c0fcd`. Most likely only `results/reference/gate_b_sewer.json`
+  (rewritten by sewer job 995869 four hours earlier); no code file was edited on the cluster. Its final weights are
+  identical to its epoch-50 snapshot.
+
+### 📊 Findings
+**Held-out loss of seed 1** (EMA weights; the windows and noise draws of the seed-0 check; train 2000–07 vs 2008
+only):
+
+| | Training years | Unseen 2008 | Gap |
+| :--- | :---: | :---: | :---: |
+| Seed 1, epoch 25 | 0.1043 | 0.0969 | −7.1% |
+| Seed 1, epoch 50 | 0.1007 | 0.0982 | −2.4% |
+| Seed 0, epoch 50 (2026-10-22) | 0.1007 | 0.0979 | −2.7% |
+
+Epoch 50 reproduces across seeds. 2008's loss rose about 1% from epoch 25 to 50, so the minimum lies between; the
+gap is still negative at 50. The epoch was not re-chosen.
+
+**BC total overflow / real** (real 2000–2008, 292,325 m³ per year), member-years pooled:
+
+| Recipe | Pooled (95%) | Years | Per training seed | Members |
+| :--- | :---: | :---: | :--- | :--- |
+| **v19 scratch, epoch 50** | **0.855 ± 0.059** | 80 | 0.764, 0.946 | 0.79, 0.74, 0.96, 0.57 / 0.99, 0.96, 1.12, 0.71 |
+| v14 scratch | 0.653 ± 0.028 | 80 | 0.683, 0.624 | 0.67–0.70 / 0.61–0.64 |
+| v14 pretrained | 0.552 ± 0.020 | 120 | 0.531, 0.567, 0.559 | 0.52–0.57 |
+
+* **v19 scratch − v14 scratch: +0.201, 95% CI [+0.136, +0.267]** (Welch, df 113). Each v19 scratch seed (0.764,
+  0.946) is above each v14 scratch seed (0.683, 0.624).
+* EFD agrees: 0.860 vs 0.639, difference +0.221 [+0.154, +0.287].
+* **Storm structure:** storms ≥ 10 mm per year are 11.8 and 15.0 for v19 scratch seeds 0 and 1 (real 15.7), 9.3 and
+  8.3 for v14 scratch, and 6.8–7.6 for v14 pretrained. The largest generated storm of any recipe is 41–50 mm (2008:
+  102 mm).
+* **Spread:** v19's two seeds differ by 0.18, v14's by at most 0.06, and v19's members spread more (0.57–1.12).
+  With 2 seeds the training-seed spread is shown, not tested.
+* **Seed 1's statistics** (`results/oneday/evaluation_v19_scratch_s1.json`): volume 0.99 of real (seed 0: 0.89),
+  12.65 long runs per year (9.75), 20% of rain in them (16%). It passes 5 of 6 checks (seed 0: 3). Gate A is 8/18,
+  below 12; real held-out years score 10/18 on Gate A. Too-close one-day windows: 9.3% (seed 0: 9.7%; limit 10%;
+  an unseen real year 5%).
+
+### ✅ Decision
+* **Selection confirmed on the sewer** (both conditions of the rule met): v19 scratch at epoch 50 stays the
+  generator.
+* **Seed 1's members are shipped as a separate folder,** `results/deliverable/v19_scratch_s1_ep50/` (`python
+  scripts/export_deliverable.py --run s1`). The DATA_CARD labels them as not tested on 2009. flood-control vendors
+  seed 0's four files by sha256 and its ranking study uses them, so `results/deliverable/v19_scratch_ep50/` is left
+  unchanged. A rebuild of it reproduces the same arrays; only the DATA_CARD gained a pointer to seed 1.
+* Whether flood-control adds seed 1 as a source (40 more years, closer to real overflow) is flood-control's decision.
+
+**Verdict:** **v19 scratch epoch 50 confirmed under equal sampling (+0.20 BC overflow/real over v14 scratch, CI
+above 0, every seed ahead); a second set of 40 years (seed 1, BC 0.95 of real, untested on 2009) is available beside
+the deliverable.**
+
+---
+
 ## October 22, 2026 — Paper Positioning: Literature Review and the Idea to Wrap Around
 
 ### 🔍 Overview

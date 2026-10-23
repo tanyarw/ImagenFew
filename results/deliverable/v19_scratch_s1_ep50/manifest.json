@@ -1,0 +1,116 @@
+{
+ "deliverable": "v19 scratch, training seed 1, epoch 50: mean rain of the Astlingen catchment, 5 min, 4 members x 10 years",
+ "data_card": "DATA_CARD.md",
+ "weights": {
+  "path": "logs/ImagenFew/Rainfall_Regime/v19_scratch_s1/final_regime_model.pt",
+  "epoch": 50,
+  "sha256": "cf7911385eb9c53b8530716378cef244ffa49faf955848ca6bfe90783e48a662",
+  "run_args": {
+   "run_id": "v19_scratch_s1",
+   "config": "regime_training/config_v19.yaml",
+   "model_ckpt": "none",
+   "pretrained": false,
+   "seed": 1,
+   "epochs": 50,
+   "batch_size": 2048,
+   "learning_rate": 0.0001,
+   "data_transform": "asinh",
+   "asinh_scale": 0.035,
+   "known_prefix_prob": 0.0,
+   "known_prefix_steps": null,
+   "limit_batches": null,
+   "save_every": 25,
+   "git_commit": "25c0fcdc3f8bb3bd31005c51367a0d6c37d042b0",
+   "git_dirty": true,
+   "torch": "2.6.0+cu124",
+   "host": "xgph15",
+   "slurm_job_id": "995711",
+   "started": "2026-10-22T23:27:30"
+  }
+ },
+ "generation": {
+  "script": "regime_training/generate_hmm_v1.py via oneday/slurm/train.sbatch (job 995711)",
+  "assembly": "calendar, no bridge blocks, overlap 4, transition overlap 8",
+  "profile": "data/rainfall/splits/seasonal_transition_matrix_train_len288.pkl",
+  "profile_sha256": "27253e00846eb613dd36c3ded1882755669df1cdc15e6ade54f083dcd0c08496"
+ },
+ "files": {
+  "v19_scratch_s1_nobridge_cal.npz": {
+   "sha256": "7fe391b216c3f05917a3fea30f4774b55eedbdebf2106443c69a5abe24bfefdd",
+   "steps": 1051200,
+   "years": 10,
+   "mm_per_year": 708.7531127929688,
+   "generation_seed": 42
+  },
+  "v19_scratch_s1_nobridge_cal_m1.npz": {
+   "sha256": "4d1aa61b6e14002313c0fd592eb3e5914d6a8a49ad7ab9e019d61ccdb3658c41",
+   "steps": 1051200,
+   "years": 10,
+   "mm_per_year": 708.89306640625,
+   "generation_seed": 43
+  },
+  "v19_scratch_s1_nobridge_cal_m2.npz": {
+   "sha256": "bcd4dd3f81c51ef67c1f91cfe2f692da48d81051ffbc46f30d4f8181bb22fd07",
+   "steps": 1051200,
+   "years": 10,
+   "mm_per_year": 719.8073120117188,
+   "generation_seed": 44
+  },
+  "v19_scratch_s1_nobridge_cal_m3.npz": {
+   "sha256": "d9e177b6654986e21bea61b6dac846e4e038c6254ab9096150d7e652fa23c5a3",
+   "steps": 1051200,
+   "years": 10,
+   "mm_per_year": 660.2752685546875,
+   "generation_seed": 45
+  }
+ },
+ "sewer_check": {
+  "source": "results/reference/gate_b_sewer.json",
+  "sha256": "50149917ba208ea06dc93ac6f37edfb0459c12c1923b9341f1b9da0e8e34f63f",
+  "members": {
+   "v19_scratch_s1_nobridge_cal": {
+    "BC": {
+     "total_m3_vs_real": 0.9939056536,
+     "total_m3": 290543.1488708879
+    },
+    "EFD": {
+     "total_m3_vs_real": 1.0025710199,
+     "total_m3": 282456.6757264182
+    }
+   },
+   "v19_scratch_s1_nobridge_cal_m1": {
+    "BC": {
+     "total_m3_vs_real": 0.9569533412,
+     "total_m3": 279741.0761013726
+    },
+    "EFD": {
+     "total_m3_vs_real": 0.9621503893,
+     "total_m3": 271068.8770356746
+    }
+   },
+   "v19_scratch_s1_nobridge_cal_m2": {
+    "BC": {
+     "total_m3_vs_real": 1.1176554211,
+     "total_m3": 326718.2596335117
+    },
+    "EFD": {
+     "total_m3_vs_real": 1.1261755812,
+     "total_m3": 317280.0775680688
+    }
+   },
+   "v19_scratch_s1_nobridge_cal_m3": {
+    "BC": {
+     "total_m3_vs_real": 0.7140726949,
+     "total_m3": 208741.0696674635
+    },
+    "EFD": {
+     "total_m3_vs_real": 0.7176436744,
+     "total_m3": 202183.4290255573
+    }
+   }
+  }
+ },
+ "test_2009": {
+  "verdict": "not tested: 2009 was spent on training seed 0 (results/testyear/test_2009.json)"
+ }
+}

@@ -1,0 +1,48 @@
+{
+ "command": "evaluate",
+ "site": "astlingen",
+ "params": {
+  "command": "evaluate",
+  "epochs": 500,
+  "batch_size": 2048,
+  "reason": "v14's recipe (500 epochs, batch 2048)",
+  "no_checkpoint": false,
+  "members": 4,
+  "run_id": "v19_scratch_ep50",
+  "heldout": "2008"
+ },
+ "argv": [
+  "/home/t/tanyawar/thesis/ImagenFew/oneday/__main__.py",
+  "evaluate",
+  "--run-id",
+  "v19_scratch_ep50",
+  "--heldout",
+  "2008"
+ ],
+ "git": {
+  "commit": "7b2e8cab6204001c7e243f1e6944223272b206d8",
+  "branch": "use-asinh",
+  "dirty": false,
+  "diff_sha256": null
+ },
+ "host": "xgpg2",
+ "slurm_job_id": "994673",
+ "started": "2026-10-22T14:50:33",
+ "inputs": {},
+ "outputs": {
+  "results/oneday/evaluation_v19_scratch_ep50.json": "7683bd74d28b9b69620c51b757ea11fa9fae8139b8d4bb8d8ea103f4e0e1bb76"
+ },
+ "results": {
+  "verdict": "statistics FAIL; sewer pending"
+ },
+ "versions": {
+  "python": "3.10.19",
+  "numpy": "2.2.6",
+  "pandas": "2.3.3",
+  "scipy": "1.15.3",
+  "sklearn": "1.7.2",
+  "yaml": "6.0.3"
+ },
+ "finished": "2026-10-22T14:50:39",
+ "status": "ok"
+}
