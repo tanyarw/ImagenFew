@@ -4,6 +4,150 @@
 **Goal:** Create realistic synthetic precipitation datasets to train Reinforcement Learning (RL) agents for stormwater management, reservoir control, and flood regulation.
 **Thesis framing (2026-10-22, flood-control D33):** *learned rainfall generators as training and test environments for reinforcement-learning sewer control.* Testing is the headline: do generated years rank controllers as real years do (flood-control `docs/SYNTHETIC_RAIN.md` §7)?
 
+## October 25, 2026 — Test Year 2009 for the Controllers (Preregistered): Best Run Beats the Best Rule; v19 Again Equals One Real Year
+
+### 🔍 Overview
+The controllers' first score on the full year 2009, the test year D13 holds back. The plan was signed off by the user and committed before any scoring (flood-control `docs/TEST_YEAR_2009.md`, commit `17c0dc1`; code `c77fab6`; results `b65e1d9`, §11). The arms:
+* **A1–A4:** final configurations chosen on 2008 by D13's readout.
+* **B:** the single run selected on 2008.
+* **References:** BC, EFD and its variants, S.
+* **D:** the competitive set as a third ranking truth.
+
+10 cluster tasks, 129 runs. 2009 is mild (BC 228k m³ against 414k in 2008).
+
+* **Bug, disclosed:** the first analysis run gave NaN for the references (a pandas index realignment in `references()`). It was fixed and rerun with no definition changed. The NaN lines are superseded.
+
+### 📊 Findings
+| | 2009 (× BC) | Creek | vs EFD + minimum (event interval) |
+| :--- | :---: | :---: | :---: |
+| A1 best configuration (5 seeds) | 0.929 ± 0.030 | 0.67 | +1.2% [−0.8, +3.5] |
+| A3 trained on v14 only | 0.942 ± 0.050 | 0.70 | +0.1% [−2.4, +2.9] |
+| A4 same design, real rain (10 seeds) | 0.961 ± 0.046 | 0.71 | −2.3% [−5.1, +0.4] |
+| **B** selected run (graph PPO s4) | **0.864** | 0.64 | **+8.1% [+5.3, +12.6]** |
+| EFD + minimum (best rule) | 0.938 | 0.58 | — |
+| S | 0.945 | 0.45 | — |
+
+* **A typical RL configuration ties the best rule on an unseen year.** B beats the rule by 8%, and has been the best in all ten real years. But it raises Park Creek overflow above the rule's, so by D13 it is a real improvement over BC only.
+* **Generated-rain training is not worse:** A3 is below A4 in all ten real years (−0.019 on 2009), but this is not resolved over seeds.
+* **Ranking, T = 2009:** v19 0.778 against one year 0.783 and the record 0.827, so it again equals one real year. `bl` − v19 −0.011, level. `w288` − `w64` **+0.098 [+0.056, +0.149]**, v19 − `v14s` **+0.050**; the creek ranking shows the same, larger.
+* **Predictions:** 8 of 10 held. Not held: 5 (creek) and 6 (v19's interval against the record reaches 0).
+
+### ✅ Decision
+* The RL chapter reports A (ties the rule) and B (beats it, and moves overflow to the creek), with the creek trade-off as a stated limitation. A creek-weighted reward is the natural follow-up.
+* "The classical model ranks better" is dropped: across 2008, LOYO and 2009, `bl` and v19 are level. The window effect is the robust result.
+* 2009 is now spent for controllers (D13). Nothing is re-selected on it.
+
+**Verdict:** **preregistered test passed in substance (8/10 predictions): the selected RL run beats the best rule on unseen rain by 8%, at a creek cost; v19 ranks controllers like one real year on a third truth; storm length is the lever.**
+
+---
+
+## October 25, 2026 — RQ-C Ranking Study: Results (v19 Ranks Like One Real Year; Window Length Is Causal)
+
+### 🔍 Overview
+flood-control's ranking study: do generated years rank controllers as real years do? Stages 1–2 complete on the cluster (295 runs). Competitive set: 133 controllers in 43 cells. Analysis: `analysis.ranking.study` (verdicts) and the new `analysis.ranking.paired`, which gives the differences between sources from the same draws. Written up in flood-control `docs/SYNTHETIC_RAIN.md` §7.8 (commits `482ebcc`, `c0afc3c`).
+
+### 📊 Findings
+| Source | τ_b, T = 2008 | τ_b, LOYO | Verdict |
+| :--- | :---: | :---: | :--- |
+| record / one real year | 0.830 / 0.773 | 0.822 / 0.766 | references |
+| `real-split`, `boot`, `w288` | 0.812, 0.792, 0.791 | 0.822, 0.814, 0.808 | record level |
+| `bl` | 0.831 | 0.798 | above one year |
+| `v19s1` / `v19` | 0.778 / 0.762 | 0.798 / 0.784 | below one year (≈ one year) |
+| `v14s` / `w64` | 0.764 / 0.759 | 0.758 / 0.746 | below one year |
+
+* **v19 equals one real year,** consistently over its 5 blocks. The gap is systematic, so more generated years would not close it.
+* **Window length is causal:** `w288` − `w64` +0.03 / +0.06 on the total and +0.12 / +0.09 on the creek. v19 is 0.02–0.03 below real one-day windows, and `v19s1` matches them.
+* **`bl` against v19:** better on the 2008 total only; level under LOYO and on the creek. Correction: `bl` (`relaxed_wet`) has Gate A 6.5/18, not 2/18 (that figure is another variant). It has much worse 5-minute texture, yet ranks as well: realism did not predict ranking validity.
+* **Ranking is easy here:** one real year already reaches τ_b 0.77, the median pair resolves in 0.8 years, and selection regret is ≤ 0.6% for every source. The levels are fragile (record − one year = 0.057).
+* **Seasonal gate:** `boot` is at record level, and the variability ratio of v19 is 1.18. **The seasonal-variability thread is closed** (see Oct 23).
+* **RL by-product (scratch analysis):** the typical seed of most RL designs ≈ the best rule, and seed spread exceeds the gaps between algorithms. The best run is picked alike by train years, v19 or `bl`.
+* **Predictions of §7.5:** 1, 3, 6 right; 2, 4, 5, 7 wrong on the total (4 and 5 hold on the creek); 9 right in direction; 8 not run.
+
+### ✅ Decision
+* RQ-C for v19: **not yet** (one real year, not the record).
+* The paper is reframed around the window effect and "realism scores do not predict usefulness". "Disagreement principle proven" and "BL fails most realism checks" are removed from the summary PDF.
+* Next: the preregistered 2009 test (entry above).
+
+**Verdict:** **generated years from v19 rank controllers like one real year; storm continuity (window length) causally sets ranking quality; a classical model with poor fine detail ranks as well.**
+
+---
+
+## October 23, 2026 — Day-of-Year Phase Chain: Stage 1 (Single Years Carry Too Little Seasonal Timing to Fit It)
+
+### 🔍 Overview
+Idea: replace the calendar (identical phase timing every year) with a Markov chain whose transition probabilities
+are smooth functions of the day of year (multinomial logistic regression on K sin/cos harmonics). Seasons would
+arrive in the right months but on different dates each year. Fitting it needs per-year phase labels; the stored
+labels are one calendar stamped on every year. New package `seasonchain/` (`python -m seasonchain labels`, then
+`diagnose`; outputs in `results/seasonchain/`). Laptop, a few seconds each.
+
+* **The phase HMM is re-derived and saved** (`results/seasonchain/phase_hmm.pkl`). `scripts/fit_seasonal_labels.py`
+  never saved it. Same data, settings and seed; it reproduces the stored calendar on all 365 days.
+* **The calendar HMM cannot label single years.** Applied to one year's 14-day mean it gives mostly phases 0 and 3
+  (e.g. 2001: 176 / 0 / 32 / 157 days; calendar 118 / 109 / 99 / 39), because a single year ranges far wider than the
+  8-year mean it was fitted on. Per-year labels are therefore made by within-year wetness rank at the calendar's
+  phase shares, then the same 4-day minimum-duration filter.
+
+### 📊 Findings
+**Leave-one-year-out log-likelihood over 2000–2007** (per day, higher is better; per-year rank labels):
+
+| Smoothing | Chain K=0 (no date) | K=1 | K=2 | K=3 | Calendar + fitted noise |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| 14 d, transitions | **−0.348** | −0.353 | −0.357 | −0.360 | −1.370 |
+| 30 d, transitions | **−0.286** | −0.297 | −0.300 | −0.301 | −1.364 |
+| 60 d, transitions | **−0.245** | −0.260 | −0.264 | −0.266 | −1.387 |
+| 30 d, occupancy only | **−1.323** | −1.330 | −1.343 | −1.365 | −1.365 |
+
+* **Every harmonic makes held-out years less likely.** On 8 years the day of year does not predict a single year's
+  phase or its transitions; the regression would select K = 0, the homogeneous chain. The calendar is worst on
+  transitions and no better than a constant on occupancy.
+* **Single real years follow the climatology weakly; calendar years follow it strongly.** Correlation of each year's
+  30-day smoothed rain with the real 2000–2007 climatology (real years: climatology of the other training years):
+
+| Series | Mean r | Range | Years with r < 0.2 |
+| :--- | :---: | :---: | :---: |
+| Real 2000–2009 | 0.25 | −0.30 to 0.63 | 4 of 10 |
+| v14 Markov | −0.07 | −0.24 to 0.23 | 9 |
+| v14 Calendar | **0.64** | 0.39 to 0.91 | 0 |
+| v19 Calendar | 0.47 | 0.19 to 0.71 | 1 |
+
+  The pattern holds at 14 and 60 days. The leave-one-out climatology is slightly noisier than the full one the
+  generated years are compared with, which lowers real r a little; it does not explain a gap of 0.2–0.4.
+* **Why calendar years correlate higher: missing week-scale variability, not too much season.** Split of each year
+  into seasonal amplitude b and residual (30-day smoothing; `year_vs_climatology.csv` has 14 and 60 days):
+
+| Series | Amplitude b | b SD across years | Residual SD (mm/day) |
+| :--- | :---: | :---: | :---: |
+| Real 2000–2009 | 0.74 | 0.81 | **0.85** |
+| v19 Calendar | 0.73 | 0.37 | **0.56** |
+| v14 Calendar | 0.86 | 0.31 | 0.42 |
+| v14 Markov | −0.10 | 0.25 | 0.59 |
+
+  v19's seasonal amplitude matches real; its years have about a third less week-to-month variability (0.56 vs 0.85;
+  60 days: 0.35 vs 0.56), and their amplitude varies about half as much between years (b SD 0.37 vs 0.81). Tuning a
+  calendar/chain mix on r alone would shrink the amplitude to reach real r, the wrong route.
+* **The wettest stretch of a real year moves around:** median day of the wettest-ranked phase, 30-day smoothing,
+  ranges from day 59 (2006) and ~200 (2002, 2007) to ~295 (2004, 2009).
+
+### ✅ Decision
+* **The day-of-year regression is not built as planned.** Cross-validation picks K = 0, so on per-year labels it
+  collapses to the homogeneous chain, which v14 Markov already shows gives no annual cycle.
+* **New finding to carry forward:** Markov has too little seasonality per year, the calendar too much. Ten-year
+  averages match real (Gate A T5) for the calendar, but each calendar year looks like the average year, which no
+  real year does. Whether that matters to the controller ranking is untested.
+* **Open:** a phase-label perturbation tuned on amplitude b *and* residual SD, not on r. Candidates: a pull toward
+  the calendar (snap with daily probability α, else the homogeneous chain), or a mean-zero slow anomaly on the
+  ordinal phase (calendar ± 1 for spells of weeks), which keeps b and adds residual. Caveat for both: the generator
+  learned rain given *calendar* phase (phase 0 vs 3 is 1.4 vs 2.7 mm/day for v19), so excursions add only that much.
+* **Decided (same day): neither is built now; the v19 deliverable stays frozen.** The thesis question is ranking
+  (flood-control RQ-C), and its `boot` source already tests this: real days ordered by a phase chain with no calendar
+  and no persistence beyond the phase, BC overflow 1.04. Tanks drain in ~45 h, so week-scale spells should matter
+  little for overflow. If `boot` ranks at record level, the thread closes as a diagnostic. If `boot` falls short, or
+  v19's variability ratio (RQ-C §7.4) is well below 1, the slow anomaly is built as a one-week ablation, judged on τ_b
+  and the variability ratio. The pull toward the calendar is dropped: it shrinks the amplitude v19 already matches.
+
+---
+
 ## October 23, 2026 — Equal Sampling: Result (v19 Scratch Selection Confirmed)
 
 ### 🔍 Overview
